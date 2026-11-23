@@ -1,0 +1,18 @@
+HERO CONTROL 0.2.2 — SỬA “Missing response trace” TRONG BUILD
+
+Log macOS cho thấy backend ABI đã qua và phản hồi native đã giải mã được
+bằng Swift; bước tiếp theo thất bại khi lấy trace.
+
+Nguyên nhân trong mã: protocol yêu cầu exchangeTrace async, actor có hàm
+cùng tên nhưng khai báo đồng bộ, trong khi protocol extension cung cấp
+implementation async mặc định trả nil. Lời gọi async có thể chọn hàm mặc
+định, làm kiểm thử không nhận được trace đã ghi.
+
+Sửa: actor khai báo exchangeTrace async tường minh, bỏ implementation
+mặc định của protocol. Mỗi backend phải triển khai hàm này rõ ràng.
+Kiểm thử mới so sánh trace qua cả concrete type và protocol existential.
+Không bỏ qua hoặc xóa bước kiểm thử đang phát hiện lỗi.
+
+Phiên bản ứng dụng: 0.2.2, build 4.
+Mã sửa nằm trực tiếp trong thư mục HeroControl hiện tại.
+Chạy git push trong cmd, rồi tải artifact của lần chạy mới trên GitHub.

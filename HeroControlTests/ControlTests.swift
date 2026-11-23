@@ -113,9 +113,28 @@ final class ControlTests: XCTestCase {
             XCTAssertTrue(error.localizedDescription.contains("$.snapshot.connected"), error.localizedDescription)
         }
     }
+
+    func testNativeTraceIsAvailableThroughConcreteAndProtocolCalls() async {
+        let missingLibrary = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathComponent("missing.dylib")
+        let backend = NativeBackend(libraryURL: missingLibrary)
+        let client: any BackendClient = backend
+        do {
+            _ = try await client.send(action: "status", revision: nil, settings: nil)
+            XCTFail("Loading a nonexistent dylib must fail")
+        } catch {
+            let concreteTrace = await backend.exchangeTrace()
+            let protocolTrace = await client.exchangeTrace()
+            XCTAssertEqual(concreteTrace?.stage, "load")
+            XCTAssertEqual(protocolTrace?.stage, "load")
+            XCTAssertEqual(protocolTrace?.libraryPath, missingLibrary.path)
+            XCTAssertEqual(protocolTrace?.action, "status")
+        }
+    }
 }
 
 private actor TestBackend: BackendClient {
+    func exchangeTrace() async -> BackendExchangeTrace? { nil }
     private var acknowledge = false
     private var session = "test-session-1"
     private var applied: String?

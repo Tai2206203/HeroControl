@@ -13,10 +13,6 @@ protocol BackendClient: Sendable {
     func exchangeTrace() async -> BackendExchangeTrace?
 }
 
-extension BackendClient {
-    func exchangeTrace() async -> BackendExchangeTrace? { nil }
-}
-
 enum BackendReplyDecoder {
     static func decode(_ data: Data) throws -> BackendReply {
         do { return try JSONDecoder().decode(BackendReply.self, from: data) }
@@ -58,7 +54,7 @@ actor NativeBackend: BackendClient {
     init(libraryURL: URL = Bundle.main.bundleURL.appendingPathComponent("Frameworks/HeroBackend.dylib")) {
         self.libraryURL = libraryURL
     }
-    func exchangeTrace() -> BackendExchangeTrace? { trace }
+    func exchangeTrace() async -> BackendExchangeTrace? { trace }
 
     private func load() throws {
         if requestFunction != nil { return }

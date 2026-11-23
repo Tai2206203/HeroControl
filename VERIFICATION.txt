@@ -1,4 +1,4 @@
-HERO CONTROL 0.2.1 — Kiểm tra đã thực hiện trong môi trường Windows:
+HERO CONTROL 0.2.2 — Kiểm tra đã thực hiện trong môi trường Windows:
 
 - Cú pháp Swift của app, XCTest và công cụ kiểm thử giao thức bằng tree-sitter-swift.
 - Project OpenStep PBX: đọc thành công bằng parser pbxproj, đủ 2 target.
@@ -12,7 +12,7 @@ HERO CONTROL 0.2.1 — Kiểm tra đã thực hiện trong môi trường Window
 Chưa thực hiện:
 
 - Xcode type checking/compilation/linking.
-- Chạy 8 bài XCTest trên iPhone Simulator.
+- Chạy 9 bài XCTest trên iPhone Simulator.
 - Chạy ứng dụng trên iPhone XR hoặc thử trình cài đặt của người dùng.
 - Kết nối libkrw/helper và áp dụng chức năng trong game.
 
@@ -29,3 +29,7 @@ Việc nạp dylib/provider và đọc header chỉ được xác minh khi chạ
 Bản 0.2.1: sửa @(!apply) -> boolean JSON tường minh; thêm kiểm tra CFBoolean
 và kiểm thử backend native -> bộ giải mã Swift production trên runner macOS.
 Các kiểm thử macOS/Simulator chưa được chạy từ môi trường Windows này.
+
+Bản 0.2.2: khắc phục async protocol dispatch của exchangeTrace. Xóa default
+implementation trả nil, khai báo async tường minh trong actor, thêm kiểm thử
+qua cả concrete type lẫn protocol existential. Giữ nguyên kiểm thử trace.

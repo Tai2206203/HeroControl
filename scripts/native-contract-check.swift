@@ -15,6 +15,11 @@ struct NativeContractCheck {
         }
         let trace = await backend.exchangeTrace()
         guard trace?.stage == "complete", trace?.rawResponse != nil else { fatalError("Missing response trace") }
+        let client: any BackendClient = backend
+        let protocolTrace = await client.exchangeTrace()
+        guard protocolTrace?.stage == trace?.stage, protocolTrace?.rawResponse == trace?.rawResponse else {
+            fatalError("Concrete and protocol calls returned different response traces")
+        }
         do {
             _ = try await backend.send(action: "apply", revision: "must-not-ack", settings: ControlSettings())
             fatalError("Diagnostics backend unexpectedly accepted apply")

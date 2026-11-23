@@ -40,6 +40,11 @@
     "sha256": "20fe5279920a0e6f260f0e9e146774fbe3220f32aa5b727d2849a2217df66b56"
   },
   {
+    "path": "CAP_NHAT_0.2.2.txt",
+    "bytes": 1074,
+    "sha256": "364fcf7ce39e4ce578192105bcab0412021e14bdfb9b560bd03cbd83c2b95705"
+  },
+  {
     "path": "CAP_NHAT_0.2.txt",
     "bytes": 4667,
     "sha256": "6e2c1cdde0766f6b468e9349512c9ba00df28c3eab7bbd7a7e4526951ecc337c"
@@ -62,7 +67,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1049,
-    "sha256": "aa9e9bfa046ba88828be85b534ac78874469b7db09a254bc9c3701715156d6af"
+    "sha256": "9dcb6ac1a9e7ceacc760483a122acb871eeb9ba7b59e369adf944e59759a4ab5"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -76,13 +81,13 @@
   },
   {
     "path": "HeroControl/NativeBackend.swift",
-    "bytes": 6152,
-    "sha256": "3c5ebf0d0a2f4f676a2f003d6dbcedee665405f5361a6f8551d2363a2bc007ce"
+    "bytes": 6065,
+    "sha256": "839f630869edf336f378ac17ee0ce22fa1fc3b635d705b16d930b3d34319a641"
   },
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9121,
-    "sha256": "606f6a171f65b7e9f33ceb4b731087790776290ed1d9d84d73395a23972a1ccf"
+    "sha256": "c6331ed2596c978f6350dffd481ffa3f2f6a4b311b3070d74a0b21371341da09"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -91,8 +96,8 @@
   },
   {
     "path": "HeroControlTests/ControlTests.swift",
-    "bytes": 6992,
-    "sha256": "53782c00997542c34252b6d78cc535d81512f25a1c41afce8ab022d39e57654a"
+    "bytes": 7976,
+    "sha256": "0e206daaddfbc8246f4dffcc2dcde401ccd283242cb222720518b044e4202117"
   },
   {
     "path": "HUONG_DAN_BUILD.txt",
@@ -117,12 +122,12 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 8730,
-    "sha256": "f28607d07f381c16fed1bb2f427169e7d396b9fa07246da63554a0c8724e09ed"
+    "sha256": "4300b3f55ab8e776aba049ca087c31d237222e033a2d5dfc0ccf06431b2988c4"
   },
   {
     "path": "scripts/native-contract-check.swift",
-    "bytes": 1776,
-    "sha256": "d6220751c67cb4df3f246ee97706c717d4ca0ba1e4d5a980a86c328aa9d3434d"
+    "bytes": 2088,
+    "sha256": "4ce47c60bb5bf1a5c40f195ac6e2ed4af6490915e5a3472ff0cee19d083e5cb6"
   },
   {
     "path": "scripts/test-simulator.sh",
@@ -136,7 +141,7 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 1816,
-    "sha256": "f47c3163a3d7c46511da6ff48a6d6916d74a514e99a7d005361380c5d23a3468"
+    "bytes": 2079,
+    "sha256": "949578890d347de57ec085209bb3b08e757f872fa0db32f03e8f2c73b5031d75"
   }
 ]
