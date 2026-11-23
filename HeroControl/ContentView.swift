@@ -6,6 +6,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showReset = false
     @State private var showConnection = false
+    @State private var showKernelCheck = false
     @State private var shareItem: ShareItem?
     @State private var exportError: String?
     private let accent = Color(red: 0.39, green: 0.88, blue: 0.78)
@@ -38,6 +39,7 @@ struct ContentView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("Thông tin kết nối", systemImage: "network") { showConnection = true }
+                        Button("Chẩn đoán kernel", systemImage: "stethoscope") { showKernelCheck = true }
                         Button("Xuất cấu hình & chẩn đoán", systemImage: "square.and.arrow.up") {
                             do { shareItem = ShareItem(url: try store.exportDiagnostics()); exportError = nil }
                             catch { exportError = error.localizedDescription }
@@ -50,6 +52,7 @@ struct ContentView: View {
                 Button("Đặt lại", role: .destructive) { store.reset() }
             } message: { Text("Muốn đưa game về cấu hình này, cần bấm Áp dụng sau khi kết nối backend.") }
             .sheet(isPresented: $showConnection) { connectionDetails }
+            .sheet(isPresented: $showKernelCheck) { KernelDiagnosticsView(store: store) }
             .sheet(item: $shareItem) { ActivitySheet(items: [$0.url]) }
             .task(id: scenePhase) {
                 guard scenePhase == .active else { return }
@@ -66,7 +69,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: store.connected ? "link" : "link.badge.plus")
-                Text(store.connected ? "BACKEND ĐÃ KẾT NỐI" : "CHƯA KẾT NỐI BACKEND").font(.caption.bold())
+                Text(store.connected ? "BACKEND ĐÃ KẾT NỐI GAME" : (store.snapshot?.diagnostics != nil ? "BACKEND CHẨN ĐOÁN" : "CHƯA KẾT NỐI BACKEND")).font(.caption.bold())
                 Spacer()
                 Button { Task { await store.refresh() } } label: { Image(systemName: "arrow.clockwise") }
                     .disabled(store.busy).accessibilityLabel("Kiểm tra kết nối")
@@ -74,7 +77,7 @@ struct ContentView: View {
             Text(store.isApplied ? "Cấu hình đã được xác nhận" : "Cấu hình đang chuẩn bị").font(.title3.bold())
             Text(store.message).font(.subheadline).foregroundStyle(.secondary)
             if let snapshot = store.snapshot {
-                Label(snapshot.gameRunning ? "Game đang chạy" : "Chưa tìm thấy game",
+                Label(snapshot.gameInspectionAvailable == false ? "Chưa tích hợp bộ nhận diện game" : (snapshot.gameRunning ? "Game đang chạy" : "Chưa tìm thấy game"),
                       systemImage: snapshot.gameRunning ? "gamecontroller.fill" : "gamecontroller")
                     .font(.caption).foregroundStyle(.secondary)
                 if !store.unsupportedKeys.isEmpty {
@@ -82,6 +85,7 @@ struct ContentView: View {
                         .font(.caption).foregroundStyle(.orange)
                 }
             }
+            Button("Xem chẩn đoán kernel") { showKernelCheck = true }.font(.subheadline.bold())
         }.padding(18).background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 20))
     }
 

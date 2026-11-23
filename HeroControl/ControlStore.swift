@@ -29,7 +29,9 @@ final class ControlStore: ObservableObject {
     }
 
     var connected: Bool { snapshot?.connected == true }
-    var canApply: Bool { connected && snapshot?.gameRunning == true && !busy && unsupportedKeys.isEmpty }
+    var canApply: Bool {
+        connected && snapshot?.gameRunning == true && !(snapshot?.sessionID?.isEmpty ?? true) && !busy && unsupportedKeys.isEmpty
+    }
     var isApplied: Bool {
         connected && snapshot?.gameRunning == true && confirmedRevision == revision && snapshot?.appliedRevision == revision
     }
@@ -68,25 +70,35 @@ final class ControlStore: ObservableObject {
         } catch { persistenceError = "Chưa lưu được cấu hình: \(error.localizedDescription)" }
     }
     func refresh() async {
+        await requestStatus(action: "status")
+    }
+    func diagnose() async {
+        await requestStatus(action: "diagnose")
+    }
+    private func requestStatus(action: String) async {
         guard !busy else { return }
         busy = true
         defer { busy = false }
         do {
-            let reply = try await backend.send(action: "status", revision: nil, settings: nil)
+            let reply = try await backend.send(action: action, revision: nil, settings: nil)
+            guard reply.ok, reply.protocolVersion == 1, reply.snapshot?.protocolVersion == 1 else {
+                throw BackendError.unavailable(reply.message)
+            }
             accept(reply.snapshot)
             message = reply.message
         } catch { disconnected(error) }
     }
     func apply() async {
         guard canApply else { return }
-        let sentRevision = revision, sentSettings = settings
+        let sentRevision = revision, sentSettings = settings, sentSession = snapshot?.sessionID
         busy = true
         defer { busy = false }
         do {
             let reply = try await backend.send(action: "apply", revision: sentRevision, settings: sentSettings)
             accept(reply.snapshot)
-            guard let result = reply.snapshot, result.connected, result.gameRunning,
-                  result.sessionID != nil, result.appliedRevision == sentRevision else {
+            guard reply.ok, reply.protocolVersion == 1, let result = reply.snapshot, result.protocolVersion == 1,
+                  result.connected, result.gameRunning, result.sessionID == sentSession,
+                  !(result.sessionID?.isEmpty ?? true), result.appliedRevision == sentRevision else {
                 confirmedRevision = nil
                 message = "Backend chưa xác nhận áp dụng cấu hình; chưa đánh dấu thành công."
                 return

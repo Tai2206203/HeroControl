@@ -1,0 +1,85 @@
+HERO CONTROL 0.2 — BACKEND CHẨN ĐOÁN DOPAMINE
+
+Bản cập nhật bổ sung backend chẩn đoán thật và công cụ terminal. Nó chưa
+có game adapter, vì vậy ESP/camera/skin/Reports trong Liên Quân chưa hoạt động.
+Các file HeroSkin gốc không bị sửa.
+
+ĐÃ THAY ĐỔI
+
+- Script build mặc định tự biên dịch và đóng gói HeroBackend.dylib chẩn đoán.
+  Không còn bắt người dùng tự tạo thư viện chỉ để xem trạng thái kết nối.
+- Thêm màn “Chẩn đoán kernel”: UID/EUID, các đường dẫn libkrw, lỗi dlopen,
+  ABI kbase/kread, kết quả xác minh và xuất JSON.
+- Thêm Tools/hero-kernel-check trong gói ứng dụng. Công cụ chạy trong terminal
+  iOS thực và có timeout 15 giây. Không chứa cơ chế tự nâng quyền.
+- Không gọi primitive khi app đang chạy mobile. Phiên root của công cụ có
+  thể lấy base do provider trả và đọc đúng 4 byte header để kiểm chứng.
+  Không nhận địa chỉ tùy ý, không gọi kwrite, không đọc hay sửa game.
+- Sửa xác nhận Apply: phải đúng session đã gửi, đúng revision và giao thức.
+  Game khởi động lại trong lúc Apply sẽ không được đánh dấu thành công.
+- Không dùng nhãn “không tìm thấy game” khi backend chưa có khả năng dò game.
+- Bổ sung XCTest và kiểm thử ABI native trên runner macOS.
+
+CÁCH NHẬN BẢN MỚI
+
+Nếu mã đã được đẩy lên GitHub, vào Actions → lần chạy mới nhất → Artifacts:
+  HeroControl-TIPA-diagnostics
+Giải nén, cài lại HeroControl.tipa qua trình cài đặt đang dùng.
+
+Nếu cần tự đẩy mã từ máy Windows, chạy TỪNG lệnh riêng trong HeroControl:
+  git add .
+  git commit -m "Add Dopamine diagnostics backend"
+  git push
+
+Trong ứng dụng mới:
+  1. Bấm “Xem chẩn đoán kernel” hoặc dấu ba chấm → “Chẩn đoán kernel”.
+  2. Bấm “Kiểm tra ngay”.
+  3. Nếu thấy UID/EUID 501, đó là quyền mobile, không phải root. Có libkrw
+     không đồng nghĩa ứng dụng này có quyền sử dụng provider.
+  4. Bấm “Chuẩn bị file chẩn đoán” → “Chia sẻ file JSON” để gửi kết quả.
+
+KIỂM TRA ROOT TRONG NEWTERM
+
+  1. Trong màn chẩn đoán, bấm “Sao chép lệnh”. Lệnh chứa đúng đường dẫn
+     Tools/hero-kernel-check của bản app đang cài; không tự gõ UUID của app.
+  2. Mở NewTerm (terminal Darwin đã dùng trước đó).
+  3. Chạy su, nhập mật khẩu root do bạn quản lý. Không gửi mật khẩu.
+  4. Chạy id; EUID/UID phải là 0 nếu muốn thực hiện bước đọc kernel.
+  5. Dán lệnh đã sao chép và nhấn Enter.
+  6. Gửi nguyên JSON in ra, hoặc lỗi nếu lệnh không chạy.
+
+Không chạy trực tiếp trong iSH Linux. Nếu app được cài lại, đường dẫn bundle
+có thể đổi: lấy lại lệnh từ màn chẩn đoán của app mới.
+
+CÁCH ĐỌC KẾT QUẢ
+
+library_unavailable:
+  Không nạp được thư viện trong tiến trình hiện tại. Xem loadMessage để
+  phân biệt đường dẫn, sandbox, chữ ký hoặc dependency; không mặc định
+  kết luận gói libkrw chưa cài.
+library_loaded_not_probed:
+  Nạp được ABI nhưng chưa gọi kernel primitive.
+root_helper_required:
+  Đang là mobile; ứng dụng bỏ qua bước đọc, cần kiểm tra bằng terminal root.
+kbase_failed / kread_failed:
+  Provider trả lỗi. Gửi mã lỗi và toàn bộ JSON.
+invalid_kernel_base:
+  Địa chỉ base không đạt kiểm tra; không đọc.
+kernel_read_verified:
+  Đã đọc được header Mach-O 64-bit qua provider. Điều này chỉ xác nhận
+  khả năng đọc kernel trong tiến trình kiểm tra, chưa xác nhận game backend.
+unexpected_kernel_header:
+  API trả thành công nhưng dữ liệu không khớp; không đánh dấu xác minh.
+Exit 124 / thông báo timeout:
+  Provider không hoàn tất trong 15 giây; công cụ tự dừng.
+
+GIỚI HẠN CÒN LẠI
+
+Chưa triển khai IPC đến helper chạy nền, bộ nhận diện tiến trình game,
+đọc đối tượng game theo ASLR/vòng đời, overlay hoặc các hook camera/skin.
+Ứng dụng riêng sẽ có thể bị iOS tạm dừng khi chuyển sang game, nên backend
+chức năng cần kiến trúc thực thi riêng; UI hoặc libkrw đơn lẻ chưa đủ.
+
+Nguồn ABI đã đối chiếu:
+https://github.com/Siguza/libkrw/blob/master/include/libkrw.h
+https://github.com/opa334/Dopamine/blob/3.x/Packages/libkrw-provider/src/main.c

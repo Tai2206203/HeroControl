@@ -1,4 +1,4 @@
-HERO CONTROL 0.1 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
+HERO CONTROL 0.2 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
 
 TRẠNG THÁI BÀN GIAO
 
@@ -6,7 +6,8 @@ TRẠNG THÁI BÀN GIAO
 Reports; lưu cấu hình; xuất chẩn đoán; bộ nạp backend qua C ABI;
 project Xcode, kiểm thử và script đóng gói .tipa.
 
-CHƯA triển khai backend kernel/game, overlay, hook camera/skin hoặc
+Đã thêm backend chẩn đoán libkrw và công cụ terminal root.
+CHƯA triển khai game adapter, overlay, hook camera/skin hoặc
 dịch vụ theo dõi tố cáo. Vì vậy gói build mặc định là ứng dụng điều
 khiển chưa kết nối, CHƯA thay thế được chức năng của menu trong game.
 Nút bật chỉ thay đổi cấu hình đang chuẩn bị; không báo thành công giả.
@@ -18,6 +19,7 @@ Thông tin thiết bị do người dùng cung cấp:
 Máy tạo mã nguồn đang dùng Windows, không có Xcode. Chưa biên dịch
 hay chạy Simulator/iPhone tại đây; chưa có file .tipa được biên dịch
 sẵn. Bản ZIP bàn giao là MÃ NGUỒN, không phải file cài đặt.
+Chi tiết bản 0.2 và cách lấy JSON chẩn đoán: CAP_NHAT_0.2.txt.
 
 A. BUILD TRÊN MAC — KHÔNG CẦN THEOS HAY XCODEGEN
 
@@ -49,8 +51,8 @@ A. BUILD TRÊN MAC — KHÔNG CẦN THEOS HAY XCODEGEN
    Nếu trình cài đặt yêu cầu .ipa, có thể sao chép và đổi phần mở rộng
    sang .ipa; nội dung gói không đổi. Đổi đuôi không tạo thêm quyền.
 
-6. Mở Hero Control. Bản mặc định hiển thị “Chưa kết nối backend”.
-   Đây là trạng thái đúng, không phải lỗi giao diện. Các lựa chọn được
+6. Mở Hero Control. Bản mặc định có backend chẩn đoán, chưa kết nối game.
+   Bấm “Xem chẩn đoán kernel” → “Kiểm tra ngay”. Các lựa chọn được
    lưu để chuẩn bị; Áp dụng chỉ mở khi backend xác nhận đủ khả năng.
 
 B. BUILD TỪ WINDOWS QUA GITHUB ACTIONS
@@ -76,7 +78,7 @@ B. BUILD TỪ WINDOWS QUA GITHUB ACTIONS
 
 4. Khi tác vụ xanh, mở phần Artifacts và tải:
 
-   HeroControl-TIPA-control-ui
+   HeroControl-TIPA-diagnostics
 
    Giải nén artifact để lấy HeroControl.tipa và file SHA-256.
 
@@ -98,7 +100,7 @@ Hoặc:
 Kiểm tra các trường hợp:
   - Bật/tắt công tắc và đóng/mở lại app: lựa chọn được giữ.
   - Camera bị giới hạn trong 1.00–2.30.
-  - Không có backend: Áp dụng bị khóa và không báo đã áp dụng.
+  - Backend chẩn đoán: Áp dụng bị khóa và không báo đã áp dụng.
   - Backend trả thiếu acknowledgement: không báo thành công.
   - Game đổi session: trạng thái áp dụng cũ bị hủy.
   - Skins/Reports không có dữ liệu: hiện trạng thái trống, không dùng
@@ -107,6 +109,8 @@ Kiểm tra các trường hợp:
 D. TÍCH HỢP BACKEND THẬT
 
 Đọc BackendSDK/PROTOCOL.txt và BackendSDK/HeroBackend.h.
+Backend chẩn đoán được đóng gói tự động; muốn thay bằng game adapter thì
+dùng --backend như bên dưới. Công cụ terminal nằm ở Tools/hero-kernel-check.
 Ứng dụng tìm thư viện đúng đường dẫn:
 
    HeroControl.app/Frameworks/HeroBackend.dylib

@@ -71,16 +71,45 @@ final class ControlTests: XCTestCase {
         await store.refresh()
         XCTAssertFalse(store.isApplied)
     }
+
+    @MainActor
+    func testRestartDuringApplyCannotAcknowledgeOldSession() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let backend = TestBackend()
+        let store = ControlStore(directory: directory, backend: backend)
+        await store.refresh()
+        await backend.setAcknowledgement(true)
+        await backend.setRestartDuringApply()
+        await store.apply()
+        XCTAssertFalse(store.isApplied)
+        XCTAssertNil(store.confirmedRevision)
+    }
+
+    func testDiagnosticsSnapshotDecodesWithoutPretendingGameConnection() throws {
+        let json = #"{"protocolVersion":1,"backendName":"diagnostics","connected":false,"gameRunning":false,"supportedKeys":[],"heroes":[],"reports":[],"message":"test","gameInspectionAvailable":false,"diagnostics":{"schemaVersion":1,"timestamp":"test","system":"Darwin","machine":"iPhone11,8","uid":501,"euid":501,"kernelProbeRequested":true,"kernelReadVerified":false,"code":"root_helper_required","summary":"test","checkedPaths":[],"symbolsFound":["kbase","kread"]}}"#
+        let snapshot = try JSONDecoder().decode(BackendSnapshot.self, from: Data(json.utf8))
+        XCTAssertEqual(snapshot.diagnostics?.euid, 501)
+        XCTAssertEqual(snapshot.diagnostics?.code, "root_helper_required")
+        XCTAssertFalse(snapshot.connected)
+        XCTAssertFalse(snapshot.gameInspectionAvailable ?? true)
+    }
 }
 
 private actor TestBackend: BackendClient {
     private var acknowledge = false
     private var session = "test-session-1"
     private var applied: String?
+    private var restartDuringApply = false
     func setAcknowledgement(_ value: Bool) { acknowledge = value }
     func restartGame() { session = "test-session-2"; applied = nil }
+    func setRestartDuringApply() { restartDuringApply = true }
     func send(action: String, revision: String?, settings: ControlSettings?) async throws -> BackendReply {
-        if action == "apply" { applied = acknowledge ? revision : "wrong-revision" }
+        if action == "apply" {
+            if restartDuringApply { session = "new-session-during-apply" }
+            applied = acknowledge ? revision : "wrong-revision"
+        }
         let snapshot = BackendSnapshot(protocolVersion: 1, backendName: "Unit test only", connected: true,
             gameRunning: true, sessionID: session, gameVersion: "test", supportedKeys: Array(ControlSettings().preferenceValues.keys),
             appliedRevision: applied, heroes: [], reports: [], message: "test")

@@ -1,18 +1,18 @@
 Kiểm tra đã thực hiện trong môi trường Windows:
 
-- Cú pháp cả 6 file Swift: tree-sitter-swift không tìm thấy ERROR/missing node.
+- Cú pháp cả 7 file Swift: tree-sitter-swift không tìm thấy ERROR/missing node.
 - Project OpenStep PBX: đọc thành công bằng parser pbxproj, đủ 2 target.
-- 39 object ID trong PBX: duy nhất, không có tham chiếu mất.
+- 41 object ID trong PBX: duy nhất, không có tham chiếu mất.
 - Shared scheme XML: hợp lệ, tham chiếu đúng app target và test target.
 - Info.plist: đọc được bằng plistlib.
 - 13 khóa công tắc và khóa camera: đối chiếu danh sách cấu hình đã phân tích.
 - 3 symbol C ABI: khớp giữa bộ nạp Swift, header và backend ví dụ.
-- Cả 3 script shell: qua bash -n.
+- Cả 4 script shell: qua bash -n.
 
 Chưa thực hiện:
 
 - Xcode type checking/compilation/linking.
-- Chạy 4 bài XCTest trên iPhone Simulator.
+- Chạy 6 bài XCTest trên iPhone Simulator.
 - Chạy ứng dụng trên iPhone XR hoặc thử trình cài đặt của người dùng.
 - Kết nối libkrw/helper và áp dụng chức năng trong game.
 
@@ -20,4 +20,8 @@ Workflow GitHub Actions đã được viết để build và chạy XCTest nhưn
 được đẩy lên repository hay kích hoạt từ phiên làm việc này.
 
 Đây là kiểm tra cấu trúc/cú pháp, không phải bằng chứng rằng app đã build
-hay rằng các chức năng game hoạt động. Bản bàn giao không có kernel backend.
+hay rằng các chức năng game hoạt động. Bản bàn giao có backend chẩn đoán,
+chưa có game adapter.
+
+Bản 0.2: thêm kiểm tra ABI native trên runner macOS qua build-diagnostics.sh.
+Việc nạp dylib/provider và đọc header chỉ được xác minh khi chạy trên thiết bị.

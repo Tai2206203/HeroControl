@@ -19,17 +19,21 @@ if [[ -n "$BACKEND" ]]; then
     [[ -f "$BACKEND" ]] || { echo "Backend does not exist: $BACKEND" >&2; exit 1; }
     BACKEND="$(cd "$(dirname "$BACKEND")" && pwd)/$(basename "$BACKEND")"
     xcrun lipo -verify_arch arm64 "$BACKEND"
-    if xcrun vtool -show-build "$BACKEND" | grep -q 'platform IOSSIMULATOR'; then
+    if xcrun vtool -show-build "$BACKEND" | grep 'platform IOSSIMULATOR' >/dev/null; then
         echo "Simulator dylibs cannot run on an iPhone." >&2; exit 1
     fi
     for SYMBOL in hc_backend_api_version hc_backend_request hc_backend_release; do
-        xcrun nm -gU "$BACKEND" | awk '{print $NF}' | grep -qx "_$SYMBOL" || {
+        xcrun nm -gU "$BACKEND" | awk '{print $NF}' | grep -x "_$SYMBOL" >/dev/null || {
             echo "Missing exported symbol: $SYMBOL" >&2; exit 1;
         }
     done
 fi
 
 mkdir -p "$ROOT/dist"
+if [[ -z "$BACKEND" ]]; then
+    bash "$ROOT/scripts/build-diagnostics.sh"
+    BACKEND="$ROOT/.build/Diagnostics/HeroBackend.dylib"
+fi
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/herocontrol.XXXXXX")"
 trap 'rm -rf -- "$STAGE"' EXIT
 xcodebuild -project "$ROOT/HeroControl.xcodeproj" -scheme HeroControl \
@@ -46,6 +50,12 @@ if [[ -n "$BACKEND" ]]; then
     mkdir -p "$STAGE/Payload/HeroControl.app/Frameworks"
     cp "$BACKEND" "$STAGE/Payload/HeroControl.app/Frameworks/HeroBackend.dylib"
 fi
+if [[ -f "$ROOT/.build/Diagnostics/hero-kernel-check" ]]; then
+    mkdir -p "$STAGE/Payload/HeroControl.app/Tools"
+    cp "$ROOT/.build/Diagnostics/hero-kernel-check" "$STAGE/Payload/HeroControl.app/Tools/hero-kernel-check"
+    chmod 755 "$STAGE/Payload/HeroControl.app/Tools/hero-kernel-check"
+    codesign --force --sign - "$STAGE/Payload/HeroControl.app/Tools/hero-kernel-check"
+fi
 
 # Ad-hoc signatures describe the bundle; the device installer must supply the
 # installation/signing mechanism. This does not grant entitlements or kernel access.
@@ -61,8 +71,5 @@ mv -f "$STAGE/HeroControl.tipa" "$OUTPUT"
 /usr/bin/unzip -t "$OUTPUT"
 /usr/bin/shasum -a 256 "$OUTPUT" > "$ROOT/dist/HeroControl.tipa.sha256"
 printf '\nBuilt: %s\n' "$OUTPUT"
-if [[ -z "$BACKEND" ]]; then
-    printf 'This package contains the control UI only. No kernel/game backend is bundled.\n'
-else
-    printf 'A backend was bundled. Device compatibility and game behavior still require testing.\n'
-fi
+printf 'Backend bundled: %s\n' "$BACKEND"
+printf 'The default diagnostics backend does not implement game functions. Device testing is required.\n'

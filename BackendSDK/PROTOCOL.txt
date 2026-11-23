@@ -1,5 +1,12 @@
 HERO CONTROL BACKEND PROTOCOL v1
 
+Update 0.2: build mặc định đóng gói DiagnosticBackend.m, chỉ hỗ trợ
+status/diagnose và từ chối apply. Đây chưa phải game adapter. Snapshot
+có thêm diagnostics (KernelDiagnostics) và gameInspectionAvailable=false.
+Ứng dụng vẫn chấp nhận backend v1 không có hai trường tùy chọn này.
+Gọi diagnose mới yêu cầu kiểm tra primitive; status polling không gọi
+kbase/kread. Với EUID khác 0, diagnose cũng bỏ qua primitive.
+
 ABI C: HeroBackend.h. Dylib được nạp trong ứng dụng UI; không tự có
 quyền kernel/root. Dylib thật có thể làm client của một helper đã được
 cài đặt và cấp quyền trong môi trường jailbreak.

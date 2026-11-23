@@ -84,6 +84,34 @@ struct BackendSnapshot: Codable {
     let heroes: [HeroChoice]
     let reports: [ReportRecord]
     let message: String
+    var diagnostics: KernelDiagnostics? = nil
+    var gameInspectionAvailable: Bool? = nil
+}
+
+struct KernelLibraryCheck: Codable {
+    let path: String
+    let visible: Bool
+    let status: Int
+    let loadMessage: String?
+}
+
+struct KernelDiagnostics: Codable {
+    let schemaVersion: Int
+    let timestamp: String
+    let system: String
+    let machine: String
+    let uid: UInt32
+    let euid: UInt32
+    let kernelProbeRequested: Bool
+    let kernelReadVerified: Bool
+    let code: String
+    let summary: String
+    let checkedPaths: [KernelLibraryCheck]
+    let loadedLibrary: String?
+    let symbolsFound: [String]
+    let kernelBaseStatus: Int?
+    let kernelReadStatus: Int?
+    let headerMagic: String?
 }
 
 struct BackendRequest: Encodable {
