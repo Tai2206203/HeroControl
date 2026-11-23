@@ -16,8 +16,8 @@
   },
   {
     "path": "BackendSDK/DiagnosticBackend.m",
-    "bytes": 25498,
-    "sha256": "74da57bdecd59c6106af7744a95ce4b04cb664a226d279a3757282940245948a"
+    "bytes": 30462,
+    "sha256": "eb8531386daf0028cc1f64c3dd451291cb4be1a3a91660e67b7ed7fccca60e4b"
   },
   {
     "path": "BackendSDK/HeroBackend.h",
@@ -55,6 +55,11 @@
     "sha256": "6e2c1cdde0766f6b468e9349512c9ba00df28c3eab7bbd7a7e4526951ecc337c"
   },
   {
+    "path": "CAP_NHAT_0.3.1.txt",
+    "bytes": 1668,
+    "sha256": "4576379149d392e07768f389b557a9283aadc30d0a6a51114ff50d4a037bce77"
+  },
+  {
     "path": "CAP_NHAT_0.3.txt",
     "bytes": 2941,
     "sha256": "17d9496d250e6028e355bc9ad08458316f034560c0ca03f7cd206f16c8bfe039"
@@ -77,17 +82,17 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1049,
-    "sha256": "7603a3e9394addbde9eed1b9bbfeca37bd1a7b52b9d407a0a2b46c38d8f43b23"
+    "sha256": "cd81bad2c355684705e44431895b852a5c0ce2b134b16bc75b93eb0fe52b909c"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
-    "bytes": 8651,
-    "sha256": "1e76edb1f8e0982c874d5694fe83034f80dc9090fe46b81b4444f1eb9377a239"
+    "bytes": 9037,
+    "sha256": "e48e9a847d7e54661a76aa28f1a60c31c3ed6c60c94ca50d3f7b321dfb750486"
   },
   {
     "path": "HeroControl/Models.swift",
-    "bytes": 5271,
-    "sha256": "d6b82759169e3d79c8097c8e741ce6ec1f7fb4c255ee34bb89481a0fb80539f7"
+    "bytes": 5486,
+    "sha256": "a33fb46f346c5db02da6aea9ddba7d7cdb015c2ab4efc36375543e6fdb381440"
   },
   {
     "path": "HeroControl/NativeBackend.swift",
@@ -97,7 +102,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9121,
-    "sha256": "76e0a229da49dea0e24ef65082b3ea45b462ed66cc7455e358a7821ab0e84636"
+    "sha256": "0a70c772c77bfe7fb17967419e88318c6d8019877cb6e28a65f3870605476d1d"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -116,8 +121,8 @@
   },
   {
     "path": "scripts/build-diagnostics.sh",
-    "bytes": 1910,
-    "sha256": "34491b9ba06fe90ed657b7c2002acf0b6739900ad450ea22bc4f3838bf9bf6d9"
+    "bytes": 1986,
+    "sha256": "16956ccbebc99330a557aa2c68972a8c529fc211442c222c6fcc6fd1829179c9"
   },
   {
     "path": "scripts/build-example-backend.sh",
@@ -130,9 +135,14 @@
     "sha256": "a86f8af65432c2864bb0300311a2e231ea6f2bd68eeda2328861dc460dee9c06"
   },
   {
+    "path": "scripts/check-helper-fds.py",
+    "bytes": 621,
+    "sha256": "8a81b3d82f182560768749da5b1b8cbab0f27c29e548d6de5f9de4d1bcbcd2e6"
+  },
+  {
     "path": "scripts/generate-project.py",
     "bytes": 8730,
-    "sha256": "7108666cba950a380c4f7b0ef7e0c5d7fd1342c3f1e78b46ed1ce3f2d7654030"
+    "sha256": "c8f978d1f07572f0988c508e0cd74792d9044125ab943a27eea25e8ba700e56f"
   },
   {
     "path": "scripts/native-contract-check.swift",
@@ -181,7 +191,7 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 2808,
-    "sha256": "4e22aa0ba3cb4d4c8c2d3316728088e05aa227dc0aee3a9b542e9e2b44f7f2dd"
+    "bytes": 3072,
+    "sha256": "8e1193cda3be1a4fb5385abf3f5d374a5b500190dd3d4843a646acf21c55d7b2"
   }
 ]

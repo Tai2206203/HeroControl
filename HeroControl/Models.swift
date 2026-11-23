@@ -125,6 +125,12 @@ struct KernelDiagnostics: Codable {
     let helperExitStatus: Int?
     let helperSignal: Int?
     let helperError: String?
+    let helperCollectedFDs: [Int]?
+    let helperStdoutByteCount: Int?
+    let helperStderrByteCount: Int?
+    let helperStdoutPreview: String?
+    let helperDecodeError: String?
+    let helperReportedEUID: UInt32?
 }
 
 struct BackendRequest: Encodable {

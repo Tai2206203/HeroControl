@@ -56,6 +56,9 @@ struct KernelDiagnosticsView: View {
                             if let value = report.helperExitStatus { LabeledContent("Exit status", value: String(value)) }
                             if let value = report.helperSignal { LabeledContent("Signal", value: String(value)) }
                             if let text = report.helperError { Text(text).font(.caption).textSelection(.enabled) }
+                            if let value = report.helperStdoutByteCount { LabeledContent("Stdout bytes", value: String(value)) }
+                            if let value = report.helperReportedEUID { LabeledContent("EUID helper trả về", value: String(value)) }
+                            if let text = report.helperDecodeError { Text(text).font(.caption).textSelection(.enabled) }
                         }
                     }
                     Section("Đường dẫn đã kiểm tra") {

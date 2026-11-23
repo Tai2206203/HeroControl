@@ -23,6 +23,13 @@ static HCKernelBase HCBaseFunction;
 static HCKernelRead HCReadFunction;
 static NSString *HCLoadedPath;
 static NSDictionary *HCSessionReport;
+static BOOL HCTraceStagesEnabled;
+
+static void HCStage(const char *stage) {
+    if (!HCTraceStagesEnabled) return;
+    fprintf(stderr, "HC_STAGE %s uid=%u euid=%u\n", stage, (unsigned)getuid(), (unsigned)geteuid());
+    fflush(stderr);
+}
 
 static NSDictionary *HCEntitlements(void) {
     typedef CFTypeRef (*CreateTask)(CFAllocatorRef);
@@ -187,7 +194,9 @@ static NSDictionary *HCReport(BOOL requestRead) {
         report[@"summary"] = @"Ứng dụng đang chạy với quyền mobile. Bộ kiểm tra không tự nâng quyền; cần chạy công cụ chẩn đoán trong terminal root để xác minh provider.";
     } else {
         uint64_t base = 0;
+        HCStage("before_kbase");
         int result = baseFunction(&base);
+        HCStage("after_kbase");
         report[@"kernelBaseStatus"] = @(result);
         if (result != 0) {
             report[@"code"] = @"kbase_failed";
@@ -199,7 +208,9 @@ static NSDictionary *HCReport(BOOL requestRead) {
             // The only read performed by this utility: four bytes at the kernel
             // base returned by the installed provider. No caller-supplied address.
             uint32_t magic = 0;
+            HCStage("before_kread");
             int readResult = readFunction(base, &magic, sizeof(magic));
+            HCStage("after_kread");
             report[@"kernelReadStatus"] = @(readResult);
             if (readResult != 0) {
                 report[@"code"] = @"kread_failed";
@@ -240,7 +251,20 @@ static int HCTemporaryFD(void) {
     if (descriptor >= 0) {
         // Keep only the file descriptor; no diagnostic output remains on disk.
         unlink(name);
-        fcntl(descriptor, F_SETFD, FD_CLOEXEC);
+        // UIKit processes need not have fd 0/1/2 open. Never use one of those
+        // as a source: dup2/addclose actions would otherwise close/clobber stdout.
+        if (descriptor < 3) {
+            int promoted = fcntl(descriptor, F_DUPFD_CLOEXEC, 3);
+            int savedError = errno;
+            close(descriptor);
+            descriptor = promoted;
+            errno = savedError;
+        } else if (fcntl(descriptor, F_SETFD, FD_CLOEXEC) != 0) {
+            int savedError = errno;
+            close(descriptor);
+            descriptor = -1;
+            errno = savedError;
+        }
     }
     free(name);
     return descriptor;
@@ -295,6 +319,7 @@ static NSDictionary *HCDiagnose(void) {
         return fallback;
     }
     posix_spawn_file_actions_t actions;
+    fallback[@"helperCollectedFDs"] = @[@(output), @(errors)];
     result = posix_spawn_file_actions_init(&actions);
     BOOL actionsReady = result == 0;
     if (!result) result = posix_spawn_file_actions_adddup2(&actions, output, STDOUT_FILENO);
@@ -336,6 +361,13 @@ static NSDictionary *HCDiagnose(void) {
     NSData *stderrData = HCReadOutput(errors, 16 * 1024);
     close(output); close(errors);
     NSString *errorText = stderrData ? [[NSString alloc] initWithData:stderrData encoding:NSUTF8StringEncoding] : nil;
+    if (stdoutData) {
+        fallback[@"helperStdoutByteCount"] = @(stdoutData.length);
+        NSData *preview = [stdoutData subdataWithRange:NSMakeRange(0, MIN(stdoutData.length, 16 * 1024))];
+        NSString *text = [[NSString alloc] initWithData:preview encoding:NSUTF8StringEncoding];
+        if (text) fallback[@"helperStdoutPreview"] = text;
+    }
+    if (stderrData) fallback[@"helperStderrByteCount"] = @(stderrData.length);
     fallback[@"helperStage"] = completed ? @"decode" : @"timeout";
     fallback[@"helperExitStatus"] = @(WIFEXITED(status) ? WEXITSTATUS(status) : -1);
     if (WIFSIGNALED(status)) fallback[@"helperSignal"] = @(WTERMSIG(status));
@@ -345,11 +377,29 @@ static NSDictionary *HCDiagnose(void) {
         fallback[@"summary"] = @"Helper không hoàn tất trong 20 giây và đã được dừng.";
         return fallback;
     }
-    id decoded = stdoutData ? [NSJSONSerialization JSONObjectWithData:stdoutData options:0 error:NULL] : nil;
+    if (!stdoutData) {
+        fallback[@"code"] = @"helper_output_unreadable";
+        fallback[@"summary"] = @"Không đọc được đầu ra helper trong giới hạn cho phép; không coi là JSON trống.";
+        return fallback;
+    }
+    if (!stdoutData.length) {
+        fallback[@"code"] = @"helper_empty_output";
+        fallback[@"summary"] = @"Helper kết thúc nhưng không có stdout hợp lệ. Xem helperCollectedFDs, helperExitStatus và helperError.";
+        return fallback;
+    }
+    NSError *decodeError = nil;
+    id decoded = [NSJSONSerialization JSONObjectWithData:stdoutData options:0 error:&decodeError];
+    if (decodeError) fallback[@"helperDecodeError"] = decodeError.localizedDescription;
     if (![decoded isKindOfClass:NSDictionary.class] || ![decoded[@"schemaVersion"] isEqual:@1] ||
-        ![decoded[@"code"] isKindOfClass:NSString.class] || ![decoded[@"euid"] isEqual:@0]) {
+        ![decoded[@"code"] isKindOfClass:NSString.class]) {
         fallback[@"code"] = @"helper_invalid_response";
         fallback[@"summary"] = @"Helper chưa trả được báo cáo root hợp lệ. Xem helperExitStatus/helperError.";
+        return fallback;
+    }
+    if (![decoded[@"euid"] isEqual:@0]) {
+        fallback[@"code"] = @"helper_not_root";
+        fallback[@"summary"] = @"Helper trả JSON nhưng không có EUID 0; chưa thể coi persona đã cấp quyền root.";
+        if ([decoded[@"euid"] isKindOfClass:NSNumber.class]) fallback[@"helperReportedEUID"] = decoded[@"euid"];
         return fallback;
     }
     NSMutableDictionary *report = [decoded mutableCopy];
@@ -358,6 +408,9 @@ static NSDictionary *HCDiagnose(void) {
     report[@"callerEntitlements"] = fallback[@"callerEntitlements"];
     report[@"helperStage"] = @"complete"; report[@"helperSpawnStatus"] = @0;
     report[@"helperExitStatus"] = fallback[@"helperExitStatus"];
+    report[@"helperCollectedFDs"] = fallback[@"helperCollectedFDs"];
+    report[@"helperStdoutByteCount"] = fallback[@"helperStdoutByteCount"];
+    if (stderrData) report[@"helperStderrByteCount"] = @(stderrData.length);
     if (errorText.length) report[@"helperError"] = errorText;
     return report;
 #else
@@ -398,7 +451,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         NSDictionary *report = HCSessionReport;
         NSString *message = apply ? @"Chưa có game adapter; cấu hình chưa được áp dụng." : report[@"summary"];
         NSDictionary *snapshot = @{
-            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.3.0",
+            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.3.1",
             @"connected": @NO, @"gameRunning": @NO, @"gameInspectionAvailable": @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
         };
@@ -410,6 +463,34 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
 __attribute__((visibility("default"))) void hc_backend_release(const char *response_json) { free((void *)response_json); }
 
 #ifdef HC_DIAGNOSTIC_CLI
+// The runner invokes this in an isolated process with fd 0/1/2 closed. It
+// exercises the actual temporary-fd allocator and dup2/close collector actions.
+static int HCFDRegression(const char *executable) {
+    close(STDIN_FILENO); close(STDOUT_FILENO); close(STDERR_FILENO);
+    int out = HCTemporaryFD(), err = HCTemporaryFD();
+    if (out < 3 || err < 3 || out == err) return 31;
+    posix_spawn_file_actions_t actions;
+    if (posix_spawn_file_actions_init(&actions)) return 32;
+    int result = posix_spawn_file_actions_adddup2(&actions, out, STDOUT_FILENO);
+    if (!result) result = posix_spawn_file_actions_adddup2(&actions, err, STDERR_FILENO);
+    if (!result) result = posix_spawn_file_actions_addclose(&actions, out);
+    if (!result) result = posix_spawn_file_actions_addclose(&actions, err);
+    char *args[] = {(char *)executable, "--emit-fd-fixture", NULL};
+    char *env[] = {"PATH=/usr/bin:/bin", NULL};
+    pid_t child = -1;
+    if (!result) result = posix_spawn(&child, executable, &actions, NULL, args, env);
+    posix_spawn_file_actions_destroy(&actions);
+    if (result) return 33;
+    int status = 0;
+    pid_t waited;
+    do { waited = waitpid(child, &status, 0); } while (waited < 0 && errno == EINTR);
+    NSData *outData = HCReadOutput(out, 4096), *errData = HCReadOutput(err, 4096);
+    close(out); close(err);
+    if (waited != child || !WIFEXITED(status) || WEXITSTATUS(status)) return 34;
+    NSDictionary *value = outData ? [NSJSONSerialization JSONObjectWithData:outData options:0 error:NULL] : nil;
+    NSString *errorText = errData ? [[NSString alloc] initWithData:errData encoding:NSUTF8StringEncoding] : nil;
+    return [value[@"fixture"] isEqual:@YES] && [errorText isEqual:@"fixture-stderr\n"] ? 0 : 35;
+}
 static BOOL HCIsJSONBoolean(id value) {
     return [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
 }
@@ -453,6 +534,12 @@ static int HCSelfTest(void) {
 }
 int main(int argc, char **argv) {
     @autoreleasepool {
+        if (argc == 2 && strcmp(argv[1], "--emit-fd-fixture") == 0) {
+            fputs("{\"fixture\":true}\n", stdout); fflush(stdout);
+            fputs("fixture-stderr\n", stderr); fflush(stderr);
+            return 0;
+        }
+        if (argc == 2 && strcmp(argv[1], "--fd-self-test") == 0) return HCFDRegression(argv[0]);
         if (argc == 2 && strcmp(argv[1], "--self-test") == 0) return HCSelfTest();
         if (argc != 2 || (strcmp(argv[1], "--inspect") != 0 && strcmp(argv[1], "--kernel-read") != 0)) {
             fprintf(stderr, "Usage: hero-kernel-check --inspect | --kernel-read\n");
@@ -460,11 +547,17 @@ int main(int argc, char **argv) {
         }
         signal(SIGALRM, HCTimeout);
         alarm(15);
+        HCTraceStagesEnabled = strcmp(argv[1], "--kernel-read") == 0;
+        HCStage("start");
         NSDictionary *report = HCReport(strcmp(argv[1], "--kernel-read") == 0);
+        HCStage("report_ready");
         alarm(0);
         NSData *data = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:NULL];
         if (!data) return 1;
-        fwrite(data.bytes, 1, data.length, stdout); putchar('\n');
+        if (fwrite(data.bytes, 1, data.length, stdout) != data.length || putchar('\n') == EOF || fflush(stdout)) {
+            fprintf(stderr, "HC_STAGE output_failed errno=%d\n", errno); fflush(stderr);
+            return 74;
+        }
         return strcmp(argv[1], "--kernel-read") == 0 && ![report[@"kernelReadVerified"] boolValue] ? 2 : 0;
     }
 }

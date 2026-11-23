@@ -1,0 +1,26 @@
+HERO CONTROL 0.3.1 — THU STDOUT/STDERR CỦA HELPER
+
+Log 0.3.0 đã xác nhận nạp libkrw thành công và nhìn thấy provider.
+Chưa xác nhận đọc kernel: helper trong app exit 0 nhưng báo cáo không
+hợp lệ; chạy trực tiếp ở terminal mobile chỉ trả root_helper_required.
+
+Đã tìm thấy lỗi có thể làm mất đầu ra: mkstemp có thể trả fd 0/1/2 trong
+tiến trình UIKit không có sẵn stdio. Các action dup2 rồi addclose nguồn
+của bản cũ có thể đóng hoặc ghi đè stdout/stderr của tiến trình con.
+
+Sửa:
+- Đẩy mọi fd thu kết quả lên >= 3 trước khi cấu hình posix_spawn.
+- Kiểm tra kết quả fcntl, giữ CLOEXEC và flush đầu ra helper tường minh.
+- Thêm kiểm thử native chạy trong tiến trình bị đóng fd 0/1/2, xác minh
+  thu riêng JSON stdout và marker stderr bằng đúng bộ thu production.
+- Ghi số byte stdout/stderr, preview, lỗi JSON, descriptor và EUID báo về.
+- Phân biệt helper_empty_output, helper_not_root và helper_invalid_response.
+- Ghi các mốc start/before_kbase/after_kbase/before_kread/after_kread vào
+  stderr để phát hiện provider dừng trước khi kịp trả JSON.
+
+Không suy luận root/kernel thành công từ exit 0; phải có báo cáo hợp lệ
+và header được xác minh. Không nới lỏng điều kiện kiểm tra quyền.
+
+Cập nhật: git push -> bản build mới qua workflow/Telegram đã cấu hình.
+Cài 0.3.1 build 7, mở Chẩn đoán kernel -> Kiểm tra ngay -> gửi JSON mới.
+Chưa có game adapter; Telegram dùng lại secrets hiện có, không cần nhập lại.

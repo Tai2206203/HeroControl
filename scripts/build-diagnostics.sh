@@ -19,6 +19,7 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -DHC_DIAGNOSTIC_CLI -Wall -Wextra -framework Foundation -framework CoreFoundation -framework Security \
     "$SOURCE" -o "$OUTPUT/diagnostic-host-tests"
 "$OUTPUT/diagnostic-host-tests" --self-test
+python3 "$ROOT/scripts/check-helper-fds.py" "$OUTPUT/diagnostic-host-tests"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -dynamiclib -fvisibility=hidden -Wall -Wextra \
     -framework Foundation -framework CoreFoundation -framework Security \
