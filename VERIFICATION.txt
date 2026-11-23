@@ -1,4 +1,11 @@
-HERO CONTROL 0.4.0 — BUILD 9
+HERO CONTROL 0.4.1 — BUILD 10
+
+Sửa lỗi SDK 18.5 do selector location/orientation gọi qua id không rõ kiểu:
+định kiểu protocol cho tất cả receiver của API riêng trong overlay.
+Đã kiểm tra lại cú pháp Objective-C, metadata app/overlay và Python.
+Biên dịch với SDK thực tế cần chạy lại GitHub Actions trên commit mới.
+
+KIỂM TRA ĐỢT OVERLAY 0.4.0 (BUILD 9):
 
 Kiểm tra Windows cho thay đổi overlay:
 - 43 PBX object ID, shared scheme và nguồn Swift mới được liên kết.

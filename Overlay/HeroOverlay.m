@@ -24,20 +24,33 @@
 @interface UIWindow (HCPrivate)
 - (unsigned int)_contextId;
 @end
-@interface NSObject (HCPrivate)
-+ (id)representationWithHIDEvent:(CFTypeRef)event hidStreamIdentifier:(NSString *)identifier;
+// Scope private selectors to their actual receiver contracts. Declaring them
+// on NSObject makes calls through `id` ambiguous with unrelated SDK APIs such
+// as NSTextAttachment.location and CIRAWFilter.orientation under ARC.
+@protocol HCAXEventPath <NSObject>
+- (NSInteger)pathIdentity;
+@end
+@protocol HCAXEventHand <NSObject>
+- (NSArray<id<HCAXEventPath>> *)paths;
+@end
+@protocol HCAXEventRepresentation <NSObject>
++ (instancetype)representationWithHIDEvent:(CFTypeRef)event hidStreamIdentifier:(NSString *)identifier;
 - (CGPoint)location;
 - (BOOL)isTouchDown;
 - (BOOL)isMove;
 - (BOOL)isCancel;
 - (BOOL)isLift;
 - (BOOL)isInRangeLift;
-- (id)handInfo;
-- (NSArray *)paths;
-- (NSInteger)pathIdentity;
-- (void)setHandler:(id)handler;
-- (long long)activeInterfaceOrientation;
+- (id<HCAXEventHand>)handInfo;
+@end
+@protocol HCOrientationUpdate <NSObject>
 - (long long)orientation;
+@end
+@protocol HCOrientationObserving <NSObject>
+- (void)setHandler:(void (^)(id<HCOrientationUpdate> update))handler;
+- (long long)activeInterfaceOrientation;
+@end
+@protocol HCWindowHosting <NSObject>
 - (void)registerWindowWithContextID:(unsigned int)context atLevel:(double)level;
 @end
 
@@ -57,7 +70,7 @@ static void HCState(void) {
         @"pid": @(getpid()), @"euid": @(geteuid()), @"heartbeat": @(NSProcessInfo.processInfo.systemUptime),
         @"session": HCSession, @"menuOpen": @(HCMenuOpen), @"orientation": @(HCOrientation),
         @"touchEvents": @(HCTouchCount), @"hiddenForLock": @(HCLocked),
-        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.4.0"};
+        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.4.1"};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     [data writeToFile:path options:NSDataWritingAtomic error:NULL];
@@ -299,7 +312,8 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
 
 static HCOverlayCanvas *HCCanvas;
 static HCOverlayWindow *HCWindow;
-static id HCHost, HCOrientationObserver;
+static id<HCWindowHosting> HCHost;
+static id<HCOrientationObserving> HCOrientationObserver;
 
 static void HCRotate(NSInteger orientation) {
     if (orientation < 1 || orientation > 4) return;
@@ -354,7 +368,7 @@ static void HCUpdateLock(void) {
     if (![HCOrientationObserver respondsToSelector:@selector(setHandler:)])
         HCStop(@"Không có API theo dõi hướng màn hình cho menu nổi.", YES);
     if ([HCOrientationObserver respondsToSelector:@selector(setHandler:)]) {
-        [HCOrientationObserver setHandler:^(id update) {
+        [HCOrientationObserver setHandler:^(id<HCOrientationUpdate> update) {
             NSInteger orientation = [update orientation];
             dispatch_async(dispatch_get_main_queue(), ^{ HCRotate(orientation); });
         }];
@@ -362,13 +376,14 @@ static void HCUpdateLock(void) {
             HCRotate([HCOrientationObserver activeInterfaceOrientation]);
     }
     int stopToken, toggleToken, lockToken, springboardToken;
-    notify_register_dispatch(HCOverlayNotification(HCDirectory, @"stop").UTF8String, &stopToken, dispatch_get_main_queue(), ^(int token) { HCStop(@"Đã tắt nút nổi.", NO); });
-    notify_register_dispatch(HCOverlayNotification(HCDirectory, @"toggle").UTF8String, &toggleToken, dispatch_get_main_queue(), ^(int token) { [HCCanvas toggleMenu]; });
-    notify_register_dispatch("com.apple.springboard.lockstate", &lockToken, dispatch_get_main_queue(), ^(int token) { HCUpdateLock(); });
-    notify_register_dispatch("SBSpringBoardDidLaunchNotification", &springboardToken, dispatch_get_main_queue(), ^(int token) { HCStop(@"SpringBoard đã khởi động lại. Mở Hero Control để bật nút nổi.", NO); });
+    notify_register_dispatch(HCOverlayNotification(HCDirectory, @"stop").UTF8String, &stopToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCStop(@"Đã tắt nút nổi.", NO); });
+    notify_register_dispatch(HCOverlayNotification(HCDirectory, @"toggle").UTF8String, &toggleToken, dispatch_get_main_queue(), ^(int token) { (void)token; [HCCanvas toggleMenu]; });
+    notify_register_dispatch("com.apple.springboard.lockstate", &lockToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCUpdateLock(); });
+    notify_register_dispatch("SBSpringBoardDidLaunchNotification", &springboardToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCStop(@"SpringBoard đã khởi động lại. Mở Hero Control để bật nút nổi.", NO); });
     HCPhase = @"visible"; HCMessage = @"Đã đăng ký nút nổi Hero Control. Chạm để mở/thu menu; kéo để di chuyển.";
     HCUpdateLock(); HCState();
     self.timer = [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer) {
+        (void)timer;
         if (access(HCExecutable.fileSystemRepresentation, X_OK) || !HCOverlayPathsValid(HCDirectory, HCProfile))
             HCStop(@"Gói ứng dụng/cấu hình không còn tồn tại; overlay tự dừng.", NO);
         // The profile is shared with the app. Do not replace an in-progress drag.
@@ -380,12 +395,13 @@ static void HCUpdateLock(void) {
 @end
 
 static void HCHIDCallback(void *target, void *refcon, CFTypeRef service, CFTypeRef event) {
+    (void)target; (void)refcon; (void)service;
     // Monitor only: no global touch injection. Dispatch our own canvas actions
     // only for a finger that begins inside the bubble/panel; ignore other apps.
     @autoreleasepool {
         @try {
-            Class representation = NSClassFromString(@"AXEventRepresentation");
-            id rep = [representation representationWithHIDEvent:event hidStreamIdentifier:@"UIApplicationEvents"];
+            Class<HCAXEventRepresentation> representation = (Class<HCAXEventRepresentation>)NSClassFromString(@"AXEventRepresentation");
+            id<HCAXEventRepresentation> rep = [representation representationWithHIDEvent:event hidStreamIdentifier:@"UIApplicationEvents"];
             if (!rep) return;
             UITouchPhase phase;
             if ([rep isTouchDown]) phase = UITouchPhaseBegan;
@@ -394,7 +410,7 @@ static void HCHIDCallback(void *target, void *refcon, CFTypeRef service, CFTypeR
             else if ([rep isLift] || [rep isInRangeLift]) phase = UITouchPhaseEnded;
             else return;
             CGPoint point = [rep location];
-            id path = [[[rep handInfo] paths] firstObject];
+            id<HCAXEventPath> path = [[[rep handInfo] paths] firstObject];
             NSInteger pointer = path ? [path pathIdentity] : -1;
             if (pointer < 1) return;
             dispatch_async(dispatch_get_main_queue(), ^{

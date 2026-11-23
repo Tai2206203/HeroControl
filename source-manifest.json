@@ -75,6 +75,11 @@
     "sha256": "427708285493887c3ef3545c870d1c1404be48c0c847b11b4124ef8c6bff9086"
   },
   {
+    "path": "CAP_NHAT_0.4.1.txt",
+    "bytes": 1758,
+    "sha256": "34a7d4e36b8fd8263dcf35b5ddfc2a02bdf680765aeb88c5a3cfeece92b64545"
+  },
+  {
     "path": "HeroControl/ContentView.swift",
     "bytes": 14492,
     "sha256": "e1f1fb5856cb7662b19f10db90c85364b574579857c5cd248b5639c5ff384a0f"
@@ -91,8 +96,8 @@
   },
   {
     "path": "HeroControl/Info.plist",
-    "bytes": 1049,
-    "sha256": "e1fd878cd7c239bfa0f2758d864404d08a14579c24ba5612ed192d16f02968b8"
+    "bytes": 1050,
+    "sha256": "a3cfcfa8e1b4450f2c165cc854e4e8840a5397d79d93885bc5b54ddcdf775af6"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -116,8 +121,8 @@
   },
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
-    "bytes": 9415,
-    "sha256": "2ff80e711e0c29dde487f62878303f89f55ecc35db1230e7b346032f9952cb8e"
+    "bytes": 9417,
+    "sha256": "ea691d1f2546a6b8df859c0565bb76ef8540bba07dc9d44e801787d59982fe25"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -131,18 +136,18 @@
   },
   {
     "path": "HUONG_DAN_BUILD.txt",
-    "bytes": 8413,
-    "sha256": "dd549c7eebb10d3a636d67a07ee2d27a22fe64627c56e9c0f0cf29d65436a8e0"
+    "bytes": 8480,
+    "sha256": "33d9c6df40a60afd52d30b8f6b78e092aaa9ef6e36234ed65634169a5a932ffa"
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 25534,
-    "sha256": "aa2afd689e82d113255a163973b0bd076b1b41b5f59f2a8c5d799d749ccef6ed"
+    "bytes": 26363,
+    "sha256": "c71d41834b36d641ee7c7362b3a1107e0f17f3572777d2a1b966fe19fb21689f"
   },
   {
     "path": "Overlay/Info.plist",
-    "bytes": 838,
-    "sha256": "98a60b29ff42013376fd7969e5a49a2f48f68e2d92b2910b1b3582e96a1a1263"
+    "bytes": 839,
+    "sha256": "dd73cf9d56e22719813a13fe0a4de7a4d63642d0ae311c1ab63648b90a753ffe"
   },
   {
     "path": "Overlay/OverlayBridge.m",
@@ -191,8 +196,8 @@
   },
   {
     "path": "scripts/generate-project.py",
-    "bytes": 8730,
-    "sha256": "03920cb0c4272022fda66b91c4bad43542420d887b7c165467a3d327ac976208"
+    "bytes": 8731,
+    "sha256": "e93e2358187ab5a76f83a4322c504adaeee1b98a78e6d3ce2b1ba528a71df9d3"
   },
   {
     "path": "scripts/native-contract-check.swift",
@@ -261,7 +266,7 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 4677,
-    "sha256": "97af8206275f4f436c1991573df50a05aab1b3cfcfbd0f3c6365e79f357620cd"
+    "bytes": 5063,
+    "sha256": "7b84f50025d19d46bd26aff9c0a97521b359c541e849d65e5f5b5d8e0a035b58"
   }
 ]

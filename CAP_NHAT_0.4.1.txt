@@ -1,0 +1,33 @@
+HERO CONTROL 0.4.1 — BUILD 10 — SỬA LỖI BIÊN DỊCH OVERLAY
+
+Log Xcode 16.4 / iPhoneOS SDK 18.5 đã xác định lỗi tại các lệnh gọi
+orientation và location qua biến id: khai báo category trên NSObject
+trùng tên với nhiều API UIKit/CoreImage có kiểu trả về khác nhau.
+
+Đã bỏ category NSObject, thay bằng các protocol riêng cho đối tượng
+AX event, hand, path, orientation update/observer và window hosting.
+Các biến receiver và tham số block được định kiểu theo protocol,
+để Clang biết chính xác location trả CGPoint, orientation trả long long.
+Các tham số callback không dùng được đánh dấu rõ để bỏ cảnh báo overlay.
+
+Các cảnh báo unused function HCReadOutput/HCTemporaryFD trong bản host
+chẩn đoán không phải nguyên nhân dừng build. Không thay đổi phần kernel.
+
+BUILD LẠI TỪ THƯ MỤC ĐANG LÀM VIỆC
+
+Mở CMD, chạy từng dòng:
+
+    cd /d C:\Users\Admin\Downloads\HeroControl
+    git push origin main
+
+Thay đổi đã được commit cục bộ trước bàn giao. Không bấm Re-run jobs
+của lượt lỗi cũ: thao tác đó vẫn dùng commit cũ. Vào Actions và chọn
+lượt mới do git push tạo; hoặc Run workflow với nhánh main sau push.
+
+Khi toàn bộ bước xanh, tải artifact HeroControl-TIPA-diagnostics hoặc
+lấy file bot Telegram gửi nếu các secret đã thiết lập. Cài .tipa mới,
+kiểm tra phiên bản 0.4.1 build 10. Các bước thử nút nổi trên iPhone ở
+CAP_NHAT_0.4.0.txt vẫn áp dụng.
+
+Máy Windows đã kiểm tra cú pháp/project/Python. Chưa có Xcode tại đây
+để xác nhận toàn bộ quá trình biên dịch và chạy trên thiết bị.
