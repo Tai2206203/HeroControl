@@ -20,4 +20,7 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -dynamiclib -fvisibility=hidden -framework Foundation \
     "$ROOT/Overlay/OverlayBridge.m" -o "$OUTPUT/overlay-host.dylib"
 python3 "$ROOT/scripts/check-overlay-bridge.py" "$OUTPUT/overlay-host.dylib"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/overlay-lock-check.c" -o "$OUTPUT/overlay-lock-check"
+python3 "$ROOT/scripts/check-overlay-lock.py" "$OUTPUT/overlay-lock-check"
 printf 'Built independent Hero Control overlay: %s\n' "$OUTPUT"

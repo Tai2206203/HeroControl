@@ -85,6 +85,11 @@
     "sha256": "37f88629c175980f3b99a81326058b1c7075c0abfd3c71b432e1d4152a928d82"
   },
   {
+    "path": "CAP_NHAT_0.4.3.txt",
+    "bytes": 2510,
+    "sha256": "5fa5a16219706e80450b43d344122d6b89484bcb3e26a9f6a900dc60bac8bffb"
+  },
+  {
     "path": "HeroControl/ContentView.swift",
     "bytes": 14492,
     "sha256": "e1f1fb5856cb7662b19f10db90c85364b574579857c5cd248b5639c5ff384a0f"
@@ -102,7 +107,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1050,
-    "sha256": "44dae6dbf6d259cc09a1147b9d0de7ebc47eb182cf8c0098873e99d9516ae849"
+    "sha256": "79020fd78eb7bfc6b9574665ef4e1ebbc65a62d5d9f39c81ce62bb647db4e61d"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -127,7 +132,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9417,
-    "sha256": "3662d629b55fdb2bbdcc677222d62243296d10442959734860a98e05b794f9e3"
+    "sha256": "ca71eba6b946872901444cbf3eb3e17fdb663a53534f81085f5adeb5c221f1db"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -142,27 +147,32 @@
   {
     "path": "HUONG_DAN_BUILD.txt",
     "bytes": 8308,
-    "sha256": "f63498f0711ce71652c63d5db7cb6f7bfa4f68d3c1632b809c3314250b7480ba"
+    "sha256": "612342b998f2a2d08d6a3c6633db262ab0922b43d7a02d61f8ac51a798c061eb"
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 28342,
-    "sha256": "391ff880d2c1a6a011062246ee74cdd753eab48334fe5149f0bb2e79a6337591"
+    "bytes": 29035,
+    "sha256": "ee1a83c02bc0f5b54fe2d80edd7f46a498decf072ceee3501243ce87625d88bc"
   },
   {
     "path": "Overlay/Info.plist",
     "bytes": 839,
-    "sha256": "11d3d03589f0599761bcdd29d2ee2d688b4ce2a436af89ae814c707f8a9c42f3"
+    "sha256": "6e02a4d92debc4e93d1666bfc2a9e8fb51240bff812524017518a3eb06cf0bc1"
   },
   {
     "path": "Overlay/OverlayBridge.m",
-    "bytes": 9678,
-    "sha256": "dea6d98e01d0a20caa5e76435dcf361a5931727280f750c527b2d3757343bc8a"
+    "bytes": 10826,
+    "sha256": "ff101434b5f7542432275f566208d6bd9266595f75dddd1e332563f9685fa870"
   },
   {
     "path": "Overlay/OverlayCommon.h",
     "bytes": 2768,
     "sha256": "d5fd441753011d302011eb6513831a5b149da3d7c04eeeda2d8eede74748903d"
+  },
+  {
+    "path": "Overlay/OverlayLock.h",
+    "bytes": 1644,
+    "sha256": "68076140cc8284e9e8bc12d95490b63c66a86a4cab73c7b4499129cbb3416b58"
   },
   {
     "path": "scripts/build-diagnostics.sh",
@@ -176,8 +186,8 @@
   },
   {
     "path": "scripts/build-overlay.sh",
-    "bytes": 1393,
-    "sha256": "fcc3521ec2a8e13abc9f02154bbb84cc9d755de973a413d77109cc1aa2ffc270"
+    "bytes": 1640,
+    "sha256": "7be7911ccae86ca836b3b66f796e83f31da59a0a1b5a3f7785f9a92412484984"
   },
   {
     "path": "scripts/build-tipa.sh",
@@ -195,6 +205,11 @@
     "sha256": "057c3eb1ca4da007efebecab39cde7dba87983be4a32d11fb9c91b2f5fcbab7a"
   },
   {
+    "path": "scripts/check-overlay-lock.py",
+    "bytes": 536,
+    "sha256": "e878bd75f6bc9a8917f28cf87a341e18a70061de3ddda8d7af8e6d33506bc13a"
+  },
+  {
     "path": "scripts/generate-overlay-features.py",
     "bytes": 1281,
     "sha256": "425eb67f9261599b7b9551ae9cbf530ca1e64d157c71367f393af50304a0c158"
@@ -202,12 +217,17 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 8731,
-    "sha256": "4a8020532bd6696b3c3b069326eb44d65270dd847dd33847d0d2591bb963a49e"
+    "sha256": "be1779364ac8de50fac750b7dd2d0e5e72043bc777d35deb73a6c055cdaf2967"
   },
   {
     "path": "scripts/native-contract-check.swift",
     "bytes": 2191,
     "sha256": "93489b9447e7c2fd7019864b26fac97b5f307b22bf2dad4f87e24118aac92f25"
+  },
+  {
+    "path": "scripts/overlay-lock-check.c",
+    "bytes": 2252,
+    "sha256": "3e760e04cd0cacaf8010109a93c9af1edac8da2290d0fcc1184df5e703909f87"
   },
   {
     "path": "scripts/send-telegram.py",
@@ -221,8 +241,8 @@
   },
   {
     "path": "scripts/validate-project.py",
-    "bytes": 4184,
-    "sha256": "24d483426c11d9cec5eb385d6205c9f774e35159ddd01127bfd289414fb06906"
+    "bytes": 4280,
+    "sha256": "471058d04691c9f09107ae6247d8baa22bbdf0588c31556f7397d703a6cb4b5d"
   },
   {
     "path": "scripts/verify-entitlements.py",
@@ -241,8 +261,8 @@
   },
   {
     "path": "Signing/Overlay.entitlements",
-    "bytes": 994,
-    "sha256": "f4478dafed21a8713e8c1ca1104b667b38782633d0c5491c69a480200d24ecf3"
+    "bytes": 1069,
+    "sha256": "007a14e9a1d9fc8a89dde22ff834a6de0305947a973dc1384d7d1072896ef9fc"
   },
   {
     "path": "TELEGRAM_SETUP.txt",

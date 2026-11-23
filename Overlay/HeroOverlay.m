@@ -6,6 +6,7 @@
 #import <objc/runtime.h>
 #import "OverlayCommon.h"
 #import "HCFeatures.h"
+#include "OverlayLock.h"
 #include <dlfcn.h>
 #include <notify.h>
 #include <sys/file.h>
@@ -73,7 +74,7 @@ static void HCState(void) {
         @"pid": @(getpid()), @"euid": @(geteuid()), @"heartbeat": @(NSProcessInfo.processInfo.systemUptime),
         @"session": HCSession, @"menuOpen": @(HCMenuOpen), @"orientation": @(HCOrientation),
         @"touchEvents": @(HCTouchCount), @"hiddenForLock": @(HCLocked),
-        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.4.2", @"stage": HCStartupStage};
+        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.4.3", @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -403,6 +404,7 @@ static void HCUpdateLock(void) {
         if (!HCCanvas.activeTarget && HCMenuOpen) [HCCanvas reloadSettings];
         HCState();
     }];
+    alarm(0);
     return YES;
 }
 @end
@@ -436,11 +438,22 @@ static void HCHIDCallback(void *target, void *refcon, CFTypeRef service, CFTypeR
     }
 }
 
+static void HCStartupTimeout(int signalNumber) {
+    (void)signalNumber;
+    const char message[] = "HC_OVERLAY startup_watchdog_timeout\n";
+    write(STDERR_FILENO, message, sizeof(message) - 1);
+    _exit(124);
+}
+
 int main(int argc, char **argv) {
     setvbuf(stderr, NULL, _IONBF, 0);
     fprintf(stderr, "HC_OVERLAY entry argc=%d uid=%u euid=%u\n", argc, (unsigned)getuid(), (unsigned)geteuid());
     @autoreleasepool {
-        if (argc != 4 || strcmp(argv[1], "--run")) { fprintf(stderr, "HC_OVERLAY invalid_arguments\n"); return 64; }
+        if (argc != 6 || strcmp(argv[1], "--run") || strcmp(argv[4], "--lock-fd") || strcmp(argv[5], "3")) {
+            fprintf(stderr, "HC_OVERLAY invalid_arguments\n"); return 64;
+        }
+        signal(SIGALRM, HCStartupTimeout);
+        alarm(20);
         HCDirectory = [NSString stringWithUTF8String:argv[2]];
         HCProfile = [NSString stringWithUTF8String:argv[3]];
         HCExecutable = [NSString stringWithUTF8String:argv[0]];
@@ -455,11 +468,14 @@ int main(int argc, char **argv) {
             }
             return 77;
         }
-        // One process per app container. No PID-file kill, even after a crash.
-        NSString *lockPath = [HCDirectory stringByAppendingPathComponent:@"overlay.lock"];
-        HCLock = open(lockPath.fileSystemRepresentation, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
-        if (HCLock < 0 || flock(HCLock, LOCK_EX | LOCK_NB)) { fprintf(stderr, "HC_OVERLAY lock_failed errno=%d\n", errno); return 73; }
-        fchown(HCLock, 501, 501);
+        // The app has already opened and locked this file as mobile. Validate
+        // the inherited descriptor, without creating/opening/locking it as root.
+        NSString *lockPath = [HCDirectory stringByAppendingPathComponent:[NSString stringWithUTF8String:HC_OVERLAY_LOCK_NAME]];
+        HCLock = HC_OVERLAY_LOCK_FD;
+        int lockError = HCOverlayValidateLockFD(HCLock, lockPath.fileSystemRepresentation, 501);
+        if (lockError) { fprintf(stderr, "HC_OVERLAY inherited_lock_invalid errno=%d\n", lockError); return 73; }
+        if (fcntl(HCLock, F_SETFD, FD_CLOEXEC)) { fprintf(stderr, "HC_OVERLAY lock_cloexec_failed errno=%d\n", errno); return 73; }
+        fprintf(stderr, "HC_OVERLAY inherited_lock_verified fd=%d\n", HCLock);
         struct rlimit logLimit = {262144, 262144}; setrlimit(RLIMIT_FSIZE, &logLimit);
         HCStage(@"paths_verified");
         @try {

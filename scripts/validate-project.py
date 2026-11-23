@@ -49,6 +49,7 @@ overlay_entitlements = plistlib.loads((root / 'Signing/Overlay.entitlements').re
 assert overlay_entitlements.get('com.apple.springboard.accessibility-window-hosting') is True
 assert overlay_entitlements.get('com.apple.private.hid.client.event-monitor') is True
 assert overlay_entitlements.get('com.apple.private.security.no-sandbox') is True
+assert overlay_entitlements.get('com.apple.private.security.storage.AppDataContainers') is True
 overlay_info = plistlib.loads((root / 'Overlay/Info.plist').read_bytes())
 assert overlay_info['CFBundleVersion'] == info['CFBundleVersion']
 assert overlay_info['CFBundleShortVersionString'] == info['CFBundleShortVersionString']

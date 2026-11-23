@@ -1,0 +1,44 @@
+HERO CONTROL 0.4.3 — BUILD 12 — SỬA KHÓA OVERLAY
+
+Log 0.4.2 xác nhận main chạy với UID/EUID 0, vượt qua kiểm tra đường
+dẫn, rồi trả 73 tại nhánh open/flock với errno=1 (EPERM). Chưa xác định
+riêng open hay flock vì mã cũ gộp hai thao tác trong cùng nhánh lỗi.
+Đọc kernel vẫn xác minh thành công; chưa đến bước tạo cửa sổ overlay.
+
+ĐÃ SỬA
+
+Ứng dụng mobile mở và khóa file trước khi khởi chạy helper root.
+Truyền file đã khóa qua posix_spawn dup2 đến FD 3, giữ nguyên khóa sau
+exec. Parent đóng bản tham chiếu của mình, không LOCK_UN. Overlay chỉ
+kiểm tra FD là file thường, đúng chủ sở hữu và cùng inode/dev với
+đường dẫn đã kiểm tra; không tự open/O_CREAT/flock bằng root nữa.
+
+Dùng tên mới overlay-mobile.lock để tránh file cũ có thể được tạo với
+chủ sở hữu root trước khi thất bại. Không xóa hoặc đổi quyền file cũ.
+Không bỏ cơ chế ngăn chạy nhiều bản overlay.
+
+Bổ sung entitlement storage.AppDataContainers cho overlay để truy cập
+profile/state trong container được chia sẻ. Build xác minh entitlement
+được nhúng trong chữ ký; thiết bị thực vẫn cần kiểm chứng việc cấp quyền.
+
+Thêm watchdog khởi động 20 giây. Nếu khởi tạo UIKit bị treo, helper tự
+thoát mã 124 và giải phóng khóa; khi hoàn tất tạo cửa sổ thì hủy watchdog.
+
+THỬ NGHIỆM
+
+Thêm kiểm thử C dùng chính OverlayLock.h: spawn/dup2/exec, FD 3 hợp lệ,
+ngăn tiến trình thứ hai lấy khóa, giải phóng sau khi child thoát, từ chối
+symlink. Chạy cả khi stdin/stdout/stderr đóng. Kiểm thử này thực thi trên
+macOS trong GitHub Actions, chưa chạy trên Windows.
+
+Cú pháp nguồn, project/plist và kiểm thử Python được kiểm tra tại Windows.
+Không khẳng định ESP/camera/check tố cáo đã hoạt động trong game.
+
+CÁCH CẬP NHẬT
+
+Tại CMD trong C:\Users\Admin\Downloads\HeroControl, chạy git push.
+Chờ lượt Actions mới xanh, lấy .tipa từ Telegram hoặc artifact, cài đè.
+Kiểm tra 0.4.3 build 12. Mở app, chờ 8 giây, thử nút HC.
+Nếu chưa xuất hiện, gửi toàn bộ Xuất báo cáo nút nổi. Log mới sẽ có
+inherited_lock_verified hoặc lỗi riêng về khóa ở phía ứng dụng.
+Không cần gửi lại báo cáo kernel trong bước kiểm tra này.

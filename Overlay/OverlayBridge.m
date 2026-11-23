@@ -1,4 +1,5 @@
 #import "OverlayCommon.h"
+#include "OverlayLock.h"
 #include <dlfcn.h>
 #include <spawn.h>
 #include <fcntl.h>
@@ -91,16 +92,34 @@ static NSDictionary *HCOverlayHandle(NSDictionary *request) {
     if (!result) result = posix_spawn_file_actions_addopen(&files, STDOUT_FILENO,
         logPath.fileSystemRepresentation, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
     if (!result) result = posix_spawn_file_actions_adddup2(&files, STDOUT_FILENO, STDERR_FILENO);
+    NSString *lockPath = [directory stringByAppendingPathComponent:[NSString stringWithUTF8String:HC_OVERLAY_LOCK_NAME]];
+    int lockFD = -1, lockError = 0;
+    if (!result) {
+        lockFD = HCOverlayAcquireLock(lockPath.fileSystemRepresentation, &lockError);
+        if (lockFD < 0) result = lockError;
+    }
+    if (!result) result = posix_spawn_file_actions_adddup2(&files, lockFD, HC_OVERLAY_LOCK_FD);
+    if (!result) result = posix_spawn_file_actions_addclose(&files, lockFD);
     pid_t child = -1;
     char *argv[] = {(char *)helper.fileSystemRepresentation, "--run", (char *)directory.fileSystemRepresentation,
-        (char *)profile.fileSystemRepresentation, NULL};
+        (char *)profile.fileSystemRepresentation, "--lock-fd", "3", NULL};
     char *env[] = {"PATH=/usr/bin:/bin:/usr/sbin:/sbin", "HOME=/var/mobile", "CFFIXED_USER_HOME=/var/mobile", NULL};
-    if (!result) result = posix_spawn(&child, helper.fileSystemRepresentation, &files, &attr, argv, env);
+    BOOL spawnAttempted = result == 0;
+    if (spawnAttempted) result = posix_spawn(&child, helper.fileSystemRepresentation, &files, &attr, argv, env);
+    // Do not LOCK_UN: the inherited child descriptor shares the same lock.
+    if (lockFD >= 0) close(lockFD);
     if (!setup) posix_spawn_file_actions_destroy(&files);
     posix_spawnattr_destroy(&attr);
-    if (result) return HCOverlayReply(NO, [NSString stringWithFormat:@"Không khởi chạy được overlay: %d (%s).", result, strerror(result)], state, directory);
+    if (result) {
+        NSString *message = lockError ? [NSString stringWithFormat:@"Ứng dụng không lấy được khóa overlay: %d (%s).", lockError, strerror(lockError)] :
+            [NSString stringWithFormat:@"Không khởi chạy được overlay: %d (%s).", result, strerror(result)];
+        NSMutableDictionary *reply = [HCOverlayReply(NO, message, state, directory) mutableCopy];
+        reply[@"launch"] = @{@"spawnAttempted": @(spawnAttempted), @"setupStatus": @(result), @"lockError": @(lockError)};
+        return reply;
+    }
     NSMutableDictionary *launch = [@{@"spawnStatus": @0, @"pid": @(child), @"helperPath": helper,
-        @"directory": directory, @"profile": profile, @"appEUID": @(geteuid()), @"exited": @NO} mutableCopy];
+        @"directory": directory, @"profile": profile, @"appEUID": @(geteuid()), @"exited": @NO,
+        @"lockPreparedByApp": @YES, @"inheritedLockFD": @(HC_OVERLAY_LOCK_FD)} mutableCopy];
     // Observe startup here before handing reaping to a background queue. The
     // old waiter discarded exit 64/73/77 and signals, masking all as a timeout.
     NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + 8;
