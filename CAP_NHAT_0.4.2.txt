@@ -1,0 +1,29 @@
+HERO CONTROL 0.4.2 — BUILD 11 — CHẨN ĐOÁN KHỞI ĐỘNG OVERLAY
+
+Log thiết bị của 0.4.1: state rỗng, startupLog rỗng, hết hạn chờ.
+Chưa đủ bằng chứng xác định lỗi chữ ký, quyền, đường dẫn hay UIKit.
+Mã cũ bỏ mất kết quả waitpid, nên mọi trường hợp thoát sớm đều bị
+hiển thị chung là không nhận được xác nhận khởi động.
+
+Đã sửa:
+- Theo dõi tiến trình trong giai đoạn khởi động bằng waitpid WNOHANG.
+  Báo PID, spawnStatus, exitStatus hoặc signal, đường dẫn helper,
+  profile và thư mục trạng thái. Chỉ chuyển việc thu hồi tiến trình
+  còn sống sang hàng đợi nền sau giai đoạn này; không thu hồi hai lần.
+- Ghi log stderr không đệm ngay đầu main, trước kiểm tra tham số/quyền.
+  Khi từ chối đường dẫn, ghi stat/errno/owner/mode/đường dẫn đã phân giải.
+- Ghi từng mốc UIKit/hosting vào state.stage và startupLog; lỗi ghi
+  state.json cũng được ghi ra stderr.
+- Tăng chờ khởi động từ 3 lên 8 giây trên actor nền, không chặn UI.
+
+Đây là sửa khả năng xác định lỗi; chưa khẳng định nút nổi đã hiện.
+Không bỏ kiểm tra đường dẫn/quyền hoặc tự quy lỗi cho chữ ký.
+
+Sau git push, chờ lượt Actions mới, cài 0.4.2 build 11.
+Mở Hero Control, chờ ít nhất 8 giây. Nếu chưa có HC, bấm
+Xuất báo cáo nút nổi và gửi toàn bộ JSON (có launch và startupLog).
+Không cần gửi lại JSON kernel để chẩn đoán nút nổi.
+
+library_loaded_not_probed + kernelProbeRequested=false là kết quả
+status chưa yêu cầu phép đọc kernel, không có nghĩa lần xác minh kernel
+thành công trước đó bị mất. Bộ xử lý chức năng game vẫn chưa triển khai.

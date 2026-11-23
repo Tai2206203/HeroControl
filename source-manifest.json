@@ -80,6 +80,11 @@
     "sha256": "34a7d4e36b8fd8263dcf35b5ddfc2a02bdf680765aeb88c5a3cfeece92b64545"
   },
   {
+    "path": "CAP_NHAT_0.4.2.txt",
+    "bytes": 1873,
+    "sha256": "37f88629c175980f3b99a81326058b1c7075c0abfd3c71b432e1d4152a928d82"
+  },
+  {
     "path": "HeroControl/ContentView.swift",
     "bytes": 14492,
     "sha256": "e1f1fb5856cb7662b19f10db90c85364b574579857c5cd248b5639c5ff384a0f"
@@ -97,7 +102,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1050,
-    "sha256": "a3cfcfa8e1b4450f2c165cc854e4e8840a5397d79d93885bc5b54ddcdf775af6"
+    "sha256": "44dae6dbf6d259cc09a1147b9d0de7ebc47eb182cf8c0098873e99d9516ae849"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -122,7 +127,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9417,
-    "sha256": "ea691d1f2546a6b8df859c0565bb76ef8540bba07dc9d44e801787d59982fe25"
+    "sha256": "3662d629b55fdb2bbdcc677222d62243296d10442959734860a98e05b794f9e3"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -136,23 +141,23 @@
   },
   {
     "path": "HUONG_DAN_BUILD.txt",
-    "bytes": 8480,
-    "sha256": "33d9c6df40a60afd52d30b8f6b78e092aaa9ef6e36234ed65634169a5a932ffa"
+    "bytes": 8308,
+    "sha256": "f63498f0711ce71652c63d5db7cb6f7bfa4f68d3c1632b809c3314250b7480ba"
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 26363,
-    "sha256": "c71d41834b36d641ee7c7362b3a1107e0f17f3572777d2a1b966fe19fb21689f"
+    "bytes": 28342,
+    "sha256": "391ff880d2c1a6a011062246ee74cdd753eab48334fe5149f0bb2e79a6337591"
   },
   {
     "path": "Overlay/Info.plist",
     "bytes": 839,
-    "sha256": "dd73cf9d56e22719813a13fe0a4de7a4d63642d0ae311c1ab63648b90a753ffe"
+    "sha256": "11d3d03589f0599761bcdd29d2ee2d688b4ce2a436af89ae814c707f8a9c42f3"
   },
   {
     "path": "Overlay/OverlayBridge.m",
-    "bytes": 7751,
-    "sha256": "c11d91ffee24e85bee6ea6bf8a3d6597c722f88e533de155608cdb28d2936f49"
+    "bytes": 9678,
+    "sha256": "dea6d98e01d0a20caa5e76435dcf361a5931727280f750c527b2d3757343bc8a"
   },
   {
     "path": "Overlay/OverlayCommon.h",
@@ -197,7 +202,7 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 8731,
-    "sha256": "e93e2358187ab5a76f83a4322c504adaeee1b98a78e6d3ce2b1ba528a71df9d3"
+    "sha256": "4a8020532bd6696b3c3b069326eb44d65270dd847dd33847d0d2591bb963a49e"
   },
   {
     "path": "scripts/native-contract-check.swift",

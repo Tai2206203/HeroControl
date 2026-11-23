@@ -22,6 +22,20 @@ static NSDictionary *HCOverlayReply(BOOL ok, NSString *message, NSDictionary *st
     return reply;
 }
 
+static void HCOverlayReapLater(pid_t child) {
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        int status = 0;
+        while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
+    });
+}
+
+static NSDictionary *HCOverlayLaunchReply(BOOL ok, NSString *message, NSDictionary *state,
+                                        NSString *directory, NSDictionary *launch) {
+    NSMutableDictionary *reply = [HCOverlayReply(ok, message, state, ok ? nil : directory) mutableCopy];
+    reply[@"launch"] = launch;
+    return reply;
+}
+
 static NSDictionary *HCOverlayHandle(NSDictionary *request) {
     NSString *action = request[@"action"], *directory = request[@"directory"], *profile = request[@"profile"];
     if (![@[@"start", @"status", @"stop", @"toggle"] containsObject:action])
@@ -85,20 +99,44 @@ static NSDictionary *HCOverlayHandle(NSDictionary *request) {
     if (!setup) posix_spawn_file_actions_destroy(&files);
     posix_spawnattr_destroy(&attr);
     if (result) return HCOverlayReply(NO, [NSString stringWithFormat:@"Không khởi chạy được overlay: %d (%s).", result, strerror(result)], state, directory);
-    // Reap on a background queue; never block the UI waiting for a persistent HUD.
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-        int status;
-        while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
-    });
-    NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + 3;
+    NSMutableDictionary *launch = [@{@"spawnStatus": @0, @"pid": @(child), @"helperPath": helper,
+        @"directory": directory, @"profile": profile, @"appEUID": @(geteuid()), @"exited": @NO} mutableCopy];
+    // Observe startup here before handing reaping to a background queue. The
+    // old waiter discarded exit 64/73/77 and signals, masking all as a timeout.
+    NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + 8;
     do {
         [NSThread sleepForTimeInterval:0.1];
         state = HCOverlayReadState(directory);
-        if (HCOverlayFresh(state)) return HCOverlayReply(YES, @"Nút nổi đã đăng ký cửa sổ hệ thống.", state, nil);
-        if ([state[@"pid"] intValue] == child && [state[@"phase"] isEqual:@"failed"])
-            return HCOverlayReply(NO, state[@"message"], state, directory);
+        int status = 0;
+        pid_t waited = waitpid(child, &status, WNOHANG);
+        if (waited == child) {
+            launch[@"exited"] = @YES;
+            NSString *message;
+            if (WIFSIGNALED(status)) {
+                launch[@"signal"] = @(WTERMSIG(status));
+                message = [NSString stringWithFormat:@"Overlay bị dừng bởi tín hiệu %d. Xem launch/startupLog; chưa xác định nguyên nhân.", WTERMSIG(status)];
+            } else {
+                launch[@"exitStatus"] = @(WEXITSTATUS(status));
+                message = [NSString stringWithFormat:@"Overlay thoát với mã %d trước khi xác nhận cửa sổ. Xem launch/startupLog.", WEXITSTATUS(status)];
+            }
+            return HCOverlayLaunchReply(NO, message, state, directory, launch);
+        }
+        if (waited < 0 && errno != EINTR) {
+            launch[@"waitError"] = @(errno);
+            return HCOverlayLaunchReply(NO, @"Không thu được trạng thái tiến trình overlay.", state, directory, launch);
+        }
+        if (HCOverlayFresh(state)) {
+            HCOverlayReapLater(child);
+            return HCOverlayLaunchReply(YES, @"Nút nổi đã đăng ký cửa sổ hệ thống.", state, directory, launch);
+        }
+        if ([state[@"pid"] intValue] == child && [state[@"phase"] isEqual:@"failed"]) {
+            HCOverlayReapLater(child);
+            return HCOverlayLaunchReply(NO, state[@"message"], state, directory, launch);
+        }
     } while (NSProcessInfo.processInfo.systemUptime < deadline);
-    return HCOverlayReply(NO, @"Chưa nhận được xác nhận khởi động overlay. Xem báo cáo nút nổi/startupLog.", state, directory);
+    HCOverlayReapLater(child);
+    launch[@"startupTimedOut"] = @YES;
+    return HCOverlayLaunchReply(NO, @"Overlay chưa xác nhận cửa sổ sau 8 giây. Xem state.stage và startupLog.", state, directory, launch);
 #endif
 }
 

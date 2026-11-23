@@ -16,6 +16,8 @@
 #include <mach/mach.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
 
 @interface UIApplication (HCPrivate)
 - (void)_accessibilityInit;
@@ -64,18 +66,26 @@ static NSInteger HCOrientation = UIInterfaceOrientationPortrait;
 static BOOL HCLocked;
 static BOOL HCMenuOpen;
 static NSString *HCSettingsError;
+static NSString *HCStartupStage = @"entry";
 
 static void HCState(void) {
     NSDictionary *state = @{@"schemaVersion": @1, @"phase": HCPhase, @"message": HCMessage,
         @"pid": @(getpid()), @"euid": @(geteuid()), @"heartbeat": @(NSProcessInfo.processInfo.systemUptime),
         @"session": HCSession, @"menuOpen": @(HCMenuOpen), @"orientation": @(HCOrientation),
         @"touchEvents": @(HCTouchCount), @"hiddenForLock": @(HCLocked),
-        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.4.1"};
+        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.4.2", @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
-    [data writeToFile:path options:NSDataWritingAtomic error:NULL];
+    NSError *writeError = nil;
+    if (![data writeToFile:path options:NSDataWritingAtomic error:&writeError])
+        fprintf(stderr, "HC_OVERLAY state_write_failed stage=%s error=%s\n", HCStartupStage.UTF8String, writeError.localizedDescription.UTF8String);
     chmod(path.fileSystemRepresentation, 0644);
     chown(path.fileSystemRepresentation, 501, 501);
+}
+static void HCStage(NSString *stage) {
+    HCStartupStage = stage;
+    fprintf(stderr, "HC_OVERLAY stage=%s uid=%u euid=%u\n", stage.UTF8String, (unsigned)getuid(), (unsigned)geteuid());
+    HCState();
 }
 static void HCStop(NSString *message, BOOL failed) {
     HCStopping = YES;
@@ -351,6 +361,7 @@ static void HCUpdateLock(void) {
 @end
 @implementation HCOverlayDelegate
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
+    HCStage(@"delegate_launch");
     HCOverlayController *controller = [HCOverlayController new];
     HCCanvas = [[HCOverlayCanvas alloc] initWithFrame:UIScreen.mainScreen.bounds];
     controller.view = HCCanvas;
@@ -363,6 +374,7 @@ static void HCUpdateLock(void) {
     HCHost = [NSClassFromString(@"SBSAccessibilityWindowHostingController") new];
     if (!HCHost || ![HCHost respondsToSelector:@selector(registerWindowWithContextID:atLevel:)] || ![HCWindow _contextId])
         HCStop(@"Không có API đăng ký cửa sổ overlay trên môi trường này.", YES);
+    HCStage(@"register_window");
     [HCHost registerWindowWithContextID:[HCWindow _contextId] atLevel:HCWindow.windowLevel];
     HCOrientationObserver = [NSClassFromString(@"FBSOrientationObserver") new];
     if (![HCOrientationObserver respondsToSelector:@selector(setHandler:)])
@@ -380,6 +392,7 @@ static void HCUpdateLock(void) {
     notify_register_dispatch(HCOverlayNotification(HCDirectory, @"toggle").UTF8String, &toggleToken, dispatch_get_main_queue(), ^(int token) { (void)token; [HCCanvas toggleMenu]; });
     notify_register_dispatch("com.apple.springboard.lockstate", &lockToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCUpdateLock(); });
     notify_register_dispatch("SBSpringBoardDidLaunchNotification", &springboardToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCStop(@"SpringBoard đã khởi động lại. Mở Hero Control để bật nút nổi.", NO); });
+    HCStartupStage = @"ready";
     HCPhase = @"visible"; HCMessage = @"Đã đăng ký nút nổi Hero Control. Chạm để mở/thu menu; kéo để di chuyển.";
     HCUpdateLock(); HCState();
     self.timer = [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer) {
@@ -424,20 +437,31 @@ static void HCHIDCallback(void *target, void *refcon, CFTypeRef service, CFTypeR
 }
 
 int main(int argc, char **argv) {
+    setvbuf(stderr, NULL, _IONBF, 0);
+    fprintf(stderr, "HC_OVERLAY entry argc=%d uid=%u euid=%u\n", argc, (unsigned)getuid(), (unsigned)geteuid());
     @autoreleasepool {
-        if (argc != 4 || strcmp(argv[1], "--run")) return 64;
+        if (argc != 4 || strcmp(argv[1], "--run")) { fprintf(stderr, "HC_OVERLAY invalid_arguments\n"); return 64; }
         HCDirectory = [NSString stringWithUTF8String:argv[2]];
         HCProfile = [NSString stringWithUTF8String:argv[3]];
         HCExecutable = [NSString stringWithUTF8String:argv[0]];
         HCSession = NSUUID.UUID.UUIDString;
-        if (geteuid() != 0 || !HCOverlayPathsValid(HCDirectory, HCProfile)) return 77;
+        if (geteuid() != 0) { fprintf(stderr, "HC_OVERLAY root_identity_missing\n"); return 77; }
+        if (!HCOverlayPathsValid(HCDirectory, HCProfile)) {
+            fprintf(stderr, "HC_OVERLAY paths_rejected directory=%s profile=%s\n", HCDirectory.fileSystemRepresentation, HCProfile.fileSystemRepresentation);
+            for (NSString *path in @[HCDirectory, HCProfile.stringByDeletingLastPathComponent, HCProfile]) {
+                struct stat info = {0}; int result = lstat(path.fileSystemRepresentation, &info); int failure = result ? errno : 0;
+                fprintf(stderr, "HC_OVERLAY path=%s stat=%d errno=%d owner=%u mode=%o resolved=%s\n", path.fileSystemRepresentation,
+                    result, failure, (unsigned)info.st_uid, (unsigned)info.st_mode, path.stringByResolvingSymlinksInPath.fileSystemRepresentation);
+            }
+            return 77;
+        }
         // One process per app container. No PID-file kill, even after a crash.
         NSString *lockPath = [HCDirectory stringByAppendingPathComponent:@"overlay.lock"];
         HCLock = open(lockPath.fileSystemRepresentation, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
-        if (HCLock < 0 || flock(HCLock, LOCK_EX | LOCK_NB)) return 73;
+        if (HCLock < 0 || flock(HCLock, LOCK_EX | LOCK_NB)) { fprintf(stderr, "HC_OVERLAY lock_failed errno=%d\n", errno); return 73; }
         fchown(HCLock, 501, 501);
         struct rlimit logLimit = {262144, 262144}; setrlimit(RLIMIT_FSIZE, &logLimit);
-        HCState();
+        HCStage(@"paths_verified");
         @try {
             for (NSString *framework in @[@"GraphicsServices", @"BackBoardServices", @"SpringBoardServices", @"FrontBoardServices", @"AccessibilityUtilities"])
                 dlopen([[NSString stringWithFormat:@"/System/Library/PrivateFrameworks/%@.framework/%@", framework, framework] fileSystemRepresentation], RTLD_NOW | RTLD_GLOBAL);
@@ -450,17 +474,21 @@ int main(int argc, char **argv) {
             void (*pushMode)(CFStringRef) = dlsym(RTLD_DEFAULT, "GSEventPushRunLoopMode");
             if (!gsInitialize || !displayStart || !appInitialize || !instantiate || !registerHID || !eventInitialize || !pushMode ||
                 !NSClassFromString(@"AXEventRepresentation")) HCStop(@"Thiếu API khởi tạo hoặc nhận chạm của overlay.", YES);
+            HCStage(@"frameworks_loaded");
             [UIScreen class]; CFRunLoopGetCurrent();
-            gsInitialize(); displayStart(); appInitialize(); instantiate(HCOverlayApplication.class);
+            HCStage(@"gs_initialize"); gsInitialize();
+            HCStage(@"display_start"); displayStart();
+            HCStage(@"application_initialize"); appInitialize();
+            HCStage(@"application_singleton"); instantiate(HCOverlayApplication.class);
             static HCOverlayDelegate *delegate;
             delegate = [HCOverlayDelegate new];
             UIApplication *app = UIApplication.sharedApplication;
             app.delegate = delegate;
-            [app _accessibilityInit];
+            HCStage(@"accessibility_initialize"); [app _accessibilityInit];
             [NSRunLoop currentRunLoop];
-            registerHID(HCHIDCallback);
+            HCStage(@"register_hid"); registerHID(HCHIDCallback);
             eventInitialize(false); pushMode(kCFRunLoopDefaultMode);
-            [app __completeAndRunAsPlugin];
+            HCStage(@"run_plugin"); [app __completeAndRunAsPlugin];
             CFRunLoopRun();
         } @catch (NSException *error) { HCStop([@"Overlay: " stringByAppendingString:error.reason ?: @"unknown exception"], YES); }
         if (!HCStopping) HCStop(@"Vòng lặp overlay đã dừng.", NO);
