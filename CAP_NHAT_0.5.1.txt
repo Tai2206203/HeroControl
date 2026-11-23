@@ -1,0 +1,66 @@
+HERO CONTROL 0.5.1 — BUILD 14
+
+LOG ĐÃ XÁC NHẬN
+
+Đã tìm thấy com.garena.game.kgvn, phiên bản 1.64.11789525. Helper root
+chạy thành công nhưng task_for_pid trả 5 (KERN_FAILURE). Chưa đọc bộ
+nhớ, chưa đọc UUID UnityFramework đang chạy. moduleMatchesDump=false
+trong kết quả này không phải bằng chứng dump sai; phép so chưa được làm.
+
+SỬA MENU KHÔNG NHẬN CHẠM
+
+Bản 0.5.0 cho hosting window bỏ qua hit-test để tránh chặn màn hình,
+nhưng callback BackBoard cũ có thể chỉ nhận sự kiện định tuyến đến
+chính cửa sổ đó. Không thể giả định callback này là global HID monitor.
+
+Nay tạo riêng IOHIDEventSystemClient kiểu Monitor (1), đăng ký callback
+và schedule trên main run loop. Giữ window passthrough; không chiếm hoặc
+phát sự kiện chạm vào app khác. AX đổi HID thành hành vi menu hiện có.
+Hỗ trợ tọa độ normalized nếu stream trả 0..1 và thiếu pathIdentity cho
+một ngón. Nếu không tạo được monitor sẽ ghi rõ routed_fallback.
+Khi mở app sau nâng cấp, yêu cầu dừng phiên overlay khác appVersion
+trước khi chạy phiên mới, tránh giữ lại mã xử lý chạm của bản cũ.
+
+Báo cáo overlay thêm inputBackend, hidEvents, axTouchEvents,
+pointerFallbacks và touchEvents (số sự kiện đã xử lý trong vùng menu).
+Các bộ đếm chỉ ghi số lượng; không ghi nội dung phím hay lịch sử chạm.
+Phải thử trên iPhone: đăng ký monitor không chứng minh nhận được sự kiện.
+
+Giới hạn vẫn còn: chạm menu nổi có thể truyền xuống app bên dưới.
+Chỉnh menu khi đang ở Hero Control, thu menu trước khi quay lại game.
+
+SỬA YÊU CẦU QUYỀN TASK PORT
+
+Signing/Helper.entitlements trước đó chưa có task_for_pid-allow hoặc
+com.apple.system-task-ports. Thêm hai yêu cầu này vào helper, cùng
+no-sandbox và storage.AppDataContainers. Ghi nhận hai khóa task port
+bằng SecTask trong entitlementChecks để đối chiếu chữ ký sau cài đặt.
+Build kiểm tra chúng trong chữ ký. Chưa khẳng định hệ thống sẽ cấp đủ
+quyền hoặc task_for_pid sẽ trả thành công chỉ vì có entitlement.
+
+Trả thêm taskPortError từ mach_error_string. Mã 5 là lỗi chung; không
+tự quy hoàn toàn cho một nguyên nhân. Status ưu tiên kết quả truy cập
+game gần nhất, tránh chỉ hiển thị đọc kernel thành công khi game đang lỗi.
+
+Nguồn chính thức cho entitlement: XNU tests/task_for_pid_entitlement.plist
+https://github.com/apple-oss-distributions/xnu/blob/main/tests/task_for_pid_entitlement.plist
+TrollStore đánh dấu yêu cầu Developer Mode khi gặp các khóa này trên
+iOS 16 trở lên. Nếu trình cài yêu cầu, thực hiện theo hướng dẫn của nó.
+https://github.com/opa334/TrollStore/blob/main/RootHelper/main.m
+Kiểu client monitor tham chiếu SPI của WebKit, không gọi filter/inject:
+https://github.com/WebKit/WebKit/blob/main/Source/WebCore/PAL/pal/spi/mac/IOKitSPIMac.h
+
+SAU KHI BUILD
+
+Chạy git push, chờ lượt Actions mới xanh. Trong app cũ bấm Tắt nút nổi
+trước khi cài đè, để không giữ tiến trình overlay cũ của bản trước.
+Cài 0.5.1 build 14, mở app và thử chạm/kéo HC, đóng/mở menu.
+Nếu menu chưa nhận chạm, gửi Xuất báo cáo nút nổi sau khi thử chạm HC
+vài lần; cần xem inputBackend và các bộ đếm trên.
+
+Mở game vào sảnh -> quay lại app -> Kiểm tra truy cập game -> Xuất cấu
+hình & chẩn đoán. Nếu task port vẫn lỗi, gửi JSON có entitlementChecks
+của gameProbeDiagnostics. Chưa dùng các offset dump khi chưa đọc UUID.
+
+ESP, camera và check tố cáo chưa được triển khai xong. Các thay đổi này
+sửa đường vào cho sự kiện và quyền đọc, không phải báo đã áp dụng game.

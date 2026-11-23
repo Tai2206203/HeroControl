@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <mach/mach.h>
 #include <mach/task_info.h>
+#include <mach/mach_error.h>
 #include <mach-o/loader.h>
 #include <string.h>
 #include <unistd.h>
@@ -70,9 +71,10 @@ static NSDictionary *HCGameInspection(void) {
     mach_port_t task = MACH_PORT_NULL;
     kern_return_t status = task_for_pid(mach_task_self(), [match[@"pid"] intValue], &task);
     result[@"taskPortStatus"] = @(status);
+    result[@"taskPortError"] = [NSString stringWithUTF8String:mach_error_string(status)] ?: @"Unknown Mach error";
     if (status != KERN_SUCCESS || task == MACH_PORT_NULL) {
         result[@"code"] = @"game_task_port_denied";
-        result[@"message"] = @"Đã nhận diện game nhưng chưa có quyền đọc bộ nhớ của nó; đọc kernel thành công chưa thay thế được quyền này."; return result;
+        result[@"message"] = @"Đã nhận diện game nhưng hệ thống chưa cấp task port. Xem taskPortStatus, taskPortError và entitlementChecks của helper; chưa xác định điều kiện nào bị từ chối."; return result;
     }
     // Always release the task port, including malformed headers and partial reads.
     @try {

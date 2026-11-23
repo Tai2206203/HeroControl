@@ -104,6 +104,7 @@ struct GameInspection: Codable {
     let pid: Int?
     let gameVersion: String?
     let taskPortStatus: Int?
+    let taskPortError: String?
     let dyldInfoStatus: Int?
     let unityUUID: String?
     let unityBase: String?

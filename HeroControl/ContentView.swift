@@ -113,7 +113,8 @@ struct ContentView: View {
                     Text(game.message).font(.footnote)
                     if let pid = game.pid { Text("PID: \(pid) • Phiên bản: \(game.gameVersion ?? "unknown")").font(.caption.monospaced()) }
                     if let status = game.taskPortStatus { Text("Quyền đọc tiến trình: mã \(status)").font(.caption) }
-                    Text("Đọc bộ nhớ: \(game.memoryReadVerified ? "đã xác minh" : "chưa xác minh") • Dump: \(game.moduleMatchesDump ? "khớp" : "chưa khớp/chưa kiểm tra")")
+                    if let error = game.taskPortError, game.taskPortStatus != 0 { Text(error).font(.caption.monospaced()) }
+                    Text("Đọc bộ nhớ: \(game.memoryReadVerified ? "đã xác minh" : "chưa xác minh") • Dump: \(game.unityUUID == nil ? "chưa kiểm tra" : game.moduleMatchesDump ? "khớp" : "không khớp")")
                         .font(.caption)
                     Text("Lần kiểm tra: \(game.timestamp)").font(.caption2).foregroundStyle(.secondary)
                 }

@@ -1,6 +1,6 @@
-HERO CONTROL 0.5.0 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
+HERO CONTROL 0.5.1 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
 
-CẬP NHẬT HIỆN TẠI: xem CAP_NHAT_0.5.0.txt để sửa lỗi build mới nhất;
+CẬP NHẬT HIỆN TẠI: xem CAP_NHAT_0.5.1.txt để sửa lỗi build mới nhất;
 xem CAP_NHAT_0.4.0.txt để dùng và kiểm tra nút nổi.
 Mã nguồn đã thêm overlay độc lập, cần kiểm tra trên iPhone sau build.
 Máy Windows chỉ kiểm tra tĩnh/Python; GitHub Actions biên dịch trên macOS.

@@ -63,6 +63,9 @@ static int HCLock = -1;
 static BOOL HCStopping;
 static NSString *HCPhase = @"starting", *HCMessage = @"Đang tạo cửa sổ nút nổi.";
 static NSUInteger HCTouchCount;
+static NSUInteger HCHIDCount, HCAXCount, HCPointerFallbackCount;
+static NSString *HCInputBackend = @"not_started";
+static CFTypeRef HCEventMonitor;
 static NSInteger HCOrientation = UIInterfaceOrientationPortrait;
 static BOOL HCLocked;
 static BOOL HCMenuOpen;
@@ -74,7 +77,9 @@ static void HCState(void) {
         @"pid": @(getpid()), @"euid": @(geteuid()), @"heartbeat": @(NSProcessInfo.processInfo.systemUptime),
         @"session": HCSession, @"menuOpen": @(HCMenuOpen), @"orientation": @(HCOrientation),
         @"touchEvents": @(HCTouchCount), @"hiddenForLock": @(HCLocked),
-        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.5.0", @"stage": HCStartupStage};
+        @"hidEvents": @(HCHIDCount), @"axTouchEvents": @(HCAXCount), @"pointerFallbacks": @(HCPointerFallbackCount),
+        @"inputBackend": HCInputBackend,
+        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.5.1", @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -418,6 +423,7 @@ static void HCHIDCallback(void *target, void *refcon, CFTypeRef service, CFTypeR
     // only for a finger that begins inside the bubble/panel; ignore other apps.
     @autoreleasepool {
         @try {
+            HCHIDCount++;
             Class<HCAXEventRepresentation> representation = (Class<HCAXEventRepresentation>)NSClassFromString(@"AXEventRepresentation");
             id<HCAXEventRepresentation> rep = [representation representationWithHIDEvent:event hidStreamIdentifier:@"UIApplicationEvents"];
             if (!rep) return;
@@ -427,10 +433,19 @@ static void HCHIDCallback(void *target, void *refcon, CFTypeRef service, CFTypeR
             else if ([rep isCancel]) phase = UITouchPhaseCancelled;
             else if ([rep isLift] || [rep isInRangeLift]) phase = UITouchPhaseEnded;
             else return;
+            HCAXCount++;
             CGPoint point = [rep location];
             id<HCAXEventPath> path = [[[rep handInfo] paths] firstObject];
             NSInteger pointer = path ? [path pathIdentity] : -1;
-            if (pointer < 1) return;
+            // Raw monitor streams can omit the path identity for a single
+            // finger. Do not silently discard the entire gesture as before.
+            if (pointer < 1) { pointer = 1; HCPointerFallbackCount++; }
+            // The system monitor may supply normalized digitizer coordinates;
+            // AX's UIApplication stream supplies points. Support both forms.
+            if (point.x >= 0 && point.y >= 0 && point.x <= 1 && point.y <= 1) {
+                CGSize screen = UIScreen.mainScreen.bounds.size;
+                point = CGPointMake(point.x * screen.width, point.y * screen.height);
+            }
             dispatch_async(dispatch_get_main_queue(), ^{
                 @try {
                     CGPoint local = [HCCanvas convertPoint:point fromView:HCWindow];
@@ -439,6 +454,27 @@ static void HCHIDCallback(void *target, void *refcon, CFTypeRef service, CFTypeR
             });
         } @catch (NSException *error) { fprintf(stderr, "HC_OVERLAY HID: %s\n", error.reason.UTF8String); }
     }
+}
+
+static BOOL HCStartInputMonitor(void) {
+    // Independent of UIApplication's routed event stream, which receives no
+    // touches when the hosting window advertises _ignoresHitTest=YES.
+    // Client type Monitor=1 follows WebKit's IOKit SPI declarations. We only
+    // register an event callback; no filtering, cancellation or injection.
+    void *library = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_NOW | RTLD_GLOBAL);
+    if (!library) return NO;
+    CFTypeRef (*create)(CFAllocatorRef, int, CFDictionaryRef) = dlsym(library, "IOHIDEventSystemClientCreateWithType");
+    void (*registerCallback)(CFTypeRef, void (*)(void *, void *, CFTypeRef, CFTypeRef), void *, void *) =
+        dlsym(library, "IOHIDEventSystemClientRegisterEventCallback");
+    void (*schedule)(CFTypeRef, CFRunLoopRef, CFStringRef) = dlsym(library, "IOHIDEventSystemClientScheduleWithRunLoop");
+    if (!create || !registerCallback || !schedule) return NO;
+    HCEventMonitor = create(kCFAllocatorDefault, 1, NULL);
+    if (!HCEventMonitor) return NO;
+    registerCallback(HCEventMonitor, HCHIDCallback, NULL, NULL);
+    schedule(HCEventMonitor, CFRunLoopGetMain(), kCFRunLoopCommonModes);
+    HCInputBackend = @"iohid_system_monitor";
+    fprintf(stderr, "HC_OVERLAY input_monitor_registered\n");
+    return YES;
 }
 
 static void HCStartupTimeout(int signalNumber) {
@@ -505,7 +541,12 @@ int main(int argc, char **argv) {
             app.delegate = delegate;
             HCStage(@"accessibility_initialize"); [app _accessibilityInit];
             [NSRunLoop currentRunLoop];
-            HCStage(@"register_hid"); registerHID(HCHIDCallback);
+            HCStage(@"register_hid");
+            if (!HCStartInputMonitor()) {
+                HCInputBackend = @"backboard_routed_fallback";
+                fprintf(stderr, "HC_OVERLAY global_monitor_unavailable_using_routed_fallback\n");
+                registerHID(HCHIDCallback);
+            }
             eventInitialize(false); pushMode(kCFRunLoopDefaultMode);
             HCStage(@"run_plugin"); [app __completeAndRunAsPlugin];
             CFRunLoopRun();

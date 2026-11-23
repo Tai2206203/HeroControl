@@ -44,6 +44,8 @@ helper_entitlements = plistlib.loads((root / 'Signing/Helper.entitlements').read
 assert app_entitlements.get('com.apple.private.security.no-sandbox') is True
 assert app_entitlements.get('com.apple.private.persona-mgmt') is True
 assert helper_entitlements.get('com.apple.private.security.no-container') is True
+assert helper_entitlements.get('task_for_pid-allow') is True
+assert helper_entitlements.get('com.apple.system-task-ports') is True
 assert helper_entitlements.get('com.apple.security.exception.iokit-user-client-class') == ['IOSurfaceRootUserClient']
 overlay_entitlements = plistlib.loads((root / 'Signing/Overlay.entitlements').read_bytes())
 assert overlay_entitlements.get('com.apple.springboard.accessibility-window-hosting') is True

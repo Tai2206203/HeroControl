@@ -43,7 +43,8 @@ static NSDictionary *HCEntitlements(void) {
     CFTypeRef task = create(kCFAllocatorDefault);
     if (!task) return values;
     NSArray *keys = @[@"com.apple.private.security.no-sandbox", @"com.apple.private.security.no-container",
-        @"platform-application", @"com.apple.private.security.storage.AppDataContainers", @"com.apple.private.persona-mgmt"];
+        @"platform-application", @"com.apple.private.security.storage.AppDataContainers", @"com.apple.private.persona-mgmt",
+        @"task_for_pid-allow", @"com.apple.system-task-ports"];
     for (NSString *key in keys) {
         CFTypeRef value = copy(task, (__bridge CFStringRef)key, NULL);
         BOOL enabled = value && CFGetTypeID(value) == CFBooleanGetTypeID() && CFBooleanGetValue((CFBooleanRef)value);
@@ -468,10 +469,12 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         if ([action isEqual:@"inspectGame"]) HCGameSessionReport = HCDiagnose(YES);
         NSDictionary *report = HCSessionReport;
         NSDictionary *game = HCGameSessionReport[@"gameInspection"];
-        NSString *message = apply ? @"Chưa có game adapter; cấu hình chưa được áp dụng." :
-            [action isEqual:@"inspectGame"] ? HCGameSessionReport[@"summary"] : report[@"summary"];
+        NSString *message;
+        if (apply) message = @"Chưa có game adapter; cấu hình chưa được áp dụng.";
+        else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
+        else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.5.0",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.5.1",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report

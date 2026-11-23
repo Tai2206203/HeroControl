@@ -16,13 +16,13 @@
   },
   {
     "path": "BackendSDK/DiagnosticBackend.m",
-    "bytes": 33156,
-    "sha256": "ef59fe0a042a36f5c612154155a8fa5e5fa03079c76d9e631b6453e8f4b31993"
+    "bytes": 33295,
+    "sha256": "34e013d6ee53598b5cd1468927c0d3f3debf9a0ef8bd182ca73e4d4341c138a0"
   },
   {
     "path": "BackendSDK/GameInspection.h",
-    "bytes": 9237,
-    "sha256": "97ca98582df1dc56e6062909b2be35693a8014a29ea38201aa29fe661cc59e59"
+    "bytes": 9430,
+    "sha256": "f80b31c2a8ddfefef1ccc2aecf0b1c76592a4ec0ee36002972abc997dbc7effb"
   },
   {
     "path": "BackendSDK/HeroBackend.h",
@@ -100,9 +100,14 @@
     "sha256": "98b393debf5b5800a67d93dd9819f33bffe489695cbbf2f479b3baa80a428353"
   },
   {
+    "path": "CAP_NHAT_0.5.1.txt",
+    "bytes": 4000,
+    "sha256": "dc1e217cf0405cb4ba59e9946213c62c915952d30123891cac13eea374725f13"
+  },
+  {
     "path": "HeroControl/ContentView.swift",
-    "bytes": 16116,
-    "sha256": "f6940e20367807793c39cdad28f9513d30e75f2e4e89f25f5882099455db0fc3"
+    "bytes": 16269,
+    "sha256": "280a7500499f5576348260df5188a5084b7e51edb7442baa7f756c96dae9d542"
   },
   {
     "path": "HeroControl/ControlStore.swift",
@@ -117,7 +122,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1050,
-    "sha256": "50726edc1867c70128e8a1cea9f0ed652054418151a07806cbbade1100abf5e1"
+    "sha256": "fdf31cd7a240ec1967fe02b6baffdee5ea77128ffa0728924aa293c567a4b164"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -126,8 +131,8 @@
   },
   {
     "path": "HeroControl/Models.swift",
-    "bytes": 6065,
-    "sha256": "416ce635c42933371573607a53686da9f7a69b88e4fcb886727993e6f51c43eb"
+    "bytes": 6096,
+    "sha256": "0b63c3de825109c44b26380f23d524785dbc65a7e066388b462c8e93105aadfd"
   },
   {
     "path": "HeroControl/NativeBackend.swift",
@@ -142,7 +147,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9417,
-    "sha256": "e96095fffaf8828b9748490f648e9f5181228eaa303c22d6d5cd059b3f6309d4"
+    "sha256": "1e1c99a7846ee01086bab543e35d65ff524f8dfef615548fcf4dbeb11e961b59"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -157,22 +162,22 @@
   {
     "path": "HUONG_DAN_BUILD.txt",
     "bytes": 8308,
-    "sha256": "0e977192701a1558a13fbcc502b56bf78f407489ea13a18f10a34684d01864bb"
+    "sha256": "7e1fcb92afd22e5652901cc716a24ca4086838400bf51aa9c7e8bc785b257072"
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 29319,
-    "sha256": "3fa4c7a1e0b4b253cda56a6cdf3a329bc2a2be8e45d0e8f18c061ef6012e78a6"
+    "bytes": 31814,
+    "sha256": "8cd0e14cb850b72816be9c6565b72b365b341f8a4689106297d7cafd7abb89d6"
   },
   {
     "path": "Overlay/Info.plist",
     "bytes": 839,
-    "sha256": "e1a75ce0d2305432407b4ace30272fa6faf900d5d29ce61c140a5851749748f8"
+    "sha256": "081c5bf17c7783775d056c2330c4829198f87aa341d332b7d8d51189ad3862b3"
   },
   {
     "path": "Overlay/OverlayBridge.m",
-    "bytes": 10826,
-    "sha256": "ff101434b5f7542432275f566208d6bd9266595f75dddd1e332563f9685fa870"
+    "bytes": 11731,
+    "sha256": "5a1d05be4da9a5af18302f2fc90a3fc695894d55663bcd811bc341c931b6efb3"
   },
   {
     "path": "Overlay/OverlayCommon.h",
@@ -227,7 +232,7 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 8731,
-    "sha256": "2ea9a4c26be7f2608f2f1a4a859154bd94eefa339367ee4e607c7172bf0b5d64"
+    "sha256": "ff35ae863f800d3562876bd64b5044dbb568899e331b2452fd3cc768e4d9619b"
   },
   {
     "path": "scripts/native-contract-check.swift",
@@ -251,8 +256,8 @@
   },
   {
     "path": "scripts/validate-project.py",
-    "bytes": 4280,
-    "sha256": "471058d04691c9f09107ae6247d8baa22bbdf0588c31556f7397d703a6cb4b5d"
+    "bytes": 4411,
+    "sha256": "27d95b0bfb8ec61ebd1f81f31c968c2623309717d2c7e66f69a95838333542a5"
   },
   {
     "path": "scripts/verify-entitlements.py",
@@ -266,8 +271,8 @@
   },
   {
     "path": "Signing/Helper.entitlements",
-    "bytes": 419,
-    "sha256": "3877445ee3ba02f7628e3b3c28ac02f6a8452e65ac2b890e1937aa9a5e4bb8a6"
+    "bytes": 645,
+    "sha256": "f7b593514cef1de370f91cdc11b28b386ab61ca7376656f3cf9c72121ca9bd0f"
   },
   {
     "path": "Signing/Overlay.entitlements",

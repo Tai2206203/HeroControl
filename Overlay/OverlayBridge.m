@@ -60,6 +60,19 @@ static NSDictionary *HCOverlayHandle(NSDictionary *request) {
         // the new state. The app polls status after this short command returns.
         return HCOverlayReply(result == NOTIFY_STATUS_OK, @"Đã gửi yêu cầu đến nút nổi.", state, nil);
     }
+    NSString *currentVersion = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+    if (running && currentVersion && ![state[@"appVersion"] isEqual:currentVersion]) {
+        // An app upgrade can leave the old root HUD alive even though the app
+        // files have changed. Do not silently reuse its old input implementation.
+        notify_post(HCOverlayNotification(directory, @"stop").UTF8String);
+        NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + 2;
+        do {
+            [NSThread sleepForTimeInterval:0.1];
+            state = HCOverlayReadState(directory);
+            running = HCOverlayFresh(state);
+        } while (running && NSProcessInfo.processInfo.systemUptime < deadline);
+        if (running) return HCOverlayReply(NO, @"Phiên nút nổi cũ chưa dừng. Bấm Tắt nút nổi rồi bật lại.", state, directory);
+    }
     if (running) return HCOverlayReply(YES, @"Nút nổi đã chạy; giữ nguyên phiên hiện có.", state, nil);
     NSString *helper = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Tools/HeroOverlay.app/hero-overlay"];
     if (access(helper.fileSystemRepresentation, X_OK))
