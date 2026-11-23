@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/utsname.h>
 #include <unistd.h>
+#include <limits.h>
 #include "HeroBackend.h"
 
 typedef int (*HCKernelBase)(uint64_t *address);
@@ -18,6 +19,81 @@ static HCKernelBase HCBaseFunction;
 static HCKernelRead HCReadFunction;
 static NSString *HCLoadedPath;
 static NSDictionary *HCSessionReport;
+
+static void HCAddRoot(NSMutableOrderedSet<NSString *> *roots, NSString *path) {
+    if (!path || ![path hasPrefix:@"/"] || path.length >= PATH_MAX) return;
+    [roots addObject:path.stringByStandardizingPath];
+}
+
+static NSArray<NSString *> *HCLibraryPaths(NSMutableDictionary *report) {
+    NSMutableOrderedSet<NSString *> *roots = [NSMutableOrderedSet orderedSet];
+    NSMutableArray<NSString *> *notes = [NSMutableArray array];
+    // Prefer the standardized API when the jailbreak has already injected it.
+    const char *(*prefixFunction)(void) = (const char *(*)(void))dlsym(RTLD_DEFAULT, "libroot_get_jbroot_prefix");
+    if (prefixFunction) {
+        const char *prefix = prefixFunction();
+        if (prefix && strnlen(prefix, PATH_MAX) < PATH_MAX) {
+            NSString *path = [NSString stringWithUTF8String:prefix];
+            HCAddRoot(roots, path.length ? path : @"/");
+            [notes addObject:@"Đã hỏi libroot_get_jbroot_prefix trong tiến trình hiện tại."];
+        }
+    } else { [notes addObject:@"Không có API libroot trong tiến trình hiện tại."]; }
+
+    // RootHide creates a .jbroot link beside binaries/libraries it manages.
+    Dl_info image = {0};
+    NSMutableArray<NSString *> *directories = [NSMutableArray arrayWithObject:NSBundle.mainBundle.bundlePath];
+    if (dladdr((const void *)&HCLibraryPaths, &image) && image.dli_fname) {
+        NSString *path = [NSString stringWithUTF8String:image.dli_fname];
+        if (path) [directories addObject:path.stringByDeletingLastPathComponent];
+    }
+    for (NSString *directory in directories) {
+        NSString *link = [directory stringByAppendingPathComponent:@".jbroot"];
+        char resolved[PATH_MAX] = {0};
+        if (realpath(link.fileSystemRepresentation, resolved)) {
+            HCAddRoot(roots, [NSString stringWithUTF8String:resolved]);
+            [notes addObject:[@"Đã phân giải liên kết " stringByAppendingString:link]];
+        }
+    }
+    HCAddRoot(roots, @"/var/jb");
+    HCAddRoot(roots, @"/jbroot");
+    HCAddRoot(roots, @"/");
+
+    // Only inspect immediate .jbroot-* names, never files inside other app bundles.
+    // No fixed root from an OCR transcript is trusted; the name changes on reboot.
+    NSRegularExpression *nameRule = [NSRegularExpression regularExpressionWithPattern:@"^\\.jbroot-[0-9A-Fa-f]{16}$" options:0 error:NULL];
+    NSArray<NSString *> *parents = @[@"/var/containers/Bundle/Application", @"/private/var/containers/Bundle/Application"];
+    for (NSString *parent in parents) {
+        NSError *error = nil;
+        NSArray<NSString *> *names = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:parent error:&error];
+        if (!names) {
+            [notes addObject:[NSString stringWithFormat:@"Không liệt kê được %@: %@", parent, error.localizedDescription ?: @"unknown error"]];
+            continue;
+        }
+        NSUInteger matches = 0;
+        for (NSString *name in [names sortedArrayUsingSelector:@selector(compare:)]) {
+            if ([nameRule numberOfMatchesInString:name options:0 range:NSMakeRange(0, name.length)] != 1) continue;
+            if (++matches > 32) break;
+            HCAddRoot(roots, [parent stringByAppendingPathComponent:name]);
+        }
+        [notes addObject:[NSString stringWithFormat:@"%@: tìm thấy %lu thư mục jailbreak root phù hợp.", parent, (unsigned long)MIN(matches, 32)]];
+    }
+    NSMutableOrderedSet<NSString *> *paths = [NSMutableOrderedSet orderedSet];
+    NSMutableArray *providers = [NSMutableArray array];
+    for (NSString *root in roots) {
+        [paths addObject:[root stringByAppendingPathComponent:@"usr/lib/libkrw.0.dylib"]];
+        [paths addObject:[root stringByAppendingPathComponent:@"usr/lib/libkrw.dylib"]];
+        NSString *provider = [root stringByAppendingPathComponent:@"usr/lib/libkrw/libkrw-dopamine.dylib"];
+        struct stat info = {0};
+        errno = 0;
+        BOOL visible = stat(provider.fileSystemRepresentation, &info) == 0;
+        int status = visible ? 0 : errno;
+        [providers addObject:@{@"path": provider, @"visible": visible ? @YES : @NO, @"status": @(status)}];
+    }
+    report[@"jailbreakRoots"] = roots.array;
+    report[@"resolverNotes"] = notes;
+    report[@"providerChecks"] = providers;
+    return paths.array;
+}
 
 static NSDictionary *HCReport(BOOL requestRead) {
     struct utsname system = {0};
@@ -31,10 +107,7 @@ static NSDictionary *HCReport(BOOL requestRead) {
         @"kernelProbeRequested": requestRead ? @YES : @NO, @"kernelReadVerified": @NO,
         @"symbolsFound": @[], @"checkedPaths": @[]
     } mutableCopy];
-    NSArray<NSString *> *paths = @[
-        @"/var/jb/usr/lib/libkrw.0.dylib", @"/var/jb/usr/lib/libkrw.dylib",
-        @"/usr/lib/libkrw.0.dylib", @"/usr/lib/libkrw.dylib"
-    ];
+    NSArray<NSString *> *paths = HCLibraryPaths(report);
     NSMutableArray *checks = [NSMutableArray array];
     void *library = HCLibraryHandle;
     HCKernelBase baseFunction = HCBaseFunction;
@@ -152,7 +225,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         NSDictionary *report = HCSessionReport;
         NSString *message = apply ? @"Chưa có game adapter; cấu hình chưa được áp dụng." : report[@"summary"];
         NSDictionary *snapshot = @{
-            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.2.1",
+            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.2.3",
             @"connected": @NO, @"gameRunning": @NO, @"gameInspectionAvailable": @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
         };

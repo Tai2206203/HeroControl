@@ -45,6 +45,28 @@ struct KernelDiagnosticsView: View {
                             }
                         }
                     }
+                    if let roots = report.jailbreakRoots {
+                        Section("Jailbreak root đã tìm") {
+                            ForEach(roots, id: \.self) { Text($0).font(.caption.monospaced()).textSelection(.enabled) }
+                        }
+                    }
+                    if let notes = report.resolverNotes {
+                        Section("Phân giải đường dẫn RootHide") {
+                            ForEach(Array(notes.enumerated()), id: \.offset) { entry in
+                                Text(entry.element).font(.caption).textSelection(.enabled)
+                            }
+                        }
+                    }
+                    if let providers = report.providerChecks {
+                        Section("Provider Dopamine") {
+                            ForEach(providers, id: \.path) { entry in
+                                VStack(alignment: .leading) {
+                                    Text(entry.path).font(.caption.monospaced()).textSelection(.enabled)
+                                    Text(entry.visible ? "Truy cập được" : "Chưa truy cập được (errno \(entry.status))").font(.caption)
+                                }
+                            }
+                        }
+                    }
                 } else {
                     Section("Kết quả") { Text(store.message).font(.subheadline) }
                 }

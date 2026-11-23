@@ -1,4 +1,4 @@
-HERO CONTROL 0.2.2 — Kiểm tra đã thực hiện trong môi trường Windows:
+HERO CONTROL 0.2.3 — Kiểm tra đã thực hiện trong môi trường Windows:
 
 - Cú pháp Swift của app, XCTest và công cụ kiểm thử giao thức bằng tree-sitter-swift.
 - Project OpenStep PBX: đọc thành công bằng parser pbxproj, đủ 2 target.
@@ -33,3 +33,7 @@ Các kiểm thử macOS/Simulator chưa được chạy từ môi trường Wind
 Bản 0.2.2: khắc phục async protocol dispatch của exchangeTrace. Xóa default
 implementation trả nil, khai báo async tường minh trong actor, thêm kiểm thử
 qua cả concrete type lẫn protocol existential. Giữ nguyên kiểm thử trace.
+
+Bản 0.2.3: phân giải jailbreak root qua API/link/tên thư mục RootHide.
+Kiểm thử giao thức native -> Swift yêu cầu có các trường resolver mới.
+Chưa kiểm chứng khả năng liệt kê thư mục/nạp libkrw dưới sandbox trên iPhone.

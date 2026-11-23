@@ -1,0 +1,27 @@
+HERO CONTROL 0.2.3 — PHÂN GIẢI ĐƯỜNG DẪN ROOTHIDE
+
+Kết quả terminal của người dùng cho thấy jbroot chuyển đường dẫn libkrw
+sang /var/containers/Bundle/Application/.jbroot-<ngẫu nhiên>/usr/lib/…
+Bản cũ chỉ kiểm tra /usr/lib và /var/jb/usr/lib nên bỏ sót vị trí này.
+
+Bản mới bổ sung:
+- Hỏi API libroot_get_jbroot_prefix nếu đã có trong tiến trình.
+- Phân giải liên kết .jbroot bên cạnh binary/library khi có.
+- Kiểm tra /var/jb, /jbroot và gốc hệ thống thông thường.
+- Liệt kê trực tiếp tên thư mục .jbroot-<16 ký tự hex> ở hai alias thư
+  mục Application; không đọc nội dung các bundle ứng dụng khác.
+- Ghi lại lỗi truy cập nếu sandbox không cho liệt kê hoặc nạp thư viện.
+- Kiểm tra sự hiện diện provider libkrw-dopamine.dylib riêng với thư
+  viện API libkrw.0.dylib. Không nhầm provider với thư viện API.
+
+Không gắn cứng tên thư mục từ ảnh/OCR; RootHide có thể đổi tên sau reboot.
+Tìm được đường dẫn không tự cấp quyền root, thay đổi sandbox hoặc triển
+khai chức năng game. Kết quả trên thiết bị vẫn cần được kiểm chứng.
+
+Đẩy commit bằng git push từ thư mục HeroControl trên Windows. Tải artifact
+mới HeroControl-TIPA-diagnostics sau khi Actions xanh; cài bản 0.2.3 build 5.
+Mở Chẩn đoán kernel -> Kiểm tra ngay -> chia sẻ JSON mới.
+
+Nguồn đã đối chiếu:
+https://github.com/opa334/libroot
+https://github.com/roothide/Developer/blob/main/roothide.md

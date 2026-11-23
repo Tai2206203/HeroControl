@@ -10,7 +10,8 @@ struct NativeContractCheck {
         let reply = try await backend.send(action: "status")
         guard reply.ok, let snapshot = reply.snapshot, let report = snapshot.diagnostics,
               !snapshot.connected, !snapshot.gameRunning, snapshot.gameInspectionAvailable == false,
-              snapshot.supportedKeys.isEmpty, !report.kernelProbeRequested, !report.kernelReadVerified else {
+              snapshot.supportedKeys.isEmpty, !report.kernelProbeRequested, !report.kernelReadVerified,
+              report.jailbreakRoots != nil, report.resolverNotes != nil, report.providerChecks != nil else {
             fatalError("Native diagnostics response violated the Swift contract")
         }
         let trace = await backend.exchangeTrace()

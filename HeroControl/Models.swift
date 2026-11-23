@@ -112,6 +112,9 @@ struct KernelDiagnostics: Codable {
     let kernelBaseStatus: Int?
     let kernelReadStatus: Int?
     let headerMagic: String?
+    let jailbreakRoots: [String]?
+    let resolverNotes: [String]?
+    let providerChecks: [KernelLibraryCheck]?
 }
 
 struct BackendRequest: Encodable {
