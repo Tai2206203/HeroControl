@@ -156,8 +156,8 @@
   },
   {
     "path": "Overlay/OverlayCommon.h",
-    "bytes": 2754,
-    "sha256": "6be44fd6421e2112a1dc71979cb7d375e01a434fc9236d732dd68c9f72ad758d"
+    "bytes": 2768,
+    "sha256": "d5fd441753011d302011eb6513831a5b149da3d7c04eeeda2d8eede74748903d"
   },
   {
     "path": "scripts/build-diagnostics.sh",
@@ -171,8 +171,8 @@
   },
   {
     "path": "scripts/build-overlay.sh",
-    "bytes": 1369,
-    "sha256": "884a6dc9708ec4742f472ceae3f3a607e2c6b769528e847d47ee279bad64d1e7"
+    "bytes": 1393,
+    "sha256": "fcc3521ec2a8e13abc9f02154bbb84cc9d755de973a413d77109cc1aa2ffc270"
   },
   {
     "path": "scripts/build-tipa.sh",

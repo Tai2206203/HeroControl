@@ -29,14 +29,14 @@ static BOOL HCOverlayPathsValid(NSString *directory, NSString *profile) {
     return lstat(profile.fileSystemRepresentation, &st) == 0 && S_ISREG(st.st_mode) && st.st_uid == 501;
 }
 
-static NSDictionary *HCOverlayReadState(NSString *directory) {
+static inline NSDictionary *HCOverlayReadState(NSString *directory) {
     NSData *data = [NSData dataWithContentsOfFile:[directory stringByAppendingPathComponent:@"state.json"]];
     if (!data || data.length > 32768) return nil;
     id value = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
     return [value isKindOfClass:NSDictionary.class] && [value[@"schemaVersion"] isEqual:@1] ? value : nil;
 }
 
-static BOOL HCOverlayFresh(NSDictionary *state) {
+static inline BOOL HCOverlayFresh(NSDictionary *state) {
     id heartbeat = state[@"heartbeat"];
     if (![heartbeat isKindOfClass:NSNumber.class]) return NO;
     double age = NSProcessInfo.processInfo.systemUptime - [heartbeat doubleValue];

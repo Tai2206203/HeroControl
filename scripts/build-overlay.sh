@@ -8,7 +8,7 @@ python3 "$ROOT/scripts/generate-overlay-features.py" "$OUTPUT/HCFeatures.h"
 xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
     -miphoneos-version-min=17.0 -fobjc-arc -Wall -Wextra \
     -Werror=implicit-function-declaration -I"$OUTPUT" \
-    -framework Foundation -framework UIKit -framework QuartzCore \
+    -framework Foundation -framework UIKit -framework QuartzCore -framework CoreGraphics \
     "$ROOT/Overlay/HeroOverlay.m" -o "$OUTPUT/HeroOverlay.app/hero-overlay"
 cp "$ROOT/Overlay/Info.plist" "$OUTPUT/HeroOverlay.app/Info.plist"
 xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
