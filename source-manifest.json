@@ -16,8 +16,8 @@
   },
   {
     "path": "BackendSDK/DiagnosticBackend.m",
-    "bytes": 30462,
-    "sha256": "eb8531386daf0028cc1f64c3dd451291cb4be1a3a91660e67b7ed7fccca60e4b"
+    "bytes": 32035,
+    "sha256": "1f121231b2b06edde450220267272a9dcc979d0cde983f6226263ffa47b89a63"
   },
   {
     "path": "BackendSDK/HeroBackend.h",
@@ -60,6 +60,11 @@
     "sha256": "4576379149d392e07768f389b557a9283aadc30d0a6a51114ff50d4a037bce77"
   },
   {
+    "path": "CAP_NHAT_0.3.2.txt",
+    "bytes": 1579,
+    "sha256": "5552421415b4bcf32662547566ad91d349f5756383ad213ceb93297f13e8f4f4"
+  },
+  {
     "path": "CAP_NHAT_0.3.txt",
     "bytes": 2941,
     "sha256": "17d9496d250e6028e355bc9ad08458316f034560c0ca03f7cd206f16c8bfe039"
@@ -82,7 +87,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1049,
-    "sha256": "cd81bad2c355684705e44431895b852a5c0ce2b134b16bc75b93eb0fe52b909c"
+    "sha256": "a8c8a5bf76ec3714308076289b48841a9682cf5bc96ac4bb9c56ffcccd922366"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -102,7 +107,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9121,
-    "sha256": "0a70c772c77bfe7fb17967419e88318c6d8019877cb6e28a65f3870605476d1d"
+    "sha256": "d185df4de29db38187dcb2290900348226bf926e877a0dafbf3966c70c0c8e95"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -142,7 +147,7 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 8730,
-    "sha256": "c8f978d1f07572f0988c508e0cd74792d9044125ab943a27eea25e8ba700e56f"
+    "sha256": "da210769e8b0b2df34209dc70f7a905a2adb259f1132bcae369d76ea88ac1762"
   },
   {
     "path": "scripts/native-contract-check.swift",
@@ -161,13 +166,13 @@
   },
   {
     "path": "scripts/validate-project.py",
-    "bytes": 3208,
-    "sha256": "9e7eba043083a4b15197e7e6e01ee0d84f82817d43b804e77d3193f1294a8678"
+    "bytes": 3326,
+    "sha256": "0f76ce93ef74f5d33a8e5384c81d7bb96bf9a0690b2412b41192cb13729ad221"
   },
   {
     "path": "scripts/verify-entitlements.py",
-    "bytes": 1964,
-    "sha256": "440f2332de1be68d8dd1b499e3b39e176d6ede67f73baadfb399872eff907a98"
+    "bytes": 2112,
+    "sha256": "ada900dbada69c471bd6460cf4e2bad1552e31a2a6a578f468198d3bf8c5b3d7"
   },
   {
     "path": "Signing/App.entitlements",
@@ -176,13 +181,18 @@
   },
   {
     "path": "Signing/Helper.entitlements",
-    "bytes": 291,
-    "sha256": "aecfde1a51dcd991f940918671802b3c394dbfc08d75d26f2b4a32fd3b59446c"
+    "bytes": 419,
+    "sha256": "3877445ee3ba02f7628e3b3c28ac02f6a8452e65ac2b890e1937aa9a5e4bb8a6"
   },
   {
     "path": "TELEGRAM_SETUP.txt",
     "bytes": 1751,
     "sha256": "1c0945eaab5e7e729fa72b79719f35b647b98c5124c759e40a9842c03b25a22b"
+  },
+  {
+    "path": "tests/test_signing.py",
+    "bytes": 1411,
+    "sha256": "6291b03794dba6d5ae333618647114e0b15b46fe8d7788eb93370fe3e6ce8e83"
   },
   {
     "path": "tests/test_telegram.py",
@@ -191,7 +201,7 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 3072,
-    "sha256": "8e1193cda3be1a4fb5385abf3f5d374a5b500190dd3d4843a646acf21c55d7b2"
+    "bytes": 3623,
+    "sha256": "4ebb07e7136be3fc9582588fd3aa18debd3648f4761bd2a354398ac699e6c98a"
   }
 ]

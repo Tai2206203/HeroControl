@@ -48,6 +48,12 @@ static NSDictionary *HCEntitlements(void) {
         values[key] = enabled ? @YES : @NO;
         if (value) CFRelease(value);
     }
+    NSString *clientKey = @"com.apple.security.exception.iokit-user-client-class";
+    CFTypeRef clients = copy(task, (__bridge CFStringRef)clientKey, NULL);
+    BOOL iosurfaceAllowed = clients && CFGetTypeID(clients) == CFArrayGetTypeID() &&
+        [(__bridge NSArray *)clients containsObject:@"IOSurfaceRootUserClient"];
+    values[clientKey] = iosurfaceAllowed ? @YES : @NO;
+    if (clients) CFRelease(clients);
     CFRelease(task);
     return values;
 }
@@ -451,7 +457,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         NSDictionary *report = HCSessionReport;
         NSString *message = apply ? @"Chưa có game adapter; cấu hình chưa được áp dụng." : report[@"summary"];
         NSDictionary *snapshot = @{
-            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.3.1",
+            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.3.2",
             @"connected": @NO, @"gameRunning": @NO, @"gameInspectionAvailable": @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
         };
@@ -463,6 +469,47 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
 __attribute__((visibility("default"))) void hc_backend_release(const char *response_json) { free((void *)response_json); }
 
 #ifdef HC_DIAGNOSTIC_CLI
+static BOOL HCWriteAll(int descriptor, const void *buffer, size_t size) {
+    size_t used = 0;
+    while (used < size) {
+        ssize_t count = write(descriptor, (const char *)buffer + used, size - used);
+        if (count < 0 && errno == EINTR) continue;
+        if (count <= 0) return NO;
+        used += (size_t)count;
+    }
+    return YES;
+}
+
+typedef NSDictionary *(*HCReportProducer)(BOOL);
+static int HCWriteIsolatedReport(BOOL requestRead, HCReportProducer producer) {
+    // Preserve the result channel before provider initialization. Some providers
+    // print warnings to stdout; redirect all such logging to captured stderr.
+    int resultFD = fcntl(STDOUT_FILENO, F_DUPFD_CLOEXEC, 3);
+    if (resultFD < 0) return 74;
+    if (fflush(stdout) || dup2(STDERR_FILENO, STDOUT_FILENO) < 0) { close(resultFD); return 74; }
+    setvbuf(stdout, NULL, _IONBF, 0);
+    HCStage("start");
+    NSDictionary *report = producer(requestRead);
+    HCStage("report_ready");
+    fflush(stdout);
+    NSError *error = nil;
+    NSData *data = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:&error];
+    BOOL sent = data && HCWriteAll(resultFD, data.bytes, data.length) && HCWriteAll(resultFD, "\n", 1);
+    close(resultFD);
+    if (!sent) {
+        fprintf(stderr, "HC_STAGE output_failed errno=%d\n", errno); fflush(stderr);
+        return 74;
+    }
+    return requestRead && ![report[@"kernelReadVerified"] boolValue] ? 2 : 0;
+}
+
+static NSDictionary *HCNoisyFixture(BOOL requestRead) {
+    (void)requestRead;
+    fputs("fixture-provider-warning {not-json}\n", stdout);
+    fputs("fixture-stderr\n", stderr); fflush(stderr);
+    return @{@"fixture": @YES};
+}
+
 // The runner invokes this in an isolated process with fd 0/1/2 closed. It
 // exercises the actual temporary-fd allocator and dup2/close collector actions.
 static int HCFDRegression(const char *executable) {
@@ -489,7 +536,8 @@ static int HCFDRegression(const char *executable) {
     if (waited != child || !WIFEXITED(status) || WEXITSTATUS(status)) return 34;
     NSDictionary *value = outData ? [NSJSONSerialization JSONObjectWithData:outData options:0 error:NULL] : nil;
     NSString *errorText = errData ? [[NSString alloc] initWithData:errData encoding:NSUTF8StringEncoding] : nil;
-    return [value[@"fixture"] isEqual:@YES] && [errorText isEqual:@"fixture-stderr\n"] ? 0 : 35;
+    return [value[@"fixture"] isEqual:@YES] && [errorText containsString:@"fixture-stderr\n"] &&
+        [errorText containsString:@"fixture-provider-warning {not-json}\n"] ? 0 : 35;
 }
 static BOOL HCIsJSONBoolean(id value) {
     return [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
@@ -535,9 +583,7 @@ static int HCSelfTest(void) {
 int main(int argc, char **argv) {
     @autoreleasepool {
         if (argc == 2 && strcmp(argv[1], "--emit-fd-fixture") == 0) {
-            fputs("{\"fixture\":true}\n", stdout); fflush(stdout);
-            fputs("fixture-stderr\n", stderr); fflush(stderr);
-            return 0;
+            return HCWriteIsolatedReport(NO, HCNoisyFixture);
         }
         if (argc == 2 && strcmp(argv[1], "--fd-self-test") == 0) return HCFDRegression(argv[0]);
         if (argc == 2 && strcmp(argv[1], "--self-test") == 0) return HCSelfTest();
@@ -548,17 +594,9 @@ int main(int argc, char **argv) {
         signal(SIGALRM, HCTimeout);
         alarm(15);
         HCTraceStagesEnabled = strcmp(argv[1], "--kernel-read") == 0;
-        HCStage("start");
-        NSDictionary *report = HCReport(strcmp(argv[1], "--kernel-read") == 0);
-        HCStage("report_ready");
+        int result = HCWriteIsolatedReport(HCTraceStagesEnabled, HCReport);
         alarm(0);
-        NSData *data = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:NULL];
-        if (!data) return 1;
-        if (fwrite(data.bytes, 1, data.length, stdout) != data.length || putchar('\n') == EOF || fflush(stdout)) {
-            fprintf(stderr, "HC_STAGE output_failed errno=%d\n", errno); fflush(stderr);
-            return 74;
-        }
-        return strcmp(argv[1], "--kernel-read") == 0 && ![report[@"kernelReadVerified"] boolValue] ? 2 : 0;
+        return result;
     }
 }
 #endif

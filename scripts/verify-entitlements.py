@@ -19,6 +19,11 @@ def read_entitlements(path):
     return plistlib.loads(payload[start:])
 
 
+def missing_entitlements(actual, expected):
+    return [key for key, value in expected.items()
+            if type(actual.get(key)) is not type(value) or actual.get(key) != value]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("app", type=Path)
@@ -37,7 +42,7 @@ def main():
             raise RuntimeError("Packaged app is missing")
         expected = plistlib.loads(expected_file.read_bytes())
         actual = read_entitlements(binary)
-        missing = [key for key, value in expected.items() if actual.get(key) is not value]
+        missing = missing_entitlements(actual, expected)
         if missing:
             raise RuntimeError("Missing requested " + label + " entitlements: " + ", ".join(missing))
         result[label] = {"present": True, "requestedEntitlementsVerified": actual}

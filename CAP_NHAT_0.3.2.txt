@@ -1,0 +1,25 @@
+HERO CONTROL 0.3.2 — TÁCH LOG PROVIDER KHỎI JSON
+
+Log thiết bị 0.3.1 có báo cáo bên trong stdout:
+  uid=0, euid=0, kernelBaseStatus=0, kernelReadStatus=0,
+  kernelReadVerified=true, headerMagic=0xfeedfacf.
+Đây là bằng chứng helper đã đọc được header kernel. App báo sai vì cảnh
+báo IOSurface được provider in ra stdout trước JSON, làm bộ giải mã thất bại.
+
+Sửa:
+- Giữ riêng descriptor trả JSON trước khi khởi tạo provider.
+- Chuyển stdout của provider sang stderr, không dùng stdout chung làm
+  đồng thời kênh dữ liệu và kênh log. Không dùng cách bỏ tùy tiện ký tự
+  trước dấu { để chấp nhận một phản hồi có thể không hợp lệ.
+- JSON đi qua hàm write-all có xử lý partial write/EINTR.
+- Kiểm thử native bây giờ cố tình in cảnh báo chứa {not-json} ra stdout
+  trước JSON, cùng với trường hợp stdio 0/1/2 đóng; dữ liệu vẫn phải sạch.
+- Helper yêu cầu entitlement iokit-user-client-class chỉ cho lớp
+  IOSurfaceRootUserClient đúng theo cảnh báo provider. Không mở mọi lớp.
+- Kiểm tra chữ ký hỗ trợ cả boolean và array entitlement.
+
+Không kết luận kalloc/kmap/kcall hoạt động: bản kiểm tra chỉ đọc 4 byte.
+Game adapter và các chức năng ESP/skin/camera vẫn chưa được triển khai.
+
+Cập nhật: git push tại HeroControl. Workflow/Telegram giữ nguyên thiết lập.
+Cài bản 0.3.2 build 8 -> Chẩn đoán kernel -> Kiểm tra ngay -> chia sẻ JSON.

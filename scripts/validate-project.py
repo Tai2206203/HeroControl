@@ -44,6 +44,7 @@ helper_entitlements = plistlib.loads((root / 'Signing/Helper.entitlements').read
 assert app_entitlements.get('com.apple.private.security.no-sandbox') is True
 assert app_entitlements.get('com.apple.private.persona-mgmt') is True
 assert helper_entitlements.get('com.apple.private.security.no-container') is True
+assert helper_entitlements.get('com.apple.security.exception.iokit-user-client-class') == ['IOSurfaceRootUserClient']
 for banned in ['com.apple.private.cs.debugger', 'dynamic-codesigning', 'com.apple.private.skip-library-validation']:
     assert banned not in app_entitlements and banned not in helper_entitlements
 print(json.dumps({'pbxObjects': len(definitions), 'toggleKeys': len(keys), 'sharedTestScheme': True,

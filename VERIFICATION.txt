@@ -1,4 +1,4 @@
-HERO CONTROL 0.3.1 — Kiểm tra đã thực hiện trong môi trường Windows:
+HERO CONTROL 0.3.2 — Kiểm tra đã thực hiện trong môi trường Windows:
 
 - Cú pháp Swift của app, XCTest và công cụ kiểm thử giao thức bằng tree-sitter-swift.
 - Project OpenStep PBX: đọc thành công bằng parser pbxproj, đủ 2 target.
@@ -47,3 +47,10 @@ Chưa xác minh gửi Telegram thật vì secrets GitHub chưa được thiết 
 Bản 0.3.1: sửa descriptor thu kết quả khi stdio 0/1/2 đóng. Thêm kiểm thử
 native con chạy với stdio đóng, xác minh thu stdout và stderr riêng biệt.
 Kiểm thử native mới cần runner macOS; chưa chạy từ phiên Windows này.
+
+Bản 0.3.2: log người dùng 0.3.1 xác nhận helper UID/EUID 0, kread status 0,
+kernelReadVerified=true, headerMagic=0xfeedfacf. Thông báo lỗi app xuất phát
+từ cảnh báo provider chèn vào stdout trước JSON, không phải lần đọc thất bại.
+Sửa tách riêng kênh báo cáo/log và bổ sung IOSurfaceRootUserClient cho helper.
+Kiểm thử native cố tình in cảnh báo chứa {not-json} trước khi tạo báo cáo.
+3 kiểm thử Python xác minh so sánh array/boolean entitlement theo giá trị/kiểu.
