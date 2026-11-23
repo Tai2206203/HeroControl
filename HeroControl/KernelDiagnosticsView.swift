@@ -48,6 +48,15 @@ struct KernelDiagnosticsView: View {
                 } else {
                     Section("Kết quả") { Text(store.message).font(.subheadline) }
                 }
+                if let trace = store.backendTrace {
+                    Section("Giao tiếp backend") {
+                        LabeledContent("Yêu cầu / bước", value: "\(trace.action) / \(trace.stage)")
+                        if let count = trace.responseByteCount { LabeledContent("Byte phản hồi", value: String(count)) }
+                        if let error = trace.decodingError { Text(error).font(.caption).textSelection(.enabled) }
+                        Text("File JSON chia sẻ có phản hồi gốc và phiên bản ứng dụng để truy tìm lỗi định dạng.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
                 Section("Kiểm tra bằng terminal iOS") {
                     Text("Trong NewTerm, dùng su để vào phiên root do bạn quản lý, sau đó chạy lệnh bên dưới. Công cụ chỉ đọc 4 byte header tại base do provider trả về; không ghi kernel hoặc đọc game.")
                         .font(.footnote)

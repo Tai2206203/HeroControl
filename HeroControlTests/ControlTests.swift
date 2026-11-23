@@ -95,6 +95,24 @@ final class ControlTests: XCTestCase {
         XCTAssertFalse(snapshot.connected)
         XCTAssertFalse(snapshot.gameInspectionAvailable ?? true)
     }
+
+    func testNumericOKRegressionReportsCodingPath() {
+        let numeric = #"{"protocolVersion":1,"ok":1,"message":"old broken native response"}"#
+        XCTAssertThrowsError(try BackendReplyDecoder.decode(Data(numeric.utf8))) { error in
+            XCTAssertTrue(error.localizedDescription.contains("$.ok"), error.localizedDescription)
+        }
+    }
+
+    func testMissingAndInvalidNestedFieldsReportExactPath() {
+        let missing = #"{"protocolVersion":1,"ok":true}"#
+        XCTAssertThrowsError(try BackendReplyDecoder.decode(Data(missing.utf8))) { error in
+            XCTAssertTrue(error.localizedDescription.contains("$.message"), error.localizedDescription)
+        }
+        let invalid = #"{"protocolVersion":1,"ok":true,"message":"test","snapshot":{"protocolVersion":1,"backendName":"test","connected":0}}"#
+        XCTAssertThrowsError(try BackendReplyDecoder.decode(Data(invalid.utf8))) { error in
+            XCTAssertTrue(error.localizedDescription.contains("$.snapshot.connected"), error.localizedDescription)
+        }
+    }
 }
 
 private actor TestBackend: BackendClient {

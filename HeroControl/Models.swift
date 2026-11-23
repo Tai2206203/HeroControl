@@ -133,3 +133,14 @@ struct SavedProfile: Codable {
     let schemaVersion: Int
     let settings: ControlSettings
 }
+
+struct BackendExchangeTrace: Codable {
+    let action: String
+    let libraryPath: String
+    var stage: String
+    var responseByteCount: Int?
+    var rawResponse: String?
+    var responseTruncated: Bool?
+    var responsePrefixHex: String?
+    var decodingError: String?
+}

@@ -16,8 +16,8 @@
   },
   {
     "path": "BackendSDK/DiagnosticBackend.m",
-    "bytes": 11504,
-    "sha256": "675c1cf743453df08bd87d9408d81528c55d6a9c2fed85867a7111050fd98960"
+    "bytes": 12543,
+    "sha256": "07dc8e7989ac2c1e7ed5ac2221828eabee910cd0b4470c2af3a95abd681a9dc9"
   },
   {
     "path": "BackendSDK/HeroBackend.h",
@@ -31,8 +31,13 @@
   },
   {
     "path": "BackendSDK/UnavailableBackend.m",
-    "bytes": 1782,
-    "sha256": "57fa405796c83260d2178382bcfb5ffea53cef470722e98aebc864bee57b966a"
+    "bytes": 1792,
+    "sha256": "9fc15ae604abb8e88acbc5c9ea869b876a6d89444c75ff2cb7cd2145aece2546"
+  },
+  {
+    "path": "CAP_NHAT_0.2.1.txt",
+    "bytes": 1705,
+    "sha256": "20fe5279920a0e6f260f0e9e146774fbe3220f32aa5b727d2849a2217df66b56"
   },
   {
     "path": "CAP_NHAT_0.2.txt",
@@ -46,8 +51,8 @@
   },
   {
     "path": "HeroControl/ControlStore.swift",
-    "bytes": 6521,
-    "sha256": "8f9edbaf0bd75d2964aadc6d14f747b91413b5b8573bacc8013af854a9518a2d"
+    "bytes": 7328,
+    "sha256": "bb638c458a9d3d27993d3c75c1cce78ab610412c1ecb2b13fd68a4161bc475ab"
   },
   {
     "path": "HeroControl/HeroControlApp.swift",
@@ -57,27 +62,27 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1049,
-    "sha256": "c1cc93dd3d067eb4997dad590bf2b604fd19f52cb33670b4d4c436b5fa2fff3d"
+    "sha256": "aa9e9bfa046ba88828be85b534ac78874469b7db09a254bc9c3701715156d6af"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
-    "bytes": 4694,
-    "sha256": "2f50b3f264513b1a5c3e9a2f09abd43d30d31469e3e3b1f61e0e5bd243a0ead3"
+    "bytes": 5399,
+    "sha256": "b0360e5787ce1d747cb5b68de3c37e175ca541ef60c8acee1bd35bc48f72fcc8"
   },
   {
     "path": "HeroControl/Models.swift",
-    "bytes": 4565,
-    "sha256": "33f89d9d167dd86ef0a8c8c87734a756a975fc861431f5b71e9961336c204af6"
+    "bytes": 4840,
+    "sha256": "c34276d4760704ada1687ec16580cb0584934e14c8818dd8970cd3ece905f655"
   },
   {
     "path": "HeroControl/NativeBackend.swift",
-    "bytes": 3807,
-    "sha256": "e8968421aecad0e9835c6ee22c561f274f13830503c5fe2c8201bb2d901b2cfe"
+    "bytes": 6152,
+    "sha256": "3c5ebf0d0a2f4f676a2f003d6dbcedee665405f5361a6f8551d2363a2bc007ce"
   },
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9121,
-    "sha256": "44f84d616d3054b996004301675c198b36416ac4bef8c0ab7d7cd7e5880dc2e4"
+    "sha256": "606f6a171f65b7e9f33ceb4b731087790776290ed1d9d84d73395a23972a1ccf"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -86,8 +91,8 @@
   },
   {
     "path": "HeroControlTests/ControlTests.swift",
-    "bytes": 5943,
-    "sha256": "847be60e5735c0c00d69d6b2c68ca7407567c61178ba4f080ab510ec95025523"
+    "bytes": 6992,
+    "sha256": "53782c00997542c34252b6d78cc535d81512f25a1c41afce8ab022d39e57654a"
   },
   {
     "path": "HUONG_DAN_BUILD.txt",
@@ -96,8 +101,8 @@
   },
   {
     "path": "scripts/build-diagnostics.sh",
-    "bytes": 1229,
-    "sha256": "f77f61533a1da377d0e97c15ab4e586a8fcba37c09ec6b793a43a7c9e2a2b697"
+    "bytes": 1830,
+    "sha256": "251ba4e1312c99d83317d89e2d4b613de08affc1dc8e14567bce23165cc581a2"
   },
   {
     "path": "scripts/build-example-backend.sh",
@@ -112,7 +117,12 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 8730,
-    "sha256": "881edf837639d436ee7e403d1a12b46348ca4f69cc552db55c3575a58e12b80e"
+    "sha256": "f28607d07f381c16fed1bb2f427169e7d396b9fa07246da63554a0c8724e09ed"
+  },
+  {
+    "path": "scripts/native-contract-check.swift",
+    "bytes": 1776,
+    "sha256": "d6220751c67cb4df3f246ee97706c717d4ca0ba1e4d5a980a86c328aa9d3434d"
   },
   {
     "path": "scripts/test-simulator.sh",
@@ -126,7 +136,7 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 1509,
-    "sha256": "77388ee210679461112fe7491eb794c6218c43baab492e6f4012e4c54375330e"
+    "bytes": 1816,
+    "sha256": "f47c3163a3d7c46511da6ff48a6d6916d74a514e99a7d005361380c5d23a3468"
   }
 ]

@@ -1,0 +1,28 @@
+HERO CONTROL 0.2.1 — SỬA LỖI ĐỊNH DẠNG PHẢN HỒI
+
+Triệu chứng người dùng gửi: “Không thể đọc dữ liệu vì dữ liệu có định
+dạng không đúng”, snapshot không có trong file chẩn đoán.
+
+Đã tìm thấy lỗi trong mã backend: @(!apply) đóng gói kết quả toán tử !
+của C dưới dạng NSNumber kiểu int, dẫn đến JSON ok:1 hoặc ok:0, trong
+khi bộ giải mã Swift yêu cầu Bool true/false.
+
+Đã sửa:
+- Dùng JSON boolean tường minh cho ok và các trường boolean chẩn đoán.
+- Kiểm thử native kiểm tra loại CFBoolean, không chỉ dùng boolValue.
+- Thêm kiểm thử xuyên suốt backend Objective-C -> C ABI -> JSON -> bộ
+  giải mã Swift dùng đúng mã production, chạy trên macOS trong build.
+- Lỗi giải mã hiển thị đường dẫn trường, ví dụ $.ok thay vì thông báo
+  chung của Foundation. Không tự ép 1/0 thành bool và che lỗi giao thức.
+- File chẩn đoán có appVersion, appBuild và backendExchange, giữ tối đa
+  64 KiB phản hồi gốc, số byte, prefix hex và chi tiết lỗi giải mã.
+- Phiên bản app: 0.2.1, build 3.
+
+Cập nhật: trong cmd tại thư mục HeroControl chạy git push (commit sửa
+đã tạo sẵn nếu dùng cùng workspace). Vào Actions tải artifact mới nhất
+HeroControl-TIPA-diagnostics, cài lại .tipa. Không cần gỡ app trước.
+
+Sau cài: Chẩn đoán kernel -> Kiểm tra ngay -> Chuẩn bị file chẩn đoán
+-> Chia sẻ file JSON. Gửi JSON đó nếu cần xác định bước kết nối tiếp.
+
+Bản này sửa giao tiếp/chẩn đoán; chưa triển khai các chức năng game.

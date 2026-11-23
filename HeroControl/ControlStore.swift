@@ -10,6 +10,7 @@ final class ControlStore: ObservableObject {
     @Published private(set) var persistenceError: String?
     @Published private(set) var confirmedRevision: String?
     @Published private(set) var revision = UUID().uuidString
+    @Published private(set) var backendTrace: BackendExchangeTrace?
     @Published var selectedGroup: FeatureGroup = .esp
     private let backend: any BackendClient
     private let profileURL: URL
@@ -81,12 +82,16 @@ final class ControlStore: ObservableObject {
         defer { busy = false }
         do {
             let reply = try await backend.send(action: action, revision: nil, settings: nil)
+            backendTrace = await backend.exchangeTrace()
             guard reply.ok, reply.protocolVersion == 1, reply.snapshot?.protocolVersion == 1 else {
                 throw BackendError.unavailable(reply.message)
             }
             accept(reply.snapshot)
             message = reply.message
-        } catch { disconnected(error) }
+        } catch {
+            backendTrace = await backend.exchangeTrace()
+            disconnected(error)
+        }
     }
     func apply() async {
         guard canApply else { return }
@@ -95,6 +100,7 @@ final class ControlStore: ObservableObject {
         defer { busy = false }
         do {
             let reply = try await backend.send(action: "apply", revision: sentRevision, settings: sentSettings)
+            backendTrace = await backend.exchangeTrace()
             accept(reply.snapshot)
             guard reply.ok, reply.protocolVersion == 1, let result = reply.snapshot, result.protocolVersion == 1,
                   result.connected, result.gameRunning, result.sessionID == sentSession,
@@ -105,7 +111,10 @@ final class ControlStore: ObservableObject {
             }
             confirmedRevision = sentRevision
             message = revision == sentRevision ? "Backend đã xác nhận áp dụng cấu hình." : "Đã áp dụng bản trước; còn thay đổi chưa áp dụng."
-        } catch { disconnected(error) }
+        } catch {
+            backendTrace = await backend.exchangeTrace()
+            disconnected(error)
+        }
     }
     private func accept(_ value: BackendSnapshot?) {
         if value?.sessionID != snapshot?.sessionID || value?.connected != true || value?.gameRunning != true {
@@ -126,10 +135,16 @@ final class ControlStore: ObservableObject {
             let confirmedRevision: String?
             let snapshot: BackendSnapshot?
             let message: String
+            let appVersion: String
+            let appBuild: String
+            let backendExchange: BackendExchangeTrace?
         }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let diagnostics = Diagnostics(schemaVersion: 1, settings: settings, revision: revision,
-                                      confirmedRevision: confirmedRevision, snapshot: snapshot, message: message)
+                                      confirmedRevision: confirmedRevision, snapshot: snapshot, message: message,
+                                      appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+                                      appBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",
+                                      backendExchange: backendTrace)
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("HeroControl-diagnostics.json")
         try encoder.encode(diagnostics).write(to: url, options: .atomic)
         return url

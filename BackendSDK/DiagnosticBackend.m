@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <CoreFoundation/CoreFoundation.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <stdio.h>
@@ -27,7 +28,7 @@ static NSDictionary *HCReport(BOOL requestRead) {
         @"system": [NSString stringWithUTF8String:system.sysname] ?: @"unknown",
         @"machine": [NSString stringWithUTF8String:system.machine] ?: @"unknown",
         @"uid": @(getuid()), @"euid": @(geteuid()),
-        @"kernelProbeRequested": @(requestRead), @"kernelReadVerified": @NO,
+        @"kernelProbeRequested": requestRead ? @YES : @NO, @"kernelReadVerified": @NO,
         @"symbolsFound": @[], @"checkedPaths": @[]
     } mutableCopy];
     NSArray<NSString *> *paths = @[
@@ -47,7 +48,7 @@ static NSDictionary *HCReport(BOOL requestRead) {
         errno = 0;
         BOOL visible = stat(path.fileSystemRepresentation, &info) == 0;
         int status = visible ? 0 : errno;
-        NSMutableDictionary *check = [@{@"path": path, @"visible": @(visible), @"status": @(status)} mutableCopy];
+        NSMutableDictionary *check = [@{@"path": path, @"visible": visible ? @YES : @NO, @"status": @(status)} mutableCopy];
         // Visibility and loadability are separate: try the loader even when stat
         // is restricted by sandbox policy. Loading does not invoke kbase/kread.
         if (!library) {
@@ -107,7 +108,7 @@ static NSDictionary *HCReport(BOOL requestRead) {
             } else {
                 report[@"headerMagic"] = [NSString stringWithFormat:@"0x%08x", magic];
                 BOOL verified = magic == UINT32_C(0xfeedfacf);
-                report[@"kernelReadVerified"] = @(verified);
+                report[@"kernelReadVerified"] = verified ? @YES : @NO;
                 report[@"code"] = verified ? @"kernel_read_verified" : @"unexpected_kernel_header";
                 report[@"summary"] = verified ? @"Đã đọc và xác minh header Mach-O của kernel. Bộ xử lý chức năng game chưa được triển khai." : @"Lệnh đọc trả thành công nhưng header không khớp Mach-O 64-bit; không đánh dấu xác minh.";
             }
@@ -151,16 +152,21 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         NSDictionary *report = HCSessionReport;
         NSString *message = apply ? @"Chưa có game adapter; cấu hình chưa được áp dụng." : report[@"summary"];
         NSDictionary *snapshot = @{
-            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.2",
+            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.2.1",
             @"connected": @NO, @"gameRunning": @NO, @"gameInspectionAvailable": @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
         };
-        return HCEncode(@{@"protocolVersion": @1, @"ok": @(!apply), @"message": message, @"snapshot": snapshot});
+        // C's ! operator has type int, so @(!apply) serializes as 0/1, not
+        // JSON false/true. Swift's Bool decoder correctly rejects those numbers.
+        return HCEncode(@{@"protocolVersion": @1, @"ok": apply ? @NO : @YES, @"message": message, @"snapshot": snapshot});
     }
 }
 __attribute__((visibility("default"))) void hc_backend_release(const char *response_json) { free((void *)response_json); }
 
 #ifdef HC_DIAGNOSTIC_CLI
+static BOOL HCIsJSONBoolean(id value) {
+    return [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
+}
 static void HCTimeout(int number) {
     (void)number;
     static const char text[] = "Kernel diagnostic provider timed out after 15 seconds.\n";
@@ -173,9 +179,10 @@ static int HCSelfTest(void) {
         const char *reply = hc_backend_request(invalid[i]);
         if (!reply) return 1;
         NSDictionary *value = [NSJSONSerialization JSONObjectWithData:[[NSString stringWithUTF8String:reply] dataUsingEncoding:NSUTF8StringEncoding] options:0 error:NULL];
+        BOOL validBoolean = HCIsJSONBoolean(value[@"ok"]);
         BOOL ok = [value[@"ok"] boolValue];
         hc_backend_release(reply);
-        if (ok) return 2;
+        if (ok || !validBoolean) return 2;
     }
     const char *request[] = {"{\"protocolVersion\":1,\"action\":\"status\"}", "{\"protocolVersion\":1,\"action\":\"apply\",\"revision\":\"must-not-ack\"}"};
     for (size_t i = 0; i < 2; ++i) {
@@ -183,10 +190,17 @@ static int HCSelfTest(void) {
         if (!reply) return 3;
         NSDictionary *value = [NSJSONSerialization JSONObjectWithData:[[NSString stringWithUTF8String:reply] dataUsingEncoding:NSUTF8StringEncoding] options:0 error:NULL];
         NSDictionary *snapshot = value[@"snapshot"];
+        BOOL correctTypes = HCIsJSONBoolean(value[@"ok"]) && HCIsJSONBoolean(snapshot[@"connected"]) &&
+            HCIsJSONBoolean(snapshot[@"gameRunning"]) && HCIsJSONBoolean(snapshot[@"gameInspectionAvailable"]) &&
+            HCIsJSONBoolean(snapshot[@"diagnostics"][@"kernelProbeRequested"]) &&
+            HCIsJSONBoolean(snapshot[@"diagnostics"][@"kernelReadVerified"]);
+        for (NSDictionary *check in snapshot[@"diagnostics"][@"checkedPaths"]) {
+            correctTypes = correctTypes && HCIsJSONBoolean(check[@"visible"]);
+        }
         BOOL invalid = [snapshot[@"connected"] boolValue] || [snapshot[@"gameRunning"] boolValue] || [snapshot[@"supportedKeys"] count] || snapshot[@"appliedRevision"] ||
                        [snapshot[@"diagnostics"][@"kernelProbeRequested"] boolValue] || (i == 1 && [value[@"ok"] boolValue]);
         hc_backend_release(reply);
-        if (invalid) return 4;
+        if (invalid || !correctTypes) return 4;
     }
     puts("Diagnostic ABI tests passed: malformed input, status, apply refusal; no kernel primitive invoked.");
     return 0;

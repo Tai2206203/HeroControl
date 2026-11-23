@@ -1,6 +1,6 @@
-Kiểm tra đã thực hiện trong môi trường Windows:
+HERO CONTROL 0.2.1 — Kiểm tra đã thực hiện trong môi trường Windows:
 
-- Cú pháp cả 7 file Swift: tree-sitter-swift không tìm thấy ERROR/missing node.
+- Cú pháp Swift của app, XCTest và công cụ kiểm thử giao thức bằng tree-sitter-swift.
 - Project OpenStep PBX: đọc thành công bằng parser pbxproj, đủ 2 target.
 - 41 object ID trong PBX: duy nhất, không có tham chiếu mất.
 - Shared scheme XML: hợp lệ, tham chiếu đúng app target và test target.
@@ -12,7 +12,7 @@ Kiểm tra đã thực hiện trong môi trường Windows:
 Chưa thực hiện:
 
 - Xcode type checking/compilation/linking.
-- Chạy 6 bài XCTest trên iPhone Simulator.
+- Chạy 8 bài XCTest trên iPhone Simulator.
 - Chạy ứng dụng trên iPhone XR hoặc thử trình cài đặt của người dùng.
 - Kết nối libkrw/helper và áp dụng chức năng trong game.
 
@@ -25,3 +25,7 @@ chưa có game adapter.
 
 Bản 0.2: thêm kiểm tra ABI native trên runner macOS qua build-diagnostics.sh.
 Việc nạp dylib/provider và đọc header chỉ được xác minh khi chạy trên thiết bị.
+
+Bản 0.2.1: sửa @(!apply) -> boolean JSON tường minh; thêm kiểm tra CFBoolean
+và kiểm thử backend native -> bộ giải mã Swift production trên runner macOS.
+Các kiểm thử macOS/Simulator chưa được chạy từ môi trường Windows này.

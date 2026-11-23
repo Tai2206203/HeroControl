@@ -19,7 +19,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
             @"message": @"Chưa tích hợp kernel/game provider."
         };
         NSDictionary *reply = @{
-            @"protocolVersion": @1, @"ok": @(status), @"snapshot": snapshot,
+            @"protocolVersion": @1, @"ok": status ? @YES : @NO, @"snapshot": snapshot,
             @"message": status ? @"Ví dụ ABI đã nạp; chưa có kết nối game." : @"Backend ví dụ không áp dụng chức năng."
         };
         NSData *data = [NSJSONSerialization dataWithJSONObject:reply options:0 error:NULL];
