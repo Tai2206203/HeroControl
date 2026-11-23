@@ -1,0 +1,78 @@
+HERO CONTROL 0.6.0 — BUILD 15 — THỰC THI CAMERA QUA DỮ LIỆU GAME
+
+Kết quả 0.5.1 trên thiết bị đã xác minh task_for_pid=0, đọc được module
+game và UUID khớp 298E718A-DA06-33B8-8253-910447B649E3. Menu nhận chạm.
+Các bản trước đó chưa có mã thực thi camera; đọc module không tự áp dụng
+các lựa chọn. Bản này bổ sung đường ghi camera, không chỉ chẩn đoán.
+
+CAMERA ĐƯỢC TRIỂN KHAI NHƯ THẾ NÀO
+
+CameraEngine chạy trên hàng đợi riêng trong tiến trình overlay, mỗi
+200 ms khi công tắc cameraEnabled=true. Mặc định tắt, kể cả cấu hình cũ
+đã có cameraScale>1. Xác minh lại game/module mỗi 2 giây, không dùng
+unityBase/PID cố định lấy từ JSON của lần khởi động trước.
+
+Kiểm tra UUID và mẫu lệnh native trước khi dùng layout:
+- CameraSystem_TypeInfo RVA 0xD0B9AD8 từ script.json.
+- Il2CppClass.parent 0x58 và static_fields 0xB8 từ il2cpp.h.
+- MonoSingleton<CameraSystem>._instance; kiểm tra _destroyed và klass.
+- CameraSystem.MobaCamera 0x18 và m_curZoom 0x8C.
+- Kiểm tra tên lớp Moba_Camera và Unity m_CachedPtr của hai đối tượng.
+- Mẫu lệnh CameraSystem.UpdateCameraState tại 0x540E520 xác minh nguồn
+  zoom và tham chiếu MobaCamera.
+- Mẫu lệnh Moba_Camera.set_currentZoomRate tại 0x550F16C:
+  str s8,[x19,#0x98]; mov w8,#1; strb w8,[x19,#0xDC].
+
+Thao tác ghi thực tế chỉ gồm float currentZoomRate tại MobaCamera+0x98
+và byte dirty tại +0xDC, tương đương đường dữ liệu setter gốc. Đọc lại
+float để xác nhận. Giá trị đích = CameraSystem.m_curZoom * hệ số 1..2.3;
+không sửa nguồn m_curZoom nên các tick không nhân dồn lên giá trị cũ.
+Không sửa mã lệnh, không chèn mã vào game, không đổi file HeroSkin.
+Overlay được bổ sung entitlement task port như helper đã hoạt động.
+
+Khi tắt công tắc hoặc đóng overlay bình thường, chỉ khôi phục nếu
+camera/moba/klass vẫn đúng đối tượng và giá trị hiện tại đúng giá trị
+vừa ghi. Khôi phục về nguồn zoom hiện tại của game, bật dirty để cập nhật.
+Nếu game đã đổi đối tượng/giá trị thì bỏ qua để không ghi đè trạng thái mới.
+Nếu tiến trình bị kill đột ngột, không bảo đảm thực hiện được bước hoàn tác.
+
+XÁC NHẬN VÀ GIỚI HẠN
+
+camera_write_verified chỉ xác nhận ghi + đọc lại float thành công; chưa
+chứng minh hình ảnh camera đã đổi. Cần thử trên iPhone. Các trường hợp
+không có camera hợp lệ, chưa vào trận, sai lớp, sai UUID/mẫu lệnh, giá trị
+không hữu hạn hoặc lỗi đọc/ghi đều không báo thành công.
+
+ESP VÀ CHECK TỐ CÁO CHƯA ĐƯỢC TRIỂN KHAI XONG.
+Nút Áp dụng chung vẫn không xác nhận các nhóm đó. Camera dùng công tắc
+riêng và không cần bấm Áp dụng chung; màn hình thẻ Camera bỏ nút chung.
+Skin/Style không được triển khai trong đợt này.
+
+CÁCH THỬ
+
+1. CMD trong thư mục HeroControl: git push. Chờ Actions mới xanh.
+2. Tắt nút nổi trong bản cũ trước khi cài đè .tipa mới.
+   Nếu trình cài yêu cầu Developer Mode do quyền task port mới của
+   overlay, làm theo hướng dẫn của trình cài.
+3. Mở 0.6.0 build 15, mở game và vào TRẬN TẬP để có camera trận.
+4. Quay lại Hero Control -> thẻ Camera -> Bật camera xa -> chọn 1.50x.
+   Giữ nút nổi đang chạy. Không cần bấm Áp dụng chung.
+5. Quay lại trận, kiểm tra phạm vi nhìn. Thử đổi 1.00x/1.50x/2.00x.
+6. Tắt công tắc, kiểm tra camera trở về trạng thái bình thường.
+7. Xuất cấu hình & chẩn đoán từ menu ba chấm: có trường overlay.camera
+   gồm code, memoryStatus, scale, sourceZoom, writtenZoom, writeCount.
+   Gửi JSON và kết quả quan sát trong trận. Nếu code camera_waiting,
+   báo cáo còn có cameraClass/cameraObject/mobaObject để xác định bước lỗi.
+
+KIỂM THỬ
+
+Đã biên dịch/chạy camera-memory-check.c trên Windows bằng Zig/Clang,
+chỉ dùng bộ nhớ mô phỏng: nhận diện đối tượng, giới hạn scale, dirty flag,
+không nhân dồn, rollback khi ghi dirty lỗi, khôi phục không ghi đè thay
+đổi của game, từ chối singleton đã hủy và lớp sai. Kiểm thử này cũng
+chạy bằng Clang trên macOS trong quy trình build.
+
+Thêm XCTest tương thích cấu hình cũ thiếu cameraEnabled: không tự bật
+camera và lưu/đọc được thao tác bật/tắt rõ ràng.
+Windows kiểm tra cú pháp Swift/Objective-C, project/plist, shell và
+11 kiểm thử Python. Xcode, XCTest và chạy game thật cần GitHub/iPhone.

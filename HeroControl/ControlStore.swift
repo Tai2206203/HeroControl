@@ -49,6 +49,7 @@ final class ControlStore: ObservableObject {
         changed()
     }
     func setCamera(_ value: Double) { reloadProfileIfChanged(); settings.cameraScale = value; changed() }
+    func setCameraEnabled(_ value: Bool) { reloadProfileIfChanged(); settings.cameraEnabled = value; changed() }
     func setSkin(hero: UInt32, skin: Int?) {
         reloadProfileIfChanged()
         if let skin, let entry = snapshot?.heroes.first(where: { $0.id == hero }),
@@ -152,7 +153,7 @@ final class ControlStore: ObservableObject {
         confirmedRevision = nil
         message = error.localizedDescription
     }
-    func exportDiagnostics() throws -> URL {
+    func exportDiagnostics(overlayState: OverlayState? = nil) throws -> URL {
         struct Diagnostics: Encodable {
             let schemaVersion: Int
             let settings: ControlSettings
@@ -163,13 +164,14 @@ final class ControlStore: ObservableObject {
             let appVersion: String
             let appBuild: String
             let backendExchange: BackendExchangeTrace?
+            let overlay: OverlayState?
         }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let diagnostics = Diagnostics(schemaVersion: 1, settings: settings, revision: revision,
                                       confirmedRevision: confirmedRevision, snapshot: snapshot, message: message,
                                       appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
                                       appBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",
-                                      backendExchange: backendTrace)
+                                      backendExchange: backendTrace, overlay: overlayState)
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("HeroControl-diagnostics.json")
         try encoder.encode(diagnostics).write(to: url, options: .atomic)
         return url

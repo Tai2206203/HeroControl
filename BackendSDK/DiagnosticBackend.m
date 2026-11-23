@@ -229,7 +229,7 @@ static NSDictionary *HCReport(BOOL requestRead) {
                 BOOL verified = magic == UINT32_C(0xfeedfacf);
                 report[@"kernelReadVerified"] = verified ? @YES : @NO;
                 report[@"code"] = verified ? @"kernel_read_verified" : @"unexpected_kernel_header";
-                report[@"summary"] = verified ? @"Đã đọc và xác minh header Mach-O của kernel. Bộ xử lý chức năng game chưa được triển khai." : @"Lệnh đọc trả thành công nhưng header không khớp Mach-O 64-bit; không đánh dấu xác minh.";
+                report[@"summary"] = verified ? @"Đã đọc và xác minh header Mach-O của kernel. Phép thử này chỉ xác minh đọc kernel." : @"Lệnh đọc trả thành công nhưng header không khớp Mach-O 64-bit; không đánh dấu xác minh.";
             }
         }
     }
@@ -474,7 +474,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
         else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.5.1",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.6.0",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report

@@ -41,6 +41,7 @@ struct ControlSettings: Codable, Equatable {
     var flags: [String: Bool] = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, false) })
     var cameraScale: Double = 1
     var selectedSkins: [String: Int] = [:]
+    var cameraEnabled: Bool? = nil
     mutating func normalize() {
         flags = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, flags[$0.key] ?? false) })
         cameraScale = cameraScale.isFinite ? min(2.3, max(1, cameraScale)) : 1

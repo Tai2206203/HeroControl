@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import Darwin
 
-struct OverlayState: Decodable {
+struct OverlayState: Codable {
     let schemaVersion: Int?
     let phase: String?
     let pid: Int?
@@ -11,6 +11,22 @@ struct OverlayState: Decodable {
     let hiddenForLock: Bool?
     let touchEvents: Int?
     let settingsError: String?
+    let camera: CameraStatus?
+}
+
+struct CameraStatus: Codable {
+    let code: String
+    let message: String
+    let scale: Double?
+    let sourceZoom: Double?
+    let writtenZoom: Double?
+    let writeCount: Int?
+    let memoryStatus: Int?
+    let pid: Int?
+    let timestamp: String?
+    let cameraClass: String?
+    let cameraObject: String?
+    let mobaObject: String?
 }
 
 private struct OverlayReply: Decodable {

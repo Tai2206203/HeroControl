@@ -122,7 +122,7 @@ static NSDictionary *HCGameInspection(void) {
                     result[@"unityBase"] = [NSString stringWithFormat:@"0x%llx", (unsigned long long)entries[i].base];
                     result[@"moduleMatchesDump"] = @([uuid isEqual:HCExpectedUnityUUID]);
                     result[@"code"] = [uuid isEqual:HCExpectedUnityUUID] ? @"game_memory_module_verified" : @"game_dump_mismatch";
-                    result[@"message"] = [uuid isEqual:HCExpectedUnityUUID] ? @"Đã đọc UnityFramework trong tiến trình game và UUID khớp bộ dump. Chưa triển khai thao tác camera/ESP." : @"Đã đọc game nhưng UUID không khớp dump; không dùng các offset từ bộ dump này.";
+                    result[@"message"] = [uuid isEqual:HCExpectedUnityUUID] ? @"Module game khớp dump. Camera xa được điều khiển ở thẻ Camera; ESP/Reports chưa có xử lý game." : @"Đã đọc game nhưng UUID không khớp dump; không dùng các offset từ bộ dump này.";
                     break;
                 }
             }

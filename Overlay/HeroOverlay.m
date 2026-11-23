@@ -7,6 +7,7 @@
 #import "OverlayCommon.h"
 #import "HCFeatures.h"
 #include "OverlayLock.h"
+#import "CameraEngine.h"
 #include <dlfcn.h>
 #include <notify.h>
 #include <sys/file.h>
@@ -70,6 +71,8 @@ static NSInteger HCOrientation = UIInterfaceOrientationPortrait;
 static BOOL HCLocked;
 static BOOL HCMenuOpen;
 static NSString *HCSettingsError;
+static HCCameraEngine *HCCamera;
+static NSDictionary *HCCameraStatus;
 static NSString *HCStartupStage = @"entry";
 
 static void HCState(void) {
@@ -79,7 +82,8 @@ static void HCState(void) {
         @"touchEvents": @(HCTouchCount), @"hiddenForLock": @(HCLocked),
         @"hidEvents": @(HCHIDCount), @"axTouchEvents": @(HCAXCount), @"pointerFallbacks": @(HCPointerFallbackCount),
         @"inputBackend": HCInputBackend,
-        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.5.1", @"stage": HCStartupStage};
+        @"settingsOnly": @NO, @"camera": HCCameraStatus ?: @{@"code": @"camera_disabled", @"message": @"Camera xa đang tắt."},
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.6.0", @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -95,6 +99,7 @@ static void HCStage(NSString *stage) {
 }
 static void HCStop(NSString *message, BOOL failed) {
     HCStopping = YES;
+    if (HCCamera) HCCameraStatus = [HCCamera stop];
     HCPhase = failed ? @"failed" : @"stopped"; HCMessage = message;
     HCState();
     exit(failed ? 70 : 0);
@@ -207,7 +212,7 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         HCText(@"HERO CONTROL", CGRectMake(p.origin.x + 14, p.origin.y + 14, p.size.width - 70, 24), 17, HCAccent(), YES);
         CGRect close = CGRectMake(CGRectGetMaxX(p) - 44, p.origin.y + 6, 38, 36);
         HCText(@"×", CGRectInset(close, 8, 0), 28, UIColor.whiteColor, NO); [self target:@"close" rect:close];
-        HCText(HCSettingsError ?: @"Chỉ lưu cấu hình • Chưa có xử lý game\nChạm có thể truyền xuống app bên dưới.", CGRectMake(p.origin.x + 14, p.origin.y + 43, p.size.width - 28, 34), 11,
+        HCText(HCSettingsError ?: @"Camera: có xử lý • ESP/Reports: chưa có\nChạm có thể truyền xuống app bên dưới.", CGRectMake(p.origin.x + 14, p.origin.y + 43, p.size.width - 28, 34), 11,
             HCSettingsError ? UIColor.systemOrangeColor : UIColor.lightGrayColor, NO);
         NSArray *tabs = @[@"ESP", @"Camera", @"Style", @"Skins", @"Reports"];
         CGFloat tabWidth = (p.size.width - 20) / 5;
@@ -221,13 +226,19 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         if (self.group == 1) {
             double scale = [self.settings[@"cameraScale"] doubleValue];
             HCText([NSString stringWithFormat:@"Camera: %.2f×", scale], CGRectMake(p.origin.x + 14, y, p.size.width - 28, 24), 16, UIColor.whiteColor, YES);
-            CGRect slider = CGRectMake(p.origin.x + 20, y + 38, p.size.width - 40, 36);
+            CGRect enable = CGRectMake(p.origin.x + 14, y + 27, p.size.width - 28, 28);
+            BOOL enabled = [self.settings[@"cameraEnabled"] boolValue];
+            HCText(@"Bật camera xa", CGRectInset(enable, 0, 4), 14, UIColor.whiteColor, YES);
+            HCText(enabled ? @"ON" : @"OFF", CGRectMake(CGRectGetMaxX(enable) - 35, enable.origin.y + 4, 35, 22), 14,
+                enabled ? HCAccent() : UIColor.lightGrayColor, YES);
+            [self target:@"cameraEnabled" rect:enable];
+            CGRect slider = CGRectMake(p.origin.x + 20, y + 62, p.size.width - 40, 36);
             [[UIColor colorWithWhite:0.22 alpha:1] setFill];
             [[UIBezierPath bezierPathWithRoundedRect:CGRectMake(slider.origin.x, slider.origin.y + 15, slider.size.width, 6) cornerRadius:3] fill];
             CGFloat x = slider.origin.x + HCClamp((scale - 1) / 1.3, 0, 1) * slider.size.width;
             [HCAccent() setFill]; [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(x - 9, slider.origin.y + 9, 18, 18)] fill];
             [self target:@"camera" rect:slider];
-            HCText(@"Kéo để chọn 1.00–2.30×; chưa áp dụng vào game.", CGRectMake(p.origin.x + 14, y + 85, p.size.width - 28, 45), 12, UIColor.lightGrayColor, NO);
+            HCText(HCCameraStatus[@"message"] ?: @"Bật camera xa rồi vào trận tập để thử.", CGRectMake(p.origin.x + 14, y + 107, p.size.width - 28, 70), 12, UIColor.lightGrayColor, NO);
         } else {
             NSArray *features = [HCFeatures() filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"group == %ld", (long)self.group]];
             CGFloat rowHeight = MIN(28, (p.size.height - 160) / MAX((NSUInteger)1, features.count));
@@ -296,6 +307,13 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         if ([target isEqual:@"bubble"] || [target isEqual:@"close"]) [self toggleMenu];
         else if ([target isEqual:@"stop"]) HCStop(@"Đã tắt nút nổi. Mở Hero Control để bật lại.", NO);
         else if ([target hasPrefix:@"tab:"]) { self.group = [[target substringFromIndex:4] integerValue]; [self setNeedsDisplay]; }
+        else if ([target isEqual:@"cameraEnabled"]) {
+            [self reloadSettings];
+            if (self.settings) {
+                self.settings[@"cameraEnabled"] = [self.settings[@"cameraEnabled"] boolValue] ? @NO : @YES;
+                [self saveSettings];
+            }
+        }
         else if ([target hasPrefix:@"flag:"]) {
             [self reloadSettings];
             NSString *key = [target substringFromIndex:5];
@@ -404,6 +422,11 @@ static void HCUpdateLock(void) {
     HCStartupStage = @"ready";
     HCPhase = @"visible"; HCMessage = @"Đã đăng ký nút nổi Hero Control. Chạm để mở/thu menu; kéo để di chuyển.";
     HCUpdateLock(); HCState();
+    HCCamera = [[HCCameraEngine alloc] initWithProfile:HCProfile report:^(NSDictionary *report) {
+        HCCameraStatus = report;
+        [HCCanvas setNeedsDisplay]; HCState();
+    }];
+    [HCCamera start];
     self.timer = [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer) {
         (void)timer;
         if (access(HCExecutable.fileSystemRepresentation, X_OK) || !HCOverlayPathsValid(HCDirectory, HCProfile))

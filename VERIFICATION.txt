@@ -1,4 +1,12 @@
-HERO CONTROL 0.4.1 — BUILD 10
+HERO CONTROL 0.6.0 — BUILD 15
+
+Camera memory core đã được biên dịch và thực thi trên Windows bằng
+Zig 0.15.2/Clang, -std=c11 -Wall -Wextra -Werror. Tất cả trường hợp
+camera-memory-check.c qua trên bộ nhớ mô phỏng; không đọc/ghi game trong
+phép thử Windows. Mã worker Objective-C/iPhone chưa chạy tại Windows.
+Xem CAP_NHAT_0.6.0.txt cho các thao tác và bước xác nhận trên thiết bị.
+
+LỊCH SỬ KIỂM TRA TRƯỚC THAY ĐỔI CAMERA:
 
 Sửa lỗi SDK 18.5 do selector location/orientation gọi qua id không rõ kiểu:
 định kiểu protocol cho tất cả receiver của API riêng trong overlay.

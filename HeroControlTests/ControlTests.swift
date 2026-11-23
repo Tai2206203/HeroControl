@@ -2,6 +2,20 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    @MainActor
+    func testLegacyProfileDoesNotEnableCameraAndCanPersistExplicitOptIn() throws {
+        let old = Data(#"{"flags":{},"cameraScale":1.6,"selectedSkins":{}}"#.utf8)
+        let decoded = try JSONDecoder().decode(ControlSettings.self, from: old)
+        XCTAssertNotEqual(decoded.cameraEnabled, true)
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = ControlStore(directory: folder)
+        store.setCameraEnabled(true)
+        XCTAssertEqual(ControlStore(directory: folder).settings.cameraEnabled, true)
+        store.setCameraEnabled(false)
+        XCTAssertEqual(ControlStore(directory: folder).settings.cameraEnabled, false)
+    }
     func testProfileRoundTripAndPreferenceMapping() throws {
         var profile = ControlSettings()
         profile.flags["DoroCheat.Reference.R1.HP"] = true

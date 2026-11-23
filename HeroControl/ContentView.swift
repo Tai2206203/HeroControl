@@ -22,7 +22,8 @@ struct ContentView: View {
                     controls
                     if let error = store.persistenceError { Text(error).foregroundStyle(.orange).font(.footnote) }
                     if let error = exportError { Text(error).foregroundStyle(.orange).font(.footnote) }
-                    Button { Task { await store.apply() } } label: {
+                    if store.selectedGroup != .camera {
+                      Button { Task { await store.apply() } } label: {
                         HStack {
                             if store.busy { ProgressView().tint(.black) }
                             Text(store.isApplied ? "ĐÃ ÁP DỤNG" : "ÁP DỤNG VÀO GAME").fontWeight(.bold)
@@ -30,7 +31,8 @@ struct ContentView: View {
                             Image(systemName: "arrow.up.right")
                         }.padding(18).foregroundStyle(.black)
                             .background(store.canApply ? accent : Color.gray, in: RoundedRectangle(cornerRadius: 16))
-                    }.disabled(!store.canApply)
+                      }.disabled(!store.canApply)
+                    }
                     Text("Các thay đổi được lưu cục bộ. Chỉ trạng thái xác nhận từ backend mới được hiển thị là đã áp dụng.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(20)
@@ -43,7 +45,7 @@ struct ContentView: View {
                         Button("Thông tin kết nối", systemImage: "network") { showConnection = true }
                         Button("Chẩn đoán kernel", systemImage: "stethoscope") { showKernelCheck = true }
                         Button("Xuất cấu hình & chẩn đoán", systemImage: "square.and.arrow.up") {
-                            do { shareItem = ShareItem(url: try store.exportDiagnostics()); exportError = nil }
+                            do { shareItem = ShareItem(url: try store.exportDiagnostics(overlayState: overlay.state)); exportError = nil }
                             catch { exportError = error.localizedDescription }
                         }
                         Button("Đặt lại cấu hình", systemImage: "arrow.counterclockwise", role: .destructive) { showReset = true }
@@ -73,6 +75,9 @@ struct ContentView: View {
                 .font(.headline).foregroundStyle(accent)
             Text(overlay.failure ?? overlay.message).font(.footnote)
                 .foregroundStyle(overlay.failure == nil ? Color.secondary : .orange)
+            if let camera = overlay.state?.camera, camera.code != "camera_disabled" {
+                Label("Camera xa: \(camera.message)", systemImage: "camera").font(.footnote)
+            }
             Text("Chạm HC để mở/thu menu; kéo để di chuyển. Nút tiếp tục chạy khi chuyển ứng dụng. Các lựa chọn hiện chỉ lưu cấu hình.")
                 .font(.footnote).foregroundStyle(.secondary)
             Text("Chế độ tránh chặn màn hình: chạm menu nổi có thể đồng thời chạm ứng dụng phía dưới. Nên mở menu khi đang ở Hero Control và thu menu trước khi vào game.")
@@ -181,6 +186,8 @@ struct ContentView: View {
 
     private var cameraControls: some View {
         VStack(alignment: .leading, spacing: 18) {
+            Toggle("Bật camera xa", isOn: Binding(get: { store.settings.cameraEnabled == true }, set: { store.setCameraEnabled($0) }))
+                .disabled(!overlay.running)
             HStack {
                 Text("CAMERA SCALE").font(.headline)
                 Spacer()
@@ -190,6 +197,16 @@ struct ContentView: View {
                 .accessibilityLabel("Hệ số camera")
             HStack { Text("1.00×"); Spacer(); Text("2.30×") }.font(.caption).foregroundStyle(.secondary)
             Button("Đặt lại camera 1.00×") { store.setCamera(1) }.buttonStyle(.bordered)
+            Text(overlay.state?.camera?.message ?? "Mở nút nổi, bật camera xa rồi vào trận tập để thử.")
+                .font(.footnote).foregroundStyle(.secondary)
+            if let report = overlay.state?.camera {
+                Text(report.code).font(.caption.monospaced())
+                if let source = report.sourceZoom, let written = report.writtenZoom {
+                    Text(String(format: "Giá trị game: %.3f → ghi: %.3f", source, written)).font(.caption)
+                }
+            }
+            Text("Camera tự cập nhật khi bật, không dùng nút Áp dụng chung. Tắt công tắc để yêu cầu hoàn tác. ESP và Reports chưa có xử lý game.")
+                .font(.footnote).foregroundStyle(.secondary)
         }
     }
 
