@@ -1,0 +1,39 @@
+GỬI BẢN BUILD HERO CONTROL VỀ TELEGRAM
+
+Workflow đã có bước gửi HeroControl.tipa sau khi build và kiểm thử thành
+công. Token và Chat ID chỉ lấy từ GitHub Actions Secrets; không ghi vào
+mã nguồn, file .tipa hoặc caption. Artifact trên GitHub vẫn được giữ lại.
+
+THIẾT LẬP MỘT LẦN, TRƯỚC KHI GIT PUSH
+
+1. Mở Telegram, vào bot @Mimichibi_bot, bấm Start hoặc gửi /start.
+
+2. Mở trang repository secrets:
+   https://github.com/Tai2206203/HeroControl/settings/secrets/actions
+
+3. Bấm New repository secret, tạo:
+
+   Name: TELEGRAM_BOT_TOKEN
+   Secret: dán token bot của bạn
+
+4. Tạo secret thứ hai:
+
+   Name: TELEGRAM_CHAT_ID
+   Secret: 9175637660
+
+5. Trong cmd tại thư mục HeroControl, chạy git push để đẩy commit mới.
+   Lần build mới sẽ gửi file khi tất cả bước kiểm tra trước đó thành công.
+
+Nếu thiếu secret, bước gửi sẽ báo warning và không gửi; vẫn tải được file
+trong Artifacts. Không có thông báo delivery confirmed thì chưa được coi
+là gửi thành công. Nếu bị bot chặn hoặc chưa /start, xem lỗi Telegram ở
+bước Send successful build to Telegram.
+
+Nếu đã push trước khi thêm secrets: thêm secrets xong, mở Actions, chọn
+workflow Build HeroControl TIPA -> Run workflow -> main để tạo lần chạy mới.
+
+Token đã xuất hiện trong cuộc trò chuyện. Bạn nên tạo token thay thế bằng
+BotFather rồi lưu token mới vào secret, không dán token vào file workflow.
+
+Mã gửi không thực hiện retry tự động khi mạng timeout để tránh gửi trùng
+trong trường hợp Telegram đã nhận file nhưng phản hồi bị mất.

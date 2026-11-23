@@ -115,6 +115,16 @@ struct KernelDiagnostics: Codable {
     let jailbreakRoots: [String]?
     let resolverNotes: [String]?
     let providerChecks: [KernelLibraryCheck]?
+    let entitlementChecks: [String: Bool]?
+    let callerEntitlements: [String: Bool]?
+    let executionContext: String?
+    let appUID: UInt32?
+    let appEUID: UInt32?
+    let helperStage: String?
+    let helperSpawnStatus: Int?
+    let helperExitStatus: Int?
+    let helperSignal: Int?
+    let helperError: String?
 }
 
 struct BackendRequest: Encodable {

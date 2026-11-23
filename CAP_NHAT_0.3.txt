@@ -1,0 +1,47 @@
+HERO CONTROL 0.3.0 — ENTITLEMENTS, ROOT HELPER VÀ TELEGRAM
+
+Log của thiết bị cho thấy app EUID 501, không có libroot và bị từ chối
+liệt kê thư mục Application. Bản trước đóng gói ad-hoc mà không kèm các
+entitlement cần thiết; chỉ thêm đường dẫn không khắc phục được giới hạn này.
+
+ĐÃ SỬA
+
+- Thêm Signing/App.entitlements: no-sandbox, platform-application,
+  AppDataContainers và persona-mgmt theo tài liệu TrollStore.
+- Thêm Signing/Helper.entitlements cho helper trong gói.
+- Script ký sử dụng đúng plist và kiểm tra lại entitlement trong chữ ký;
+  xuất dist/signing-report.json vào artifact. Không thêm các entitlement
+  debugger/dynamic-codesigning/skip-library-validation bị cấm trên A12+.
+- Chẩn đoán ghi entitlement đọc được sau cài đặt. Việc có trong chữ ký
+  không chứng minh hệ thống thực sự cấp quyền: lỗi truy cập vẫn được giữ.
+- Khi người dùng bấm Kiểm tra ngay, app có thể yêu cầu chạy đúng công cụ
+  Tools/hero-kernel-check qua persona root nếu môi trường cho phép.
+  Không nhận đường dẫn chương trình hoặc câu lệnh tùy ý từ người dùng.
+- Root helper có timeout riêng 15 giây, phía gọi giới hạn 20 giây và chỉ
+  nhận tối đa 256 KiB stdout, 16 KiB stderr. Nội dung tạm chỉ qua fd đã unlink.
+- Không còn phải chép lệnh vào terminal cho luồng kiểm tra bình thường.
+  Nếu bị từ chối, báo cáo có helperSpawnStatus, helperExitStatus/helperError.
+- Thêm gửi bản build đã qua kiểm thử về Telegram bằng GitHub Secrets.
+  Xem TELEGRAM_SETUP.txt để cấu hình hai secret trước khi git push.
+
+NHỮNG ĐIỀU CHƯA ĐƯỢC XÁC NHẬN
+
+Trình cài đặt trên iOS 17.4.1 của người dùng có giữ/cấp các entitlement
+này hay không phải được xác minh bằng bản cài thực tế. Không suy luận rằng
+TrollStore upstream hỗ trợ phiên bản này chỉ vì các khóa tồn tại trong plist.
+Nếu helper không khởi chạy được, dùng lỗi thực tế để xử lý môi trường.
+
+Đọc được kernel chưa có nghĩa các chức năng Liên Quân đã được triển khai.
+Bản này vẫn là backend chẩn đoán, chưa có game adapter/overlay/hook skin.
+
+PHIÊN BẢN VÀ CÁCH CẬP NHẬT
+
+App version 0.3.0, build 6. Commit được tạo sẵn trong workspace.
+Thêm GitHub Secrets theo TELEGRAM_SETUP.txt, rồi chạy git push tại HeroControl.
+Đợi Actions xanh; bot gửi HeroControl.tipa nếu secret và chat hợp lệ.
+Cài lại, mở Chẩn đoán kernel -> Kiểm tra ngay -> gửi JSON mới.
+
+Nguồn:
+https://github.com/opa334/TrollStore/blob/main/README.md#unsandboxing
+https://github.com/opa334/TrollStore/blob/main/README.md#root-helpers
+https://core.telegram.org/bots/api#senddocument

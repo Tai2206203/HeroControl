@@ -10,6 +10,10 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <limits.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <TargetConditionals.h>
 #include "HeroBackend.h"
 
 typedef int (*HCKernelBase)(uint64_t *address);
@@ -19,6 +23,27 @@ static HCKernelBase HCBaseFunction;
 static HCKernelRead HCReadFunction;
 static NSString *HCLoadedPath;
 static NSDictionary *HCSessionReport;
+
+static NSDictionary *HCEntitlements(void) {
+    typedef CFTypeRef (*CreateTask)(CFAllocatorRef);
+    typedef CFTypeRef (*CopyEntitlement)(CFTypeRef, CFStringRef, CFErrorRef *);
+    CreateTask create = (CreateTask)dlsym(RTLD_DEFAULT, "SecTaskCreateFromSelf");
+    CopyEntitlement copy = (CopyEntitlement)dlsym(RTLD_DEFAULT, "SecTaskCopyValueForEntitlement");
+    NSMutableDictionary *values = [NSMutableDictionary dictionary];
+    if (!create || !copy) return values;
+    CFTypeRef task = create(kCFAllocatorDefault);
+    if (!task) return values;
+    NSArray *keys = @[@"com.apple.private.security.no-sandbox", @"com.apple.private.security.no-container",
+        @"platform-application", @"com.apple.private.security.storage.AppDataContainers", @"com.apple.private.persona-mgmt"];
+    for (NSString *key in keys) {
+        CFTypeRef value = copy(task, (__bridge CFStringRef)key, NULL);
+        BOOL enabled = value && CFGetTypeID(value) == CFBooleanGetTypeID() && CFBooleanGetValue((CFBooleanRef)value);
+        values[key] = enabled ? @YES : @NO;
+        if (value) CFRelease(value);
+    }
+    CFRelease(task);
+    return values;
+}
 
 static void HCAddRoot(NSMutableOrderedSet<NSString *> *roots, NSString *path) {
     if (!path || ![path hasPrefix:@"/"] || path.length >= PATH_MAX) return;
@@ -105,7 +130,8 @@ static NSDictionary *HCReport(BOOL requestRead) {
         @"machine": [NSString stringWithUTF8String:system.machine] ?: @"unknown",
         @"uid": @(getuid()), @"euid": @(geteuid()),
         @"kernelProbeRequested": requestRead ? @YES : @NO, @"kernelReadVerified": @NO,
-        @"symbolsFound": @[], @"checkedPaths": @[]
+        @"symbolsFound": @[], @"checkedPaths": @[], @"entitlementChecks": HCEntitlements(),
+        @"executionContext": @"app-process"
     } mutableCopy];
     NSArray<NSString *> *paths = HCLibraryPaths(report);
     NSMutableArray *checks = [NSMutableArray array];
@@ -192,6 +218,153 @@ static NSDictionary *HCReport(BOOL requestRead) {
     return report;
 }
 
+static NSData *HCReadOutput(int descriptor, NSUInteger limit) {
+    struct stat info = {0};
+    if (fstat(descriptor, &info) || info.st_size < 0 || (uint64_t)info.st_size > limit) return nil;
+    NSMutableData *data = [NSMutableData dataWithLength:(NSUInteger)info.st_size];
+    NSUInteger used = 0;
+    while (used < data.length) {
+        ssize_t count = pread(descriptor, (char *)data.mutableBytes + used, data.length - used, (off_t)used);
+        if (count < 0 && errno == EINTR) continue;
+        if (count <= 0) return nil;
+        used += (NSUInteger)count;
+    }
+    return data;
+}
+
+static int HCTemporaryFD(void) {
+    NSString *pattern = [NSTemporaryDirectory() stringByAppendingPathComponent:@"hc-probe.XXXXXX"];
+    char *name = strdup(pattern.fileSystemRepresentation);
+    if (!name) return -1;
+    int descriptor = mkstemp(name);
+    if (descriptor >= 0) {
+        // Keep only the file descriptor; no diagnostic output remains on disk.
+        unlink(name);
+        fcntl(descriptor, F_SETFD, FD_CLOEXEC);
+    }
+    free(name);
+    return descriptor;
+}
+
+static NSDictionary *HCDiagnose(void) {
+#if TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR
+    if (geteuid() == 0) return HCReport(YES);
+    NSMutableDictionary *fallback = [HCReport(NO) mutableCopy];
+    fallback[@"kernelProbeRequested"] = @YES;
+    fallback[@"appUID"] = @(getuid()); fallback[@"appEUID"] = @(geteuid());
+    fallback[@"callerEntitlements"] = HCEntitlements();
+    fallback[@"helperStage"] = @"preflight";
+    NSString *helper = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Tools/hero-kernel-check"];
+    if (access(helper.fileSystemRepresentation, X_OK) != 0) {
+        fallback[@"code"] = @"helper_missing";
+        fallback[@"summary"] = @"Không truy cập được công cụ helper trong gói ứng dụng.";
+        return fallback;
+    }
+    typedef int (*SetPersona)(const posix_spawnattr_t *, uid_t, uint32_t);
+    typedef int (*SetIdentity)(const posix_spawnattr_t *, uid_t);
+    SetPersona setPersona = (SetPersona)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_np");
+    SetIdentity setUID = (SetIdentity)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_uid_np");
+    SetIdentity setGID = (SetIdentity)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_gid_np");
+    if (!setPersona || !setUID || !setGID) {
+        fallback[@"code"] = @"persona_api_unavailable";
+        fallback[@"summary"] = @"Môi trường này không cung cấp API khởi chạy helper theo persona.";
+        return fallback;
+    }
+    posix_spawnattr_t attributes;
+    int result = posix_spawnattr_init(&attributes);
+    if (result) {
+        fallback[@"code"] = @"helper_setup_failed"; fallback[@"helperSpawnStatus"] = @(result);
+        return fallback;
+    }
+    result = setPersona(&attributes, 99, 1);
+    if (!result) result = setUID(&attributes, 0);
+    if (!result) result = setGID(&attributes, 0);
+    if (result) {
+        posix_spawnattr_destroy(&attributes);
+        fallback[@"code"] = @"persona_setup_failed"; fallback[@"helperSpawnStatus"] = @(result);
+        fallback[@"summary"] = @"Hệ thống từ chối thiết lập persona root cho helper; không tự coi là đã có quyền.";
+        return fallback;
+    }
+    int output = HCTemporaryFD(), errors = HCTemporaryFD();
+    if (output < 0 || errors < 0) {
+        if (output >= 0) close(output);
+        if (errors >= 0) close(errors);
+        posix_spawnattr_destroy(&attributes);
+        fallback[@"code"] = @"helper_output_failed";
+        fallback[@"summary"] = @"Không tạo được bộ thu kết quả helper trong container ứng dụng.";
+        return fallback;
+    }
+    posix_spawn_file_actions_t actions;
+    result = posix_spawn_file_actions_init(&actions);
+    BOOL actionsReady = result == 0;
+    if (!result) result = posix_spawn_file_actions_adddup2(&actions, output, STDOUT_FILENO);
+    if (!result) result = posix_spawn_file_actions_adddup2(&actions, errors, STDERR_FILENO);
+    if (!result) result = posix_spawn_file_actions_addclose(&actions, output);
+    if (!result) result = posix_spawn_file_actions_addclose(&actions, errors);
+    pid_t child = -1;
+    char *arguments[] = {(char *)helper.fileSystemRepresentation, "--kernel-read", NULL};
+    char *environment[] = {"PATH=/usr/bin:/bin:/usr/sbin:/sbin", NULL};
+    if (!result) result = posix_spawn(&child, helper.fileSystemRepresentation, &actions, &attributes, arguments, environment);
+    if (actionsReady) posix_spawn_file_actions_destroy(&actions);
+    posix_spawnattr_destroy(&attributes);
+    fallback[@"helperSpawnStatus"] = @(result);
+    if (result) {
+        close(output); close(errors);
+        fallback[@"helperStage"] = @"spawn"; fallback[@"code"] = @"helper_spawn_failed";
+        fallback[@"summary"] = [NSString stringWithFormat:@"Không khởi chạy được helper root (mã %d). Kiểm tra entitlement/chữ ký sau cài đặt.", result];
+        return fallback;
+    }
+    int status = 0;
+    BOOL completed = NO;
+    BOOL childOwned = YES;
+    NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + 20;
+    while (NSProcessInfo.processInfo.systemUptime < deadline) {
+        pid_t waited = waitpid(child, &status, WNOHANG);
+        if (waited == child) { completed = YES; break; }
+        if (waited < 0 && errno != EINTR) {
+            childOwned = NO;
+            fallback[@"helperError"] = [NSString stringWithFormat:@"waitpid failed: %d", errno];
+            break;
+        }
+        usleep(100000);
+    }
+    if (!completed && childOwned) {
+        kill(child, SIGKILL);
+        while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
+    }
+    NSData *stdoutData = HCReadOutput(output, 256 * 1024);
+    NSData *stderrData = HCReadOutput(errors, 16 * 1024);
+    close(output); close(errors);
+    NSString *errorText = stderrData ? [[NSString alloc] initWithData:stderrData encoding:NSUTF8StringEncoding] : nil;
+    fallback[@"helperStage"] = completed ? @"decode" : @"timeout";
+    fallback[@"helperExitStatus"] = @(WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+    if (WIFSIGNALED(status)) fallback[@"helperSignal"] = @(WTERMSIG(status));
+    if (errorText.length) fallback[@"helperError"] = errorText;
+    if (!completed) {
+        fallback[@"code"] = @"helper_timeout";
+        fallback[@"summary"] = @"Helper không hoàn tất trong 20 giây và đã được dừng.";
+        return fallback;
+    }
+    id decoded = stdoutData ? [NSJSONSerialization JSONObjectWithData:stdoutData options:0 error:NULL] : nil;
+    if (![decoded isKindOfClass:NSDictionary.class] || ![decoded[@"schemaVersion"] isEqual:@1] ||
+        ![decoded[@"code"] isKindOfClass:NSString.class] || ![decoded[@"euid"] isEqual:@0]) {
+        fallback[@"code"] = @"helper_invalid_response";
+        fallback[@"summary"] = @"Helper chưa trả được báo cáo root hợp lệ. Xem helperExitStatus/helperError.";
+        return fallback;
+    }
+    NSMutableDictionary *report = [decoded mutableCopy];
+    report[@"executionContext"] = @"root-helper";
+    report[@"appUID"] = @(getuid()); report[@"appEUID"] = @(geteuid());
+    report[@"callerEntitlements"] = fallback[@"callerEntitlements"];
+    report[@"helperStage"] = @"complete"; report[@"helperSpawnStatus"] = @0;
+    report[@"helperExitStatus"] = fallback[@"helperExitStatus"];
+    if (errorText.length) report[@"helperError"] = errorText;
+    return report;
+#else
+    return HCReport(YES);
+#endif
+}
+
 static const char *HCEncode(NSDictionary *value) {
     NSData *data = [NSJSONSerialization dataWithJSONObject:value options:0 error:NULL];
     if (!data || data.length > 4 * 1024 * 1024) return NULL;
@@ -220,12 +393,12 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         // Status polling never invokes kernel primitives. Explicit diagnose is
         // still subject to the root precondition inside HCReport.
         if (!HCSessionReport || [action isEqual:@"diagnose"]) {
-            HCSessionReport = HCReport([action isEqual:@"diagnose"]);
+            HCSessionReport = [action isEqual:@"diagnose"] ? HCDiagnose() : HCReport(NO);
         }
         NSDictionary *report = HCSessionReport;
         NSString *message = apply ? @"Chưa có game adapter; cấu hình chưa được áp dụng." : report[@"summary"];
         NSDictionary *snapshot = @{
-            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.2.3",
+            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.3.0",
             @"connected": @NO, @"gameRunning": @NO, @"gameInspectionAvailable": @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
         };

@@ -6,8 +6,8 @@
   },
   {
     "path": ".github/workflows/build.yml",
-    "bytes": 781,
-    "sha256": "fc1cf7c4d1607d31a94d67937684a6bbd3bb7eae3a18d3a132e86210cc381acc"
+    "bytes": 1190,
+    "sha256": "5c862749492f807951d3a7d028a3abaad3d3a2d777440811d682f598a271f02d"
   },
   {
     "path": ".gitignore",
@@ -16,8 +16,8 @@
   },
   {
     "path": "BackendSDK/DiagnosticBackend.m",
-    "bytes": 16742,
-    "sha256": "4bfc98ff4c823285aa1afbb58349e3c4cd30760482dcf061afa5c65e6fee3933"
+    "bytes": 25498,
+    "sha256": "74da57bdecd59c6106af7744a95ce4b04cb664a226d279a3757282940245948a"
   },
   {
     "path": "BackendSDK/HeroBackend.h",
@@ -55,6 +55,11 @@
     "sha256": "6e2c1cdde0766f6b468e9349512c9ba00df28c3eab7bbd7a7e4526951ecc337c"
   },
   {
+    "path": "CAP_NHAT_0.3.txt",
+    "bytes": 2941,
+    "sha256": "17d9496d250e6028e355bc9ad08458316f034560c0ca03f7cd206f16c8bfe039"
+  },
+  {
     "path": "HeroControl/ContentView.swift",
     "bytes": 12761,
     "sha256": "f87b27fd27297359f6584e26ff7460ea306739a9852f2886fe5e366629bcda9c"
@@ -72,17 +77,17 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1049,
-    "sha256": "7ec81f47ea4a7a131073d06137bb137933ab636e3353be055c392618fff42f60"
+    "sha256": "7603a3e9394addbde9eed1b9bbfeca37bd1a7b52b9d407a0a2b46c38d8f43b23"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
-    "bytes": 6694,
-    "sha256": "4f31145e70dff7f71f971ebecddfa1927fdef3a4252c4427c6d47416d58c8f1d"
+    "bytes": 8651,
+    "sha256": "1e76edb1f8e0982c874d5694fe83034f80dc9090fe46b81b4444f1eb9377a239"
   },
   {
     "path": "HeroControl/Models.swift",
-    "bytes": 4953,
-    "sha256": "7750b2f3fc7de03eb030b5193c41bfa1afe6f8040355ae6a4ad9171786b61683"
+    "bytes": 5271,
+    "sha256": "d6b82759169e3d79c8097c8e741ce6ec1f7fb4c255ee34bb89481a0fb80539f7"
   },
   {
     "path": "HeroControl/NativeBackend.swift",
@@ -92,7 +97,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9121,
-    "sha256": "176c14807bad36002dbd61cbe53b610105174fdb3596185b53fdf1f19dc296a8"
+    "sha256": "76e0a229da49dea0e24ef65082b3ea45b462ed66cc7455e358a7821ab0e84636"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -111,8 +116,8 @@
   },
   {
     "path": "scripts/build-diagnostics.sh",
-    "bytes": 1830,
-    "sha256": "251ba4e1312c99d83317d89e2d4b613de08affc1dc8e14567bce23165cc581a2"
+    "bytes": 1910,
+    "sha256": "34491b9ba06fe90ed657b7c2002acf0b6739900ad450ea22bc4f3838bf9bf6d9"
   },
   {
     "path": "scripts/build-example-backend.sh",
@@ -121,18 +126,23 @@
   },
   {
     "path": "scripts/build-tipa.sh",
-    "bytes": 3593,
-    "sha256": "fc7cddb6c51dd717f4cef2b75452faa6a2eb86cb3fde67db3f03d6eecc998028"
+    "bytes": 3820,
+    "sha256": "a86f8af65432c2864bb0300311a2e231ea6f2bd68eeda2328861dc460dee9c06"
   },
   {
     "path": "scripts/generate-project.py",
     "bytes": 8730,
-    "sha256": "f06e1500b7b50737c1e9ff8e17a3f30ee120e2bb165ccd5caff934f64b9d585c"
+    "sha256": "7108666cba950a380c4f7b0ef7e0c5d7fd1342c3f1e78b46ed1ce3f2d7654030"
   },
   {
     "path": "scripts/native-contract-check.swift",
     "bytes": 2191,
     "sha256": "93489b9447e7c2fd7019864b26fac97b5f307b22bf2dad4f87e24118aac92f25"
+  },
+  {
+    "path": "scripts/send-telegram.py",
+    "bytes": 5592,
+    "sha256": "02ef7c27006ce366dcc2e3916e1bb5158f02a7b7b1d26063bd47c3552d74e15c"
   },
   {
     "path": "scripts/test-simulator.sh",
@@ -141,12 +151,37 @@
   },
   {
     "path": "scripts/validate-project.py",
-    "bytes": 2608,
-    "sha256": "1fc7337624c627dcf92dfaf9ee09692ed1c64019096f4b6c70e3dd88b8d8a836"
+    "bytes": 3208,
+    "sha256": "9e7eba043083a4b15197e7e6e01ee0d84f82817d43b804e77d3193f1294a8678"
+  },
+  {
+    "path": "scripts/verify-entitlements.py",
+    "bytes": 1964,
+    "sha256": "440f2332de1be68d8dd1b499e3b39e176d6ede67f73baadfb399872eff907a98"
+  },
+  {
+    "path": "Signing/App.entitlements",
+    "bytes": 417,
+    "sha256": "4e805ce9d2cc48b4076483f35dea53e0fe75be9d6228ad87bb9064be5f1fafaa"
+  },
+  {
+    "path": "Signing/Helper.entitlements",
+    "bytes": 291,
+    "sha256": "aecfde1a51dcd991f940918671802b3c394dbfc08d75d26f2b4a32fd3b59446c"
+  },
+  {
+    "path": "TELEGRAM_SETUP.txt",
+    "bytes": 1751,
+    "sha256": "1c0945eaab5e7e729fa72b79719f35b647b98c5124c759e40a9842c03b25a22b"
+  },
+  {
+    "path": "tests/test_telegram.py",
+    "bytes": 4245,
+    "sha256": "7e55e084f95187a4e37c09aa8e208f851a8f664acbebf97cc5b45b6177a9e37b"
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 2349,
-    "sha256": "6fbedc224248d5702d4ca45523849fa53d323b8e2a577bddc24c5c3809926996"
+    "bytes": 2808,
+    "sha256": "4e22aa0ba3cb4d4c8c2d3316728088e05aa227dc0aee3a9b542e9e2b44f7f2dd"
   }
 ]

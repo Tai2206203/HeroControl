@@ -1,4 +1,4 @@
-HERO CONTROL 0.2.3 — Kiểm tra đã thực hiện trong môi trường Windows:
+HERO CONTROL 0.3.0 — Kiểm tra đã thực hiện trong môi trường Windows:
 
 - Cú pháp Swift của app, XCTest và công cụ kiểm thử giao thức bằng tree-sitter-swift.
 - Project OpenStep PBX: đọc thành công bằng parser pbxproj, đủ 2 target.
@@ -37,3 +37,9 @@ qua cả concrete type lẫn protocol existential. Giữ nguyên kiểm thử tr
 Bản 0.2.3: phân giải jailbreak root qua API/link/tên thư mục RootHide.
 Kiểm thử giao thức native -> Swift yêu cầu có các trường resolver mới.
 Chưa kiểm chứng khả năng liệt kê thư mục/nạp libkrw dưới sandbox trên iPhone.
+
+Bản 0.3.0: plist entitlement được kiểm tra cấu trúc và loại bỏ các khóa cấm;
+script build kiểm tra lại entitlement trong Mach-O signatures trên macOS.
+8 kiểm thử Python cho gửi Telegram dùng opener giả lập, không gửi qua mạng.
+Chưa xác minh cấp quyền sau cài đặt hoặc spawn helper root trên iPhone.
+Chưa xác minh gửi Telegram thật vì secrets GitHub chưa được thiết lập tại đây.

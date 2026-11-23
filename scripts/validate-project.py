@@ -39,5 +39,12 @@ for symbol in ['hc_backend_api_version', 'hc_backend_request', 'hc_backend_relea
     assert all(symbol in text for text in [backend, header, example])
 assert '@"connected": @NO' in example
 assert 'CODE_SIGNING_ALLOWED=NO' in (root / 'scripts/build-tipa.sh').read_text('utf8')
+app_entitlements = plistlib.loads((root / 'Signing/App.entitlements').read_bytes())
+helper_entitlements = plistlib.loads((root / 'Signing/Helper.entitlements').read_bytes())
+assert app_entitlements.get('com.apple.private.security.no-sandbox') is True
+assert app_entitlements.get('com.apple.private.persona-mgmt') is True
+assert helper_entitlements.get('com.apple.private.security.no-container') is True
+for banned in ['com.apple.private.cs.debugger', 'dynamic-codesigning', 'com.apple.private.skip-library-validation']:
+    assert banned not in app_entitlements and banned not in helper_entitlements
 print(json.dumps({'pbxObjects': len(definitions), 'toggleKeys': len(keys), 'sharedTestScheme': True,
                   'plistValid': True, 'abiWiring': True, 'note': 'Static checks only; run Xcode/Simulator for compilation and runtime checks.'}, indent=2))

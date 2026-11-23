@@ -19,13 +19,15 @@ struct KernelDiagnosticsView: View {
                     Button { Task { await store.diagnose() } } label: {
                         Label(store.busy ? "Đang kiểm tra…" : "Kiểm tra ngay", systemImage: "stethoscope")
                     }.disabled(store.busy)
-                    Text("Không tự nâng quyền. Nếu tiến trình không phải root, bước gọi primitive kernel sẽ được bỏ qua.")
+                    Text("Khi bấm kiểm tra, ứng dụng yêu cầu khởi chạy helper root bằng quyền persona do trình cài đặt/jailbreak cấp. Nếu bị từ chối, báo cáo sẽ ghi mã lỗi.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 if let report = store.snapshot?.diagnostics {
                     Section("Kết quả") {
                         LabeledContent("Hệ thống", value: "\(report.system) / \(report.machine)")
                         LabeledContent("UID / EUID", value: "\(report.uid) / \(report.euid)")
+                        if let context = report.executionContext { LabeledContent("Tiến trình kiểm tra", value: context) }
+                        if let appEUID = report.appEUID { LabeledContent("EUID ứng dụng", value: String(appEUID)) }
                         LabeledContent("Mã kết quả", value: report.code)
                         LabeledContent("Đọc kernel", value: report.kernelReadVerified ? "Đã xác minh" : "Chưa xác minh")
                         Text(report.summary)
@@ -34,6 +36,27 @@ struct KernelDiagnosticsView: View {
                         if let status = report.kernelReadStatus { LabeledContent("kread status", value: String(status)) }
                         if let magic = report.headerMagic { LabeledContent("Header", value: magic) }
                         Text(report.timestamp).font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let entitlements = report.callerEntitlements ?? report.entitlementChecks, !entitlements.isEmpty {
+                        Section("Entitlement đọc được từ chữ ký") {
+                            ForEach(entitlements.keys.sorted(), id: \.self) { key in
+                                VStack(alignment: .leading) {
+                                    Text(key).font(.caption.monospaced())
+                                    Text(entitlements[key] == true ? "Có trong chữ ký" : "Không có / false").font(.caption)
+                                }
+                            }
+                            Text("Có entitlement trong chữ ký chưa đủ để kết luận hệ thống đã cấp quyền; kết quả truy cập phía trên mới là kiểm chứng thực tế.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    if let stage = report.helperStage {
+                        Section("Helper root") {
+                            LabeledContent("Bước", value: stage)
+                            if let value = report.helperSpawnStatus { LabeledContent("Spawn status", value: String(value)) }
+                            if let value = report.helperExitStatus { LabeledContent("Exit status", value: String(value)) }
+                            if let value = report.helperSignal { LabeledContent("Signal", value: String(value)) }
+                            if let text = report.helperError { Text(text).font(.caption).textSelection(.enabled) }
+                        }
                     }
                     Section("Đường dẫn đã kiểm tra") {
                         ForEach(report.checkedPaths, id: \.path) { entry in

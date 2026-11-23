@@ -54,16 +54,19 @@ if [[ -f "$ROOT/.build/Diagnostics/hero-kernel-check" ]]; then
     mkdir -p "$STAGE/Payload/HeroControl.app/Tools"
     cp "$ROOT/.build/Diagnostics/hero-kernel-check" "$STAGE/Payload/HeroControl.app/Tools/hero-kernel-check"
     chmod 755 "$STAGE/Payload/HeroControl.app/Tools/hero-kernel-check"
-    codesign --force --sign - "$STAGE/Payload/HeroControl.app/Tools/hero-kernel-check"
+    codesign --force --sign - --entitlements "$ROOT/Signing/Helper.entitlements" \
+        "$STAGE/Payload/HeroControl.app/Tools/hero-kernel-check"
 fi
 
-# Ad-hoc signatures describe the bundle; the device installer must supply the
-# installation/signing mechanism. This does not grant entitlements or kernel access.
+# Embed explicit entitlement requests. The on-device installer/jailbreak must
+# preserve and honor them; a successful build alone does not prove access.
 while IFS= read -r -d '' FILE; do
     codesign --force --sign - "$FILE"
 done < <(find "$STAGE/Payload/HeroControl.app" -type f -name '*.dylib' -print0)
-codesign --force --sign - "$STAGE/Payload/HeroControl.app"
+codesign --force --sign - --entitlements "$ROOT/Signing/App.entitlements" "$STAGE/Payload/HeroControl.app"
 codesign --verify --deep --strict "$STAGE/Payload/HeroControl.app"
+python3 "$ROOT/scripts/verify-entitlements.py" "$STAGE/Payload/HeroControl.app" \
+    --output "$ROOT/dist/signing-report.json"
 OUTPUT="$ROOT/dist/HeroControl.tipa"
 # zip can append entries to an existing archive; always create a fresh archive.
 (cd "$STAGE" && /usr/bin/zip -qry "$STAGE/HeroControl.tipa" Payload)
