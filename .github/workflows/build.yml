@@ -1,0 +1,28 @@
+name: Build HeroControl TIPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source contract
+        run: python3 scripts/validate-project.py
+      - name: Build and package iPhone app
+        run: bash scripts/build-tipa.sh
+      - name: Build ABI example
+        run: bash scripts/build-example-backend.sh
+      - name: Test iPhone Simulator
+        run: bash scripts/test-simulator.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HeroControl-TIPA-control-ui
+          path: |
+            dist/HeroControl.tipa
+            dist/HeroControl.tipa.sha256
+          if-no-files-found: error

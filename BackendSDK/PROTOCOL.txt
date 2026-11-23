@@ -1,0 +1,111 @@
+HERO CONTROL BACKEND PROTOCOL v1
+
+ABI C: HeroBackend.h. Dylib được nạp trong ứng dụng UI; không tự có
+quyền kernel/root. Dylib thật có thể làm client của một helper đã được
+cài đặt và cấp quyền trong môi trường jailbreak.
+
+hc_backend_api_version() -> 1
+hc_backend_request(request_utf8) -> chuỗi JSON do backend cấp phát
+hc_backend_release(response_utf8) -> giải phóng đúng vùng nhớ đó
+
+Request UTF-8:
+  {"protocolVersion":1,"action":"status"}
+
+Request apply:
+  {
+    "protocolVersion":1,
+    "action":"apply",
+    "revision":"UUID-cua-yeu-cau",
+    "settings":{
+      "flags":{"__ifxEnemyEspEnabledV1":false,"reports.enabled":false},
+      "cameraScale":1.0,
+      "selectedSkins":{"123":7}
+    },
+    "preferenceValues":{
+      "__ifxEnemyEspEnabledV1":0.0,
+      "DoroCheat.Reference.R2.CameraScale":1.0,
+      "DoroCheat.Style.SelectedSkin.123":7.0
+    }
+  }
+
+Ví dụ trên rút gọn flags; request thực có đủ 13 công tắc.
+preferenceValues dùng tên khóa lấy từ gói ILFix. Đây chỉ là giá trị
+giao tiếp: không có nghĩa ghi UserDefaults trong ứng dụng riêng sẽ
+thay đổi PlayerPrefs của game. Backend phải triển khai hành vi thật.
+Không tự ghi VerifiedSkin chỉ vì có SelectedSkin.
+
+Reply status:
+  {
+    "protocolVersion":1,"ok":true,"message":"Thông tin thực tế",
+    "snapshot":{
+      "protocolVersion":1,
+      "backendName":"Tên backend/phiên bản",
+      "connected":false,
+      "gameRunning":false,
+      "sessionID":null,
+      "gameVersion":null,
+      "supportedKeys":[],
+      "appliedRevision":null,
+      "heroes":[],
+      "reports":[],
+      "message":"Chưa kết nối game"
+    }
+  }
+
+Ý nghĩa:
+  connected: đã liên lạc được với game adapter thật, không chỉ dlopen được.
+  gameRunning: trạng thái quan sát thực tế của tiến trình game.
+  sessionID: khác nhau sau mỗi lần tiến trình game khởi động lại.
+  supportedKeys: danh sách đầy đủ các khóa có khả năng áp dụng thật.
+  appliedRevision: revision đã thực hiện thành công trong session hiện tại.
+  gameVersion: phiên bản/bản build xác định được từ game hiện tại.
+
+Apply phải kiểm tra toàn bộ cấu hình trước khi thay đổi, rồi thực hiện
+theo cơ chế transactional hoặc rollback do adapter cung cấp. Khi chưa
+hoàn tất, trả ok=false và message; không trả revision mới. Nếu tác vụ
+bất đồng bộ, chỉ trả acknowledgement sau khi game/helper xác nhận.
+UI kiểm tra connected, gameRunning, sessionID và revision trước khi
+hiển thị đã áp dụng. Khi kết nối/game/session mất, UI hủy xác nhận cũ.
+
+Nếu snapshot không có hoặc JSON/ABI lỗi, app không coi là áp dụng được.
+UI gửi toàn bộ trạng thái, bao gồm các công tắc false để có thể tắt
+chức năng đã bật trước đó. Vì vậy backend phải hỗ trợ đủ các khóa
+trong request; bản backend chỉ hỗ trợ một phần sẽ bị khóa Apply.
+
+heroes:
+  [{"id":123,"name":"Tên tướng thật",
+    "skins":[{"id":0,"name":"Mặc định"},{"id":7,"name":"Tên skin thật"}]}]
+  ID tướng và skin phải hợp lệ, duy nhất trong phạm vi tương ứng.
+
+reports:
+  [{"id":"ID-ban-ghi-duy-nhat","time":"Thời gian",
+    "information":"Thông tin","reason":"Lý do"}]
+  Phải có nguồn dữ liệu thật. Mảng rỗng không phải kết luận không có tố cáo.
+
+Giới hạn trả về: 4 MiB UTF-8 + NUL. Tất cả lời gọi được serialize trên
+actor riêng. Backend không được gọi trực tiếp API UIKit từ luồng đó.
+request chỉ sống trong một lần gọi; copy chuỗi nếu cần giữ lại.
+Mỗi response phải được release, kể cả JSON không hợp lệ.
+Backend phải trả kết quả trong thời gian ngắn; không chờ vô hạn. Nên
+đặt timeout ở IPC với helper vì không thể ngắt an toàn một hàm C treo.
+
+Nhóm khóa bắt buộc hiện tại:
+  __ifxEnemyEspEnabledV1
+  DoroCheat.Reference.R1.Box
+  DoroCheat.Reference.R1.Icon
+  DoroCheat.Reference.R1.HP
+  DoroCheat.Reference.R1.Map
+  DoroCheat.Reference.R1.Unseen
+  DoroCheat.Reference.R1.Check
+  DoroCheat.Style.Buttons
+  DoroCheat.Style.Banner
+  DoroCheat.Style.Skin
+  DoroCheat.Style.BeforeMatch
+  DoroCheat.Style.LiveChange
+  DoroCheat.Reference.R2.CameraScale
+  reports.enabled
+  DoroCheat.Style.SelectedSkin.<hero-id> cho mỗi lựa chọn đã lưu
+
+reports.enabled là khóa giao thức mới: backend phải chuyển thành hành
+vi tương ứng với phần Lua /checkto; không phải PlayerPrefs gốc được tìm
+thấy trong dump. Tất cả khóa khác nêu ở đây được đối chiếu từ bản phân tích.

@@ -1,0 +1,163 @@
+HERO CONTROL 0.1 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
+
+TRẠNG THÁI BÀN GIAO
+
+Đã triển khai giao diện iOS cho các nhóm ESP, Camera, Style, Skins,
+Reports; lưu cấu hình; xuất chẩn đoán; bộ nạp backend qua C ABI;
+project Xcode, kiểm thử và script đóng gói .tipa.
+
+CHƯA triển khai backend kernel/game, overlay, hook camera/skin hoặc
+dịch vụ theo dõi tố cáo. Vì vậy gói build mặc định là ứng dụng điều
+khiển chưa kết nối, CHƯA thay thế được chức năng của menu trong game.
+Nút bật chỉ thay đổi cấu hình đang chuẩn bị; không báo thành công giả.
+
+Thông tin thiết bị do người dùng cung cấp:
+  iPhone XR, iOS 17.4.1, Dopamine 3.0.13-30, A12/A13 PPL.
+  Menu trong ứng dụng riêng, chuyển qua lại với game.
+
+Máy tạo mã nguồn đang dùng Windows, không có Xcode. Chưa biên dịch
+hay chạy Simulator/iPhone tại đây; chưa có file .tipa được biên dịch
+sẵn. Bản ZIP bàn giao là MÃ NGUỒN, không phải file cài đặt.
+
+A. BUILD TRÊN MAC — KHÔNG CẦN THEOS HAY XCODEGEN
+
+1. Cài Xcode đầy đủ (15 trở lên), mở Xcode một lần để hoàn tất cài SDK
+   và chấp nhận giấy phép. Xcode Command Line Tools riêng lẻ không đủ.
+
+2. Giải nén mã nguồn. Mở Terminal tại thư mục có HeroControl.xcodeproj:
+
+   cd /duong/dan/HeroControl
+   python3 scripts/validate-project.py
+   bash scripts/build-tipa.sh
+
+3. Nếu xcodebuild báo chỉ đang chọn Command Line Tools, chọn Xcode:
+
+   sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+
+   Sau đó chạy lại script build.
+
+4. Kết quả:
+
+   dist/HeroControl.tipa
+   dist/HeroControl.tipa.sha256
+
+   Script build arm64 cho iPhone, tạo Payload/HeroControl.app, ký ad-hoc,
+   kiểm tra chữ ký và cấu trúc ZIP. Nó không tự cấp quyền kernel.
+   Cơ chế cài đặt/chữ ký trên máy của bạn phải chấp nhận gói này.
+
+5. Gửi .tipa sang iPhone, mở bằng trình cài đặt đang hoạt động của bạn.
+   Nếu trình cài đặt yêu cầu .ipa, có thể sao chép và đổi phần mở rộng
+   sang .ipa; nội dung gói không đổi. Đổi đuôi không tạo thêm quyền.
+
+6. Mở Hero Control. Bản mặc định hiển thị “Chưa kết nối backend”.
+   Đây là trạng thái đúng, không phải lỗi giao diện. Các lựa chọn được
+   lưu để chuẩn bị; Áp dụng chỉ mở khi backend xác nhận đủ khả năng.
+
+B. BUILD TỪ WINDOWS QUA GITHUB ACTIONS
+
+1. Tạo repository GitHub trống, ví dụ HeroControl. Không cần tạo sẵn
+   README hoặc .gitignore trên GitHub. Bạn tự chọn chế độ riêng tư.
+
+2. Giải nén ZIP. Mở PowerShell tại thư mục HeroControl, chạy:
+
+   git init
+   git add .
+   git commit -m "Add HeroControl iOS app"
+   git branch -M main
+   git remote add origin https://github.com/TEN_CUA_BAN/HeroControl.git
+   git push -u origin main
+
+   Thay TEN_CUA_BAN bằng tài khoản của bạn; đăng nhập GitHub khi Git yêu cầu.
+
+3. Vào repository → Actions → Build HeroControl TIPA.
+   Lần push đầu tự chạy, hoặc bấm Run workflow → main → Run workflow.
+   Máy macOS của GitHub sẽ build app và chạy kiểm thử trên Simulator.
+   Cần bật Actions và có hạn mức runner phù hợp cho tài khoản/repository.
+
+4. Khi tác vụ xanh, mở phần Artifacts và tải:
+
+   HeroControl-TIPA-control-ui
+
+   Giải nén artifact để lấy HeroControl.tipa và file SHA-256.
+
+5. Nếu thất bại, mở bước báo đỏ và lấy log lỗi. Không coi artifact là
+   bản đã kiểm chứng nếu bước build/test chưa thành công. Workflow mới
+   được cung cấp trong mã nguồn, chưa được chạy ở một repository từ đây.
+
+C. CHẠY VÀ KIỂM THỬ GIAO DIỆN
+
+Trên Mac:
+   open HeroControl.xcodeproj
+
+Chọn scheme HeroControl và một iPhone Simulator có iOS 17 trở lên.
+Run để mở giao diện; Command-U để chạy test.
+
+Hoặc:
+   bash scripts/test-simulator.sh
+
+Kiểm tra các trường hợp:
+  - Bật/tắt công tắc và đóng/mở lại app: lựa chọn được giữ.
+  - Camera bị giới hạn trong 1.00–2.30.
+  - Không có backend: Áp dụng bị khóa và không báo đã áp dụng.
+  - Backend trả thiếu acknowledgement: không báo thành công.
+  - Game đổi session: trạng thái áp dụng cũ bị hủy.
+  - Skins/Reports không có dữ liệu: hiện trạng thái trống, không dùng
+    danh sách tướng hoặc lịch sử tố cáo giả.
+
+D. TÍCH HỢP BACKEND THẬT
+
+Đọc BackendSDK/PROTOCOL.txt và BackendSDK/HeroBackend.h.
+Ứng dụng tìm thư viện đúng đường dẫn:
+
+   HeroControl.app/Frameworks/HeroBackend.dylib
+
+Build có backend:
+
+   bash scripts/build-tipa.sh --backend /duong/dan/HeroBackend.dylib
+
+Backend cần là Mach-O arm64 cho iPhone, không phải iOS Simulator;
+export đủ ba hàm ABI. Các thư viện phụ thuộc cũng phải có trên thiết bị
+và tương thích môi trường cài đặt. Script không tự đóng gói dependency.
+
+Ví dụ ABI không kết nối:
+
+   bash scripts/build-example-backend.sh
+   bash scripts/build-tipa.sh --backend "$PWD/.build/HeroBackend.dylib"
+
+Ví dụ này chỉ kiểm tra giao tiếp dylib/JSON; không đọc kernel và không
+áp dụng chức năng. Nó luôn trả connected=false và từ chối apply.
+
+Đã tìm thấy provider libkrw trong mã nguồn Dopamine nhánh 3.x:
+https://github.com/opa334/Dopamine/blob/3.x/Packages/libkrw-provider/src/main.c
+
+Provider công bố các hàm đọc/ghi kernel qua libkrw và khởi tạo primitive
+qua libjailbreak. Điều này không chứng minh tiến trình ứng dụng mobile
+có quyền gọi chúng trên máy của bạn. Cần kiểm tra thư viện/gói thực tế,
+quyền tiến trình và đường giao tiếp với helper khi ứng dụng vào nền.
+
+Để hoàn tất backend game cần thêm:
+  - Game/phiên bản trên máy khớp với UnityFramework đã phân tích hay không.
+  - Cơ chế quyền và helper hoạt động dưới Dopamine 3.0.13-30 thực tế.
+  - Địa chỉ runtime, ASLR, vòng đời đối tượng và luồng cập nhật game.
+  - Cách thực hiện từng nhóm chức năng, không chỉ quyền đọc kernel.
+
+Ứng dụng UI có thể bị iOS tạm dừng khi chuyển sang game. Chức năng cần
+tiếp tục chạy phải được xử lý trong helper/dịch vụ hoặc thành phần
+chạy cùng game. Background modes không tự cấp quyền chạy liên tục.
+Gói hiện tại không cài helper và không thay đổi bốn file HeroSkin.
+
+E. CẤU TRÚC
+
+HeroControl/Models.swift        Khóa chức năng, cấu hình và dữ liệu giao tiếp
+HeroControl/ControlStore.swift  Lưu cấu hình, xác nhận áp dụng theo revision/session
+HeroControl/NativeBackend.swift Bộ nạp dylib và giao tiếp C ABI/JSON
+HeroControl/ContentView.swift   Giao diện chính
+HeroControlTests/               Kiểm thử cấu hình và acknowledgement
+BackendSDK/                    Header, giao thức và ví dụ ABI
+scripts/                       Build, test, tạo project và kiểm tra cấu trúc
+.github/workflows/build.yml     Build trên macOS của GitHub
+
+Nguồn tham khảo:
+https://developer.apple.com/documentation/xcode/xcode-command-line-tool-reference
+https://developer.apple.com/documentation/swiftui/scenephase
+https://github.com/opa334/Dopamine/tree/3.x
