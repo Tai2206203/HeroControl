@@ -29,6 +29,52 @@ final class ControlTests: XCTestCase {
     }
 
     @MainActor
+    func testOverlayProfileEditInvalidatesAcknowledgementAndPreservesOtherControls() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let backend = TestBackend()
+        let store = ControlStore(directory: directory, backend: backend)
+        await store.refresh()
+        await backend.setAcknowledgement(true)
+        await store.apply()
+        XCTAssertTrue(store.isApplied)
+        let oldRevision = store.revision
+        let url = try XCTUnwrap(store.prepareOverlayProfile())
+        var external = store.settings
+        external.flags["DoroCheat.Reference.R1.HP"] = true
+        external.cameraScale = 2.04
+        try JSONEncoder().encode(SavedProfile(schemaVersion: 1, settings: external)).write(to: url, options: .atomic)
+        // A user changes another control before the next foreground poll. The
+        // store must import the HUD edit first rather than overwrite the file.
+        store.setFlag("DoroCheat.Reference.R1.Box", true)
+        XCTAssertEqual(store.settings.cameraScale, 2.04)
+        XCTAssertEqual(store.settings.flags["DoroCheat.Reference.R1.HP"], true)
+        XCTAssertEqual(store.settings.flags["DoroCheat.Reference.R1.Box"], true)
+        XCTAssertNotEqual(store.revision, oldRevision)
+        XCTAssertNil(store.confirmedRevision)
+        XCTAssertFalse(store.isApplied)
+        let persisted = try JSONDecoder().decode(SavedProfile.self, from: Data(contentsOf: url))
+        XCTAssertEqual(persisted.settings, store.settings)
+    }
+
+    @MainActor
+    func testCorruptOverlayProfileIsReportedWithoutOverwritingIt() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ControlStore(directory: directory)
+        let url = try XCTUnwrap(store.prepareOverlayProfile())
+        let corrupt = Data("{not json".utf8)
+        try corrupt.write(to: url, options: .atomic)
+        store.reloadProfileIfChanged()
+        XCTAssertNotNil(store.persistenceError)
+        XCTAssertNil(store.prepareOverlayProfile())
+        XCTAssertEqual(try Data(contentsOf: url), corrupt)
+        XCTAssertFalse(store.isApplied)
+    }
+
+    @MainActor
     func testSavedConfigurationIsNotReportedAsApplied() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

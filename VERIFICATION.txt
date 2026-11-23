@@ -1,4 +1,21 @@
-HERO CONTROL 0.3.2 — Kiểm tra đã thực hiện trong môi trường Windows:
+HERO CONTROL 0.4.0 — BUILD 9
+
+Kiểm tra Windows cho thay đổi overlay:
+- 43 PBX object ID, shared scheme và nguồn Swift mới được liên kết.
+- Info.plist app/overlay cùng phiên bản 0.4.0 build 9; entitlement XML hợp lệ.
+- Cú pháp 9 file Swift và 4 file Objective-C qua tree-sitter.
+- 11 kiểm thử Python về ký và Telegram qua, không gửi mạng trong test.
+- Python AST, bash -n và tính nhất quán bảng 13 tính năng được kiểm tra.
+
+Thêm kiểm thử XCTest: thay đổi từ overlay phải hủy xác nhận áp dụng cũ,
+giữ các lựa chọn khác khi app ghi, và không ghi đè file hỏng khi chỉ đọc.
+Thêm kiểm thử native bridge trên macOS: từ chối JSON/lệnh không hợp lệ,
+không khởi chạy tiến trình đặc quyền trên host.
+Các kiểm thử native/XCTest này được chạy bởi GitHub Actions, chưa chạy
+trên Windows. Chưa xác nhận cửa sổ, chạm, nền, khóa hoặc xoay trên iPhone.
+Xem danh sách thử thiết bị tại CAP_NHAT_0.4.0.txt.
+
+LỊCH SỬ KIỂM TRA 0.3.2 (TRƯỚC THAY ĐỔI OVERLAY):
 
 - Cú pháp Swift của app, XCTest và công cụ kiểm thử giao thức bằng tree-sitter-swift.
 - Project OpenStep PBX: đọc thành công bằng parser pbxproj, đủ 2 target.

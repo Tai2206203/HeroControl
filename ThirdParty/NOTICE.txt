@@ -1,0 +1,13 @@
+Hero Control overlay bootstrap reference
+
+TrollSpeed by Lessica (MIT)
+https://github.com/Lessica/TrollSpeed
+Reference revision: a609be260c8261ead36509c3bc4ded8479da9c40
+
+Adapted plugin application startup, accessibility window hosting,
+AX HID representation and orientation/lock-state API declarations from
+sources/HUDApp.mm, HUDMainApplicationDelegate.mm, HUDMainWindow.mm,
+HUDRootViewController.mm and the corresponding private API headers.
+The canvas, controls, profile synchronization and command bridge are
+Hero Control implementations; no KIF event injection code is included.
+The MIT notice is bundled in the TIPA under ThirdParty.

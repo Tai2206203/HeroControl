@@ -44,11 +44,13 @@ final class ControlStore: ObservableObject {
     func supports(_ key: String) -> Bool { snapshot?.supportedKeys.contains(key) == true }
     func setFlag(_ key: String, _ value: Bool) {
         guard Feature.all.contains(where: { $0.key == key }) else { return }
+        reloadProfileIfChanged()
         settings.flags[key] = value
         changed()
     }
-    func setCamera(_ value: Double) { settings.cameraScale = value; changed() }
+    func setCamera(_ value: Double) { reloadProfileIfChanged(); settings.cameraScale = value; changed() }
     func setSkin(hero: UInt32, skin: Int?) {
+        reloadProfileIfChanged()
         if let skin, let entry = snapshot?.heroes.first(where: { $0.id == hero }),
            entry.skins.contains(where: { $0.id == skin }) {
             settings.selectedSkins[String(hero)] = skin
@@ -56,6 +58,26 @@ final class ControlStore: ObservableObject {
         changed()
     }
     func reset() { settings = ControlSettings(); changed() }
+    // Import edits made by the independent HUD without treating them as a game
+    // acknowledgement. Revisions change even while the backend is disconnected.
+    func reloadProfileIfChanged() {
+        guard FileManager.default.fileExists(atPath: profileURL.path) else { return }
+        do {
+            let data = try Data(contentsOf: profileURL)
+            guard data.count <= 131072 else { throw BackendError.unavailable("Cấu hình quá lớn.") }
+            let saved = try JSONDecoder().decode(SavedProfile.self, from: data)
+            guard saved.schemaVersion == 1 else { throw BackendError.unavailable("Phiên bản cấu hình không hỗ trợ.") }
+            var imported = saved.settings; imported.normalize()
+            if imported != settings {
+                settings = imported; revision = UUID().uuidString; confirmedRevision = nil
+            }
+            persistenceError = nil
+        } catch { persistenceError = "Không đọc được cấu hình từ menu nổi: \(error.localizedDescription)" }
+    }
+    func prepareOverlayProfile() -> URL? {
+        if !FileManager.default.fileExists(atPath: profileURL.path) { persist() }
+        return persistenceError == nil ? profileURL : nil
+    }
     private func changed() {
         settings.normalize()
         revision = UUID().uuidString

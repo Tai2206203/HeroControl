@@ -70,24 +70,29 @@
     "sha256": "17d9496d250e6028e355bc9ad08458316f034560c0ca03f7cd206f16c8bfe039"
   },
   {
+    "path": "CAP_NHAT_0.4.0.txt",
+    "bytes": 5295,
+    "sha256": "427708285493887c3ef3545c870d1c1404be48c0c847b11b4124ef8c6bff9086"
+  },
+  {
     "path": "HeroControl/ContentView.swift",
-    "bytes": 12761,
-    "sha256": "f87b27fd27297359f6584e26ff7460ea306739a9852f2886fe5e366629bcda9c"
+    "bytes": 14492,
+    "sha256": "e1f1fb5856cb7662b19f10db90c85364b574579857c5cd248b5639c5ff384a0f"
   },
   {
     "path": "HeroControl/ControlStore.swift",
-    "bytes": 7328,
-    "sha256": "bb638c458a9d3d27993d3c75c1cce78ab610412c1ecb2b13fd68a4161bc475ab"
+    "bytes": 8648,
+    "sha256": "96aeab7afd7eaf6087f3ad942f79adeb77539e5db34eda41a46e0657cb2c7638"
   },
   {
     "path": "HeroControl/HeroControlApp.swift",
-    "bytes": 216,
-    "sha256": "2788dd591b4b09fa9dff0a6bf8fd3298a82127afde7503ecb827e5c830e98d8b"
+    "bytes": 940,
+    "sha256": "03466c87d7c93e2acd25ff1a5181b0b4776c2aba6a666352daa9e55c7cd60428"
   },
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1049,
-    "sha256": "a8c8a5bf76ec3714308076289b48841a9682cf5bc96ac4bb9c56ffcccd922366"
+    "sha256": "e1fd878cd7c239bfa0f2758d864404d08a14579c24ba5612ed192d16f02968b8"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -105,9 +110,14 @@
     "sha256": "839f630869edf336f378ac17ee0ce22fa1fc3b635d705b16d930b3d34319a641"
   },
   {
+    "path": "HeroControl/OverlayController.swift",
+    "bytes": 4985,
+    "sha256": "bf579afa5b89882da28a480ad2d7abd92da18d6da03711767bcdbdc376b0f400"
+  },
+  {
     "path": "HeroControl.xcodeproj/project.pbxproj",
-    "bytes": 9121,
-    "sha256": "d185df4de29db38187dcb2290900348226bf926e877a0dafbf3966c70c0c8e95"
+    "bytes": 9415,
+    "sha256": "2ff80e711e0c29dde487f62878303f89f55ecc35db1230e7b346032f9952cb8e"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -116,13 +126,33 @@
   },
   {
     "path": "HeroControlTests/ControlTests.swift",
-    "bytes": 7976,
-    "sha256": "0e206daaddfbc8246f4dffcc2dcde401ccd283242cb222720518b044e4202117"
+    "bytes": 10534,
+    "sha256": "2bca30cae9e3271102a11642d6f6b7513b67e78550da4f573548020a3f35256b"
   },
   {
     "path": "HUONG_DAN_BUILD.txt",
-    "bytes": 8133,
-    "sha256": "e69c5a425daf4741e898637d5afe35b68d4ae97ecf146f8288dbff5e03f469e3"
+    "bytes": 8413,
+    "sha256": "dd549c7eebb10d3a636d67a07ee2d27a22fe64627c56e9c0f0cf29d65436a8e0"
+  },
+  {
+    "path": "Overlay/HeroOverlay.m",
+    "bytes": 25534,
+    "sha256": "aa2afd689e82d113255a163973b0bd076b1b41b5f59f2a8c5d799d749ccef6ed"
+  },
+  {
+    "path": "Overlay/Info.plist",
+    "bytes": 838,
+    "sha256": "98a60b29ff42013376fd7969e5a49a2f48f68e2d92b2910b1b3582e96a1a1263"
+  },
+  {
+    "path": "Overlay/OverlayBridge.m",
+    "bytes": 7751,
+    "sha256": "c11d91ffee24e85bee6ea6bf8a3d6597c722f88e533de155608cdb28d2936f49"
+  },
+  {
+    "path": "Overlay/OverlayCommon.h",
+    "bytes": 2754,
+    "sha256": "6be44fd6421e2112a1dc71979cb7d375e01a434fc9236d732dd68c9f72ad758d"
   },
   {
     "path": "scripts/build-diagnostics.sh",
@@ -135,9 +165,14 @@
     "sha256": "d5594b194ef4f32c38a2b7a345cfd21b03a9d99a038db85f1812c004f426e0ff"
   },
   {
+    "path": "scripts/build-overlay.sh",
+    "bytes": 1369,
+    "sha256": "884a6dc9708ec4742f472ceae3f3a607e2c6b769528e847d47ee279bad64d1e7"
+  },
+  {
     "path": "scripts/build-tipa.sh",
-    "bytes": 3820,
-    "sha256": "a86f8af65432c2864bb0300311a2e231ea6f2bd68eeda2328861dc460dee9c06"
+    "bytes": 4448,
+    "sha256": "0ef5f22eb80d9066949f9db70c20f3412e038ba173389ad2c253710af1254576"
   },
   {
     "path": "scripts/check-helper-fds.py",
@@ -145,9 +180,19 @@
     "sha256": "8a81b3d82f182560768749da5b1b8cbab0f27c29e548d6de5f9de4d1bcbcd2e6"
   },
   {
+    "path": "scripts/check-overlay-bridge.py",
+    "bytes": 1179,
+    "sha256": "057c3eb1ca4da007efebecab39cde7dba87983be4a32d11fb9c91b2f5fcbab7a"
+  },
+  {
+    "path": "scripts/generate-overlay-features.py",
+    "bytes": 1281,
+    "sha256": "425eb67f9261599b7b9551ae9cbf530ca1e64d157c71367f393af50304a0c158"
+  },
+  {
     "path": "scripts/generate-project.py",
     "bytes": 8730,
-    "sha256": "da210769e8b0b2df34209dc70f7a905a2adb259f1132bcae369d76ea88ac1762"
+    "sha256": "03920cb0c4272022fda66b91c4bad43542420d887b7c165467a3d327ac976208"
   },
   {
     "path": "scripts/native-contract-check.swift",
@@ -156,8 +201,8 @@
   },
   {
     "path": "scripts/send-telegram.py",
-    "bytes": 5592,
-    "sha256": "02ef7c27006ce366dcc2e3916e1bb5158f02a7b7b1d26063bd47c3552d74e15c"
+    "bytes": 5636,
+    "sha256": "37673a23050ab8455584a7ff49c4c5ffad5ac6056dae2556ce61f0d9632011cb"
   },
   {
     "path": "scripts/test-simulator.sh",
@@ -166,13 +211,13 @@
   },
   {
     "path": "scripts/validate-project.py",
-    "bytes": 3326,
-    "sha256": "0f76ce93ef74f5d33a8e5384c81d7bb96bf9a0690b2412b41192cb13729ad221"
+    "bytes": 4184,
+    "sha256": "24d483426c11d9cec5eb385d6205c9f774e35159ddd01127bfd289414fb06906"
   },
   {
     "path": "scripts/verify-entitlements.py",
-    "bytes": 2112,
-    "sha256": "ada900dbada69c471bd6460cf4e2bad1552e31a2a6a578f468198d3bf8c5b3d7"
+    "bytes": 2226,
+    "sha256": "67690ad59a79c9ee4e64886882cf46ae440bf62ecfb44cd80bfb4f8059b3b5e8"
   },
   {
     "path": "Signing/App.entitlements",
@@ -183,6 +228,11 @@
     "path": "Signing/Helper.entitlements",
     "bytes": 419,
     "sha256": "3877445ee3ba02f7628e3b3c28ac02f6a8452e65ac2b890e1937aa9a5e4bb8a6"
+  },
+  {
+    "path": "Signing/Overlay.entitlements",
+    "bytes": 994,
+    "sha256": "f4478dafed21a8713e8c1ca1104b667b38782633d0c5491c69a480200d24ecf3"
   },
   {
     "path": "TELEGRAM_SETUP.txt",
@@ -200,8 +250,18 @@
     "sha256": "7e55e084f95187a4e37c09aa8e208f851a8f664acbebf97cc5b45b6177a9e37b"
   },
   {
+    "path": "ThirdParty/NOTICE.txt",
+    "bytes": 652,
+    "sha256": "bffe2578e56b0941c71f8c54b42c88c18dd489ab696b1e9ad3ab8dfd2b3dd163"
+  },
+  {
+    "path": "ThirdParty/TrollSpeed-LICENSE.txt",
+    "bytes": 1064,
+    "sha256": "cc81c2a899100c1f4877876bbf969d5f8d9c8f491283db36027bd8cabfdc0a12"
+  },
+  {
     "path": "VERIFICATION.txt",
-    "bytes": 3623,
-    "sha256": "4ebb07e7136be3fc9582588fd3aa18debd3648f4761bd2a354398ac699e6c98a"
+    "bytes": 4677,
+    "sha256": "97af8206275f4f436c1991573df50a05aab1b3cfcfbd0f3c6365e79f357620cd"
   }
 ]

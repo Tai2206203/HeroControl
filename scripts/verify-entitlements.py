@@ -34,12 +34,13 @@ def main():
     for label, binary, expected_file in [
         ("app", args.app, root / "Signing/App.entitlements"),
         ("helper", args.app / "Tools/hero-kernel-check", root / "Signing/Helper.entitlements"),
+        ("overlay", args.app / "Tools/HeroOverlay.app", root / "Signing/Overlay.entitlements"),
     ]:
         if not binary.exists():
             if label == "helper":
                 result[label] = {"present": False}
                 continue
-            raise RuntimeError("Packaged app is missing")
+            raise RuntimeError("Packaged " + label + " is missing")
         expected = plistlib.loads(expected_file.read_bytes())
         actual = read_entitlements(binary)
         missing = missing_entitlements(actual, expected)
@@ -48,7 +49,7 @@ def main():
         result[label] = {"present": True, "requestedEntitlementsVerified": actual}
     result["note"] = "Signature contents verified only; runtime granting must be checked on the device."
     args.output.write_text(json.dumps(result, indent=2), encoding="utf8")
-    print("Packaged app/helper entitlement requests verified.")
+    print("Packaged app/helper/overlay entitlement requests verified.")
 
 
 if __name__ == "__main__":

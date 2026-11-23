@@ -3,6 +3,7 @@ import UIKit
 
 struct ContentView: View {
     @ObservedObject var store: ControlStore
+    @ObservedObject var overlay: OverlayController
     @Environment(\.scenePhase) private var scenePhase
     @State private var showReset = false
     @State private var showConnection = false
@@ -15,6 +16,7 @@ struct ContentView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    overlayCard
                     statusCard
                     groupPicker
                     controls
@@ -63,6 +65,33 @@ struct ContentView: View {
                 }
             }
         }.tint(accent)
+    }
+
+    private var overlayCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(overlay.running ? "Nút nổi Hero Control đang chạy" : "Nút nổi Hero Control", systemImage: "circle.circle")
+                .font(.headline).foregroundStyle(accent)
+            Text(overlay.failure ?? overlay.message).font(.footnote)
+                .foregroundStyle(overlay.failure == nil ? Color.secondary : .orange)
+            Text("Chạm HC để mở/thu menu; kéo để di chuyển. Nút tiếp tục chạy khi chuyển ứng dụng. Các lựa chọn hiện chỉ lưu cấu hình.")
+                .font(.footnote).foregroundStyle(.secondary)
+            HStack {
+                if overlay.running {
+                    Button("Mở/thu menu") { Task { await overlay.toggle() } }
+                } else {
+                    Button("Bật nút nổi") { Task {
+                        if let profile = store.prepareOverlayProfile() { await overlay.start(profile: profile) }
+                    } }
+                }
+                Spacer()
+                Button("Tắt nút nổi", role: .destructive) { Task { await overlay.stop() } }
+                if overlay.busy { ProgressView() }
+            }.disabled(overlay.busy)
+            Button("Xuất báo cáo nút nổi", systemImage: "square.and.arrow.up") {
+                do { shareItem = ShareItem(url: try overlay.exportReport()); exportError = nil }
+                catch { exportError = error.localizedDescription }
+            }.font(.footnote)
+        }.padding(16).background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var statusCard: some View {

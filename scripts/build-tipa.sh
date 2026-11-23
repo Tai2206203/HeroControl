@@ -34,6 +34,7 @@ if [[ -z "$BACKEND" ]]; then
     bash "$ROOT/scripts/build-diagnostics.sh"
     BACKEND="$ROOT/.build/Diagnostics/HeroBackend.dylib"
 fi
+bash "$ROOT/scripts/build-overlay.sh"
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/herocontrol.XXXXXX")"
 trap 'rm -rf -- "$STAGE"' EXIT
 xcodebuild -project "$ROOT/HeroControl.xcodeproj" -scheme HeroControl \
@@ -46,6 +47,12 @@ APP="$ROOT/.build/DerivedData/Build/Products/Release-iphoneos/HeroControl.app"
 [[ -d "$APP" ]] || { echo "Built app not found: $APP" >&2; exit 1; }
 mkdir -p "$STAGE/Payload"
 ditto "$APP" "$STAGE/Payload/HeroControl.app"
+mkdir -p "$STAGE/Payload/HeroControl.app/Tools" "$STAGE/Payload/HeroControl.app/Frameworks" "$STAGE/Payload/HeroControl.app/ThirdParty"
+ditto "$ROOT/.build/Overlay/HeroOverlay.app" "$STAGE/Payload/HeroControl.app/Tools/HeroOverlay.app"
+cp "$ROOT/.build/Overlay/HeroOverlayBridge.dylib" "$STAGE/Payload/HeroControl.app/Frameworks/"
+cp "$ROOT/ThirdParty/TrollSpeed-LICENSE.txt" "$ROOT/ThirdParty/NOTICE.txt" "$STAGE/Payload/HeroControl.app/ThirdParty/"
+codesign --force --sign - --entitlements "$ROOT/Signing/Overlay.entitlements" \
+    "$STAGE/Payload/HeroControl.app/Tools/HeroOverlay.app"
 if [[ -n "$BACKEND" ]]; then
     mkdir -p "$STAGE/Payload/HeroControl.app/Frameworks"
     cp "$BACKEND" "$STAGE/Payload/HeroControl.app/Frameworks/HeroBackend.dylib"

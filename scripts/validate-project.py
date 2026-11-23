@@ -45,6 +45,18 @@ assert app_entitlements.get('com.apple.private.security.no-sandbox') is True
 assert app_entitlements.get('com.apple.private.persona-mgmt') is True
 assert helper_entitlements.get('com.apple.private.security.no-container') is True
 assert helper_entitlements.get('com.apple.security.exception.iokit-user-client-class') == ['IOSurfaceRootUserClient']
+overlay_entitlements = plistlib.loads((root / 'Signing/Overlay.entitlements').read_bytes())
+assert overlay_entitlements.get('com.apple.springboard.accessibility-window-hosting') is True
+assert overlay_entitlements.get('com.apple.private.hid.client.event-monitor') is True
+assert overlay_entitlements.get('com.apple.private.security.no-sandbox') is True
+overlay_info = plistlib.loads((root / 'Overlay/Info.plist').read_bytes())
+assert overlay_info['CFBundleVersion'] == info['CFBundleVersion']
+assert overlay_info['CFBundleShortVersionString'] == info['CFBundleShortVersionString']
+assert overlay_info['CFBundleExecutable'] == 'hero-overlay'
+build_script = (root / 'scripts/build-tipa.sh').read_text('utf8')
+assert 'scripts/build-overlay.sh' in build_script
+assert 'Tools/HeroOverlay.app' in build_script
+assert 'Signing/Overlay.entitlements' in build_script
 for banned in ['com.apple.private.cs.debugger', 'dynamic-codesigning', 'com.apple.private.skip-library-validation']:
     assert banned not in app_entitlements and banned not in helper_entitlements
 print(json.dumps({'pbxObjects': len(definitions), 'toggleKeys': len(keys), 'sharedTestScheme': True,

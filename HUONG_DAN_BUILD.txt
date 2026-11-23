@@ -1,4 +1,8 @@
-HERO CONTROL 0.2 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
+HERO CONTROL 0.4.0 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
+
+CẬP NHẬT HIỆN TẠI: xem CAP_NHAT_0.4.0.txt để build và dùng nút nổi.
+Mã nguồn đã thêm overlay độc lập, cần kiểm tra trên iPhone sau build.
+Máy Windows chỉ kiểm tra tĩnh/Python; GitHub Actions biên dịch trên macOS.
 
 TRẠNG THÁI BÀN GIAO
 
@@ -7,7 +11,7 @@ Reports; lưu cấu hình; xuất chẩn đoán; bộ nạp backend qua C ABI;
 project Xcode, kiểm thử và script đóng gói .tipa.
 
 Đã thêm backend chẩn đoán libkrw và công cụ terminal root.
-CHƯA triển khai game adapter, overlay, hook camera/skin hoặc
+Đã thêm overlay riêng. CHƯA triển khai game adapter, hook camera/skin hoặc
 dịch vụ theo dõi tố cáo. Vì vậy gói build mặc định là ứng dụng điều
 khiển chưa kết nối, CHƯA thay thế được chức năng của menu trong game.
 Nút bật chỉ thay đổi cấu hình đang chuẩn bị; không báo thành công giả.

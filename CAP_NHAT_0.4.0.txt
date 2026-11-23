@@ -1,0 +1,90 @@
+HERO CONTROL 0.4.0 — BUILD 9 — NÚT NỔI RIÊNG
+
+ĐÃ THAY ĐỔI MÃ NGUỒN
+
+1. Khi mở Hero Control, ứng dụng yêu cầu chạy HeroOverlay.app bằng
+   persona root, độc lập với backend kiểm tra kernel và tiến trình game.
+   Không chờ overlay kết thúc trên luồng giao diện.
+2. Cửa sổ dùng API accessibility window hosting. Chạm HC để mở/thu
+   menu, kéo HC để di chuyển. Có TẮT NÚT NỔI trong menu và trong app.
+   Đóng menu vẫn giữ HC; tắt nút nổi kết thúc tiến trình overlay.
+3. Các nhóm ESP, Camera, Style, Skins, Reports lấy cùng 13 khóa cấu hình
+   từ Models.swift. Camera cho chọn 1.00–2.30. Không tạo danh sách skin
+   giả khi chưa có dữ liệu tướng từ backend.
+4. Menu ngoài và app đọc/ghi cùng profile JSON, thay file nguyên tử.
+   App nhập lại thay đổi và hủy xác nhận áp dụng cũ khi cấu hình đổi.
+5. Theo dõi hướng màn hình, ẩn khi khóa máy, hiện lại khi mở khóa.
+   Tự dừng nếu app/cấu hình không còn tồn tại hoặc SpringBoard khởi
+   động lại. Mở lại Hero Control để bật lại. Khóa file tránh nhiều
+   tiến trình overlay trong cùng container.
+6. Báo cáo nút nổi có PID, EUID, heartbeat, hướng, trạng thái menu,
+   số sự kiện chạm xử lý và lỗi cấu hình. Nếu khởi động thất bại có
+   startupLog; không coi spawn thành công là cửa sổ đã hoạt động.
+
+GIỚI HẠN
+
+Đây là bản triển khai mới, chưa chạy trên iPhone tại máy Windows này.
+GitHub Actions sẽ biên dịch/ký/kiểm thử. Chữ ký có entitlement không
+chứng minh hệ điều hành sẽ cấp quyền. Cần thử trên thiết bị thực tế.
+Simulator không khởi chạy overlay đặc quyền; chỉ chạy giao diện/test.
+
+Bộ xử lý chức năng game CHƯA được triển khai. Nút nổi chỉ điều khiển
+cấu hình Hero Control; không đọc tiến trình game, không vẽ ESP,
+không thay đổi camera/skin trong game, không sửa các file HeroSkin.
+Đọc kernel thành công trong 0.3.2 không thay thế cho bộ xử lý game.
+
+BUILD TỪ LAPTOP WINDOWS ĐANG DÙNG
+
+Mã nguồn đã sửa tại C:\Users\Admin\Downloads\HeroControl.
+Không cần chép file cũ lên GitHub bằng trình duyệt hay tạo lại repo.
+
+Mở Command Prompt trong thư mục đó và chạy từng dòng riêng:
+
+    cd /d C:\Users\Admin\Downloads\HeroControl
+    git push origin main
+
+Các thay đổi của đợt này được lưu bằng một commit cục bộ trước bàn giao.
+Nếu bạn dùng bản ZIP sang thư mục khác thay vì thư mục đang làm việc,
+hãy chép mã nguồn vào repo cũ (giữ .git), rồi git add / git commit / push.
+
+Vào https://github.com/Tai2206203/HeroControl/actions
+Mở lượt chạy mới nhất của Build HeroControl TIPA, chờ toàn bộ bước xanh.
+Artifact: HeroControl-TIPA-diagnostics (giữ tên cũ để dễ tìm).
+Giải nén lấy HeroControl.tipa. App hiển thị 0.4.0 build 9.
+
+Workflow cũng gửi .tipa về Telegram sau khi các bước build/test qua nếu
+TELEGRAM_BOT_TOKEN và TELEGRAM_CHAT_ID đã có trong Actions Secrets.
+Nếu chưa có, làm theo TELEGRAM_SETUP.txt. Không ghi token vào mã nguồn.
+
+TRÌNH TỰ DÙNG VÀ KIỂM TRA TRÊN IPHONE
+
+1. Cài đè HeroControl.tipa mới bằng trình cài đang dùng. Trước khi cập
+   nhật các bản overlay sau này, hãy Tắt nút nổi ở bản đang chạy.
+2. Mở Hero Control trước. Kiểm tra phiên bản, chờ nút HC xuất hiện.
+   Chạm để mở/thu, kéo để chuyển vị trí.
+3. Ra màn hình chính rồi mở game. Kiểm tra HC vẫn hiện và chạm được.
+   Khi menu đóng, các vùng ngoài HC phải chạm được bình thường.
+   Khi menu mở, các vùng ngoài HC/menu cũng phải chạm được bình thường.
+4. Xoay ngang/dọc, kiểm tra vị trí và tọa độ chạm khớp. Khóa/mở khóa
+   máy, kiểm tra menu ẩn trên màn hình khóa và HC hiện lại sau mở khóa.
+5. Đổi một lựa chọn hoặc Camera trong menu nổi, quay lại app kiểm tra
+   cấu hình khớp. Sau đó đổi trong app, mở menu nổi kiểm tra ngược lại.
+6. Bấm TẮT NÚT NỔI: cả nút và menu phải biến mất. Bật lại từ app; chỉ
+   có một HC. Mở app nhiều lần không được tạo nhiều nút.
+7. Nếu không hiện, không nhận chạm hoặc làm mất chạm vùng ngoài menu:
+   quay về Hero Control -> Tắt nút nổi -> Xuất báo cáo nút nổi, gửi JSON.
+   Báo cáo kernel là riêng; không cần chạy kiểm tra kernel để bật HC.
+
+BUILD TRÊN MAC NẾU CÓ
+
+    python3 scripts/validate-project.py
+    bash scripts/build-tipa.sh
+
+Kết quả dist/HeroControl.tipa. Không chạy xcodebuild trực tiếp trên
+Windows/Ubuntu; GitHub Actions dùng máy macOS để biên dịch.
+
+NGUỒN THAM KHẢO
+
+Bootstrap/hosting/HID/orientation dựa trên TrollSpeed của Lessica (MIT).
+Xem ThirdParty/NOTICE.txt và TrollSpeed-LICENSE.txt. Thông báo bản quyền
+được đóng kèm gói .tipa. Không dùng KIF để phát sự kiện chạm toàn cục.
