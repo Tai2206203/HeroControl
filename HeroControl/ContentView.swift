@@ -75,6 +75,8 @@ struct ContentView: View {
                 .foregroundStyle(overlay.failure == nil ? Color.secondary : .orange)
             Text("Chạm HC để mở/thu menu; kéo để di chuyển. Nút tiếp tục chạy khi chuyển ứng dụng. Các lựa chọn hiện chỉ lưu cấu hình.")
                 .font(.footnote).foregroundStyle(.secondary)
+            Text("Chế độ tránh chặn màn hình: chạm menu nổi có thể đồng thời chạm ứng dụng phía dưới. Nên mở menu khi đang ở Hero Control và thu menu trước khi vào game.")
+                .font(.footnote).foregroundStyle(.orange)
             HStack {
                 if overlay.running {
                     Button("Mở/thu menu") { Task { await overlay.toggle() } }
@@ -105,8 +107,19 @@ struct ContentView: View {
             }.foregroundStyle(store.connected ? accent : .orange)
             Text(store.isApplied ? "Cấu hình đã được xác nhận" : "Cấu hình đang chuẩn bị").font(.title3.bold())
             Text(store.message).font(.subheadline).foregroundStyle(.secondary)
+            if let game = store.snapshot?.gameInspection {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("KIỂM TRA TRUY CẬP GAME").font(.caption.bold())
+                    Text(game.message).font(.footnote)
+                    if let pid = game.pid { Text("PID: \(pid) • Phiên bản: \(game.gameVersion ?? "unknown")").font(.caption.monospaced()) }
+                    if let status = game.taskPortStatus { Text("Quyền đọc tiến trình: mã \(status)").font(.caption) }
+                    Text("Đọc bộ nhớ: \(game.memoryReadVerified ? "đã xác minh" : "chưa xác minh") • Dump: \(game.moduleMatchesDump ? "khớp" : "chưa khớp/chưa kiểm tra")")
+                        .font(.caption)
+                    Text("Lần kiểm tra: \(game.timestamp)").font(.caption2).foregroundStyle(.secondary)
+                }
+            }
             if let snapshot = store.snapshot {
-                Label(snapshot.gameInspectionAvailable == false ? "Chưa tích hợp bộ nhận diện game" : (snapshot.gameRunning ? "Game đang chạy" : "Chưa tìm thấy game"),
+                Label(snapshot.gameInspectionAvailable == false ? "Chưa xác minh tiến trình game" : (snapshot.gameRunning ? "Đã quan sát thấy game ở lần kiểm tra" : "Chưa quan sát thấy game ở lần kiểm tra"),
                       systemImage: snapshot.gameRunning ? "gamecontroller.fill" : "gamecontroller")
                     .font(.caption).foregroundStyle(.secondary)
                 if !store.unsupportedKeys.isEmpty {
@@ -115,6 +128,10 @@ struct ContentView: View {
                 }
             }
             Button("Xem chẩn đoán kernel") { showKernelCheck = true }.font(.subheadline.bold())
+            Button("Kiểm tra truy cập game", systemImage: "gamecontroller") { Task { await store.inspectGame() } }
+                .font(.subheadline.bold()).disabled(store.busy)
+            Text("Mở Liên Quân vào sảnh, quay lại đây và bấm kiểm tra. Sau đó dùng Xuất cấu hình & chẩn đoán để gửi kết quả.")
+                .font(.caption).foregroundStyle(.secondary)
         }.padding(18).background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 20))
     }
 

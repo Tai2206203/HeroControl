@@ -74,7 +74,7 @@ static void HCState(void) {
         @"pid": @(getpid()), @"euid": @(geteuid()), @"heartbeat": @(NSProcessInfo.processInfo.systemUptime),
         @"session": HCSession, @"menuOpen": @(HCMenuOpen), @"orientation": @(HCOrientation),
         @"touchEvents": @(HCTouchCount), @"hiddenForLock": @(HCLocked),
-        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.4.3", @"stage": HCStartupStage};
+        @"settingsOnly": @YES, @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.5.0", @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -202,7 +202,7 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         HCText(@"HERO CONTROL", CGRectMake(p.origin.x + 14, p.origin.y + 14, p.size.width - 70, 24), 17, HCAccent(), YES);
         CGRect close = CGRectMake(CGRectGetMaxX(p) - 44, p.origin.y + 6, 38, 36);
         HCText(@"×", CGRectInset(close, 8, 0), 28, UIColor.whiteColor, NO); [self target:@"close" rect:close];
-        HCText(HCSettingsError ?: @"Chỉ lưu cấu hình • Chưa có xử lý game", CGRectMake(p.origin.x + 14, p.origin.y + 43, p.size.width - 28, 34), 11,
+        HCText(HCSettingsError ?: @"Chỉ lưu cấu hình • Chưa có xử lý game\nChạm có thể truyền xuống app bên dưới.", CGRectMake(p.origin.x + 14, p.origin.y + 43, p.size.width - 28, 34), 11,
             HCSettingsError ? UIColor.systemOrangeColor : UIColor.lightGrayColor, NO);
         NSArray *tabs = @[@"ESP", @"Camera", @"Style", @"Skins", @"Reports"];
         CGFloat tabWidth = (p.size.width - 20) / 5;
@@ -305,7 +305,10 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
 @implementation HCOverlayWindow
 + (BOOL)_isSystemWindow { return YES; }
 - (BOOL)_isWindowServerHostingManaged { return NO; }
-- (BOOL)_ignoresHitTest { return HCLocked; }
+// Window hosting otherwise captures the full display context before UIKit's
+// view hitTest gets a chance to return nil. Our controls use the AX monitor,
+// not UIKit-delivered touches, so let the underlying application receive input.
+- (BOOL)_ignoresHitTest { return YES; }
 - (BOOL)_isSecure { return YES; }
 - (BOOL)_shouldCreateContextAsSecure { return YES; }
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {

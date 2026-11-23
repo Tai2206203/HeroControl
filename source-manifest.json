@@ -16,8 +16,13 @@
   },
   {
     "path": "BackendSDK/DiagnosticBackend.m",
-    "bytes": 32035,
-    "sha256": "1f121231b2b06edde450220267272a9dcc979d0cde983f6226263ffa47b89a63"
+    "bytes": 33156,
+    "sha256": "ef59fe0a042a36f5c612154155a8fa5e5fa03079c76d9e631b6453e8f4b31993"
+  },
+  {
+    "path": "BackendSDK/GameInspection.h",
+    "bytes": 9237,
+    "sha256": "97ca98582df1dc56e6062909b2be35693a8014a29ea38201aa29fe661cc59e59"
   },
   {
     "path": "BackendSDK/HeroBackend.h",
@@ -90,14 +95,19 @@
     "sha256": "5fa5a16219706e80450b43d344122d6b89484bcb3e26a9f6a900dc60bac8bffb"
   },
   {
+    "path": "CAP_NHAT_0.5.0.txt",
+    "bytes": 3400,
+    "sha256": "98b393debf5b5800a67d93dd9819f33bffe489695cbbf2f479b3baa80a428353"
+  },
+  {
     "path": "HeroControl/ContentView.swift",
-    "bytes": 14492,
-    "sha256": "e1f1fb5856cb7662b19f10db90c85364b574579857c5cd248b5639c5ff384a0f"
+    "bytes": 16116,
+    "sha256": "f6940e20367807793c39cdad28f9513d30e75f2e4e89f25f5882099455db0fc3"
   },
   {
     "path": "HeroControl/ControlStore.swift",
-    "bytes": 8648,
-    "sha256": "96aeab7afd7eaf6087f3ad942f79adeb77539e5db34eda41a46e0657cb2c7638"
+    "bytes": 8736,
+    "sha256": "feffa26d3906ee4f18e1e0c2c9d497c58f1e78f08123600d3922de052cd136d3"
   },
   {
     "path": "HeroControl/HeroControlApp.swift",
@@ -107,7 +117,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1050,
-    "sha256": "79020fd78eb7bfc6b9574665ef4e1ebbc65a62d5d9f39c81ce62bb647db4e61d"
+    "sha256": "50726edc1867c70128e8a1cea9f0ed652054418151a07806cbbade1100abf5e1"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -116,8 +126,8 @@
   },
   {
     "path": "HeroControl/Models.swift",
-    "bytes": 5486,
-    "sha256": "a33fb46f346c5db02da6aea9ddba7d7cdb015c2ab4efc36375543e6fdb381440"
+    "bytes": 6065,
+    "sha256": "416ce635c42933371573607a53686da9f7a69b88e4fcb886727993e6f51c43eb"
   },
   {
     "path": "HeroControl/NativeBackend.swift",
@@ -132,7 +142,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9417,
-    "sha256": "ca71eba6b946872901444cbf3eb3e17fdb663a53534f81085f5adeb5c221f1db"
+    "sha256": "e96095fffaf8828b9748490f648e9f5181228eaa303c22d6d5cd059b3f6309d4"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -147,17 +157,17 @@
   {
     "path": "HUONG_DAN_BUILD.txt",
     "bytes": 8308,
-    "sha256": "612342b998f2a2d08d6a3c6633db262ab0922b43d7a02d61f8ac51a798c061eb"
+    "sha256": "0e977192701a1558a13fbcc502b56bf78f407489ea13a18f10a34684d01864bb"
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 29035,
-    "sha256": "ee1a83c02bc0f5b54fe2d80edd7f46a498decf072ceee3501243ce87625d88bc"
+    "bytes": 29319,
+    "sha256": "3fa4c7a1e0b4b253cda56a6cdf3a329bc2a2be8e45d0e8f18c061ef6012e78a6"
   },
   {
     "path": "Overlay/Info.plist",
     "bytes": 839,
-    "sha256": "6e02a4d92debc4e93d1666bfc2a9e8fb51240bff812524017518a3eb06cf0bc1"
+    "sha256": "e1a75ce0d2305432407b4ace30272fa6faf900d5d29ce61c140a5851749748f8"
   },
   {
     "path": "Overlay/OverlayBridge.m",
@@ -217,12 +227,12 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 8731,
-    "sha256": "be1779364ac8de50fac750b7dd2d0e5e72043bc777d35deb73a6c055cdaf2967"
+    "sha256": "2ea9a4c26be7f2608f2f1a4a859154bd94eefa339367ee4e607c7172bf0b5d64"
   },
   {
     "path": "scripts/native-contract-check.swift",
-    "bytes": 2191,
-    "sha256": "93489b9447e7c2fd7019864b26fac97b5f307b22bf2dad4f87e24118aac92f25"
+    "bytes": 2792,
+    "sha256": "bc082f174bacd42971a93a0927a52d85fd1b25dabe0c27931af46293aab13d84"
   },
   {
     "path": "scripts/overlay-lock-check.c",

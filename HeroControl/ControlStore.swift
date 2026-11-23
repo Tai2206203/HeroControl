@@ -98,6 +98,9 @@ final class ControlStore: ObservableObject {
     func diagnose() async {
         await requestStatus(action: "diagnose")
     }
+    func inspectGame() async {
+        await requestStatus(action: "inspectGame")
+    }
     private func requestStatus(action: String) async {
         guard !busy else { return }
         busy = true

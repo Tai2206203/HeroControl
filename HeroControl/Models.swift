@@ -86,6 +86,27 @@ struct BackendSnapshot: Codable {
     let message: String
     var diagnostics: KernelDiagnostics? = nil
     var gameInspectionAvailable: Bool? = nil
+    var gameInspection: GameInspection? = nil
+    var gameProbeDiagnostics: KernelDiagnostics? = nil
+}
+
+struct GameInspection: Codable {
+    let schemaVersion: Int
+    let timestamp: String
+    let bundleID: String
+    let gameRunning: Bool
+    let processScanSucceeded: Bool
+    let memoryReadVerified: Bool
+    let moduleMatchesDump: Bool
+    let expectedUnityUUID: String
+    let code: String
+    let message: String
+    let pid: Int?
+    let gameVersion: String?
+    let taskPortStatus: Int?
+    let dyldInfoStatus: Int?
+    let unityUUID: String?
+    let unityBase: String?
 }
 
 struct KernelLibraryCheck: Codable {

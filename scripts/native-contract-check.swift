@@ -21,6 +21,14 @@ struct NativeContractCheck {
         guard protocolTrace?.stage == trace?.stage, protocolTrace?.rawResponse == trace?.rawResponse else {
             fatalError("Concrete and protocol calls returned different response traces")
         }
+        let inspected = try await backend.send(action: "inspectGame")
+        guard inspected.ok, let game = inspected.snapshot?.gameInspection,
+              game.code == "game_inspection_requires_device", !game.gameRunning,
+              !game.processScanSucceeded, !game.memoryReadVerified, !game.moduleMatchesDump,
+              inspected.snapshot?.connected == false, inspected.snapshot?.supportedKeys.isEmpty == true,
+              inspected.snapshot?.gameProbeDiagnostics != nil else {
+            fatalError("Host game-inspection contract or refusal to read other processes failed")
+        }
         do {
             _ = try await backend.send(action: "apply", revision: "must-not-ack", settings: ControlSettings())
             fatalError("Diagnostics backend unexpectedly accepted apply")

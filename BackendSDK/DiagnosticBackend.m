@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <TargetConditionals.h>
 #include "HeroBackend.h"
+#include "GameInspection.h"
 
 typedef int (*HCKernelBase)(uint64_t *address);
 typedef int (*HCKernelRead)(uint64_t address, void *buffer, size_t length);
@@ -23,6 +24,7 @@ static HCKernelBase HCBaseFunction;
 static HCKernelRead HCReadFunction;
 static NSString *HCLoadedPath;
 static NSDictionary *HCSessionReport;
+static NSDictionary *HCGameSessionReport;
 static BOOL HCTraceStagesEnabled;
 
 static void HCStage(const char *stage) {
@@ -276,11 +278,20 @@ static int HCTemporaryFD(void) {
     return descriptor;
 }
 
-static NSDictionary *HCDiagnose(void) {
+static NSDictionary *HCGameReport(BOOL unused) {
+    (void)unused;
+    NSMutableDictionary *report = [HCReport(NO) mutableCopy];
+    NSDictionary *game = HCGameInspection();
+    report[@"gameInspection"] = game;
+    report[@"code"] = game[@"code"]; report[@"summary"] = game[@"message"];
+    return report;
+}
+
+static NSDictionary *HCDiagnose(BOOL inspectGame) {
 #if TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR
-    if (geteuid() == 0) return HCReport(YES);
+    if (geteuid() == 0) return inspectGame ? HCGameReport(NO) : HCReport(YES);
     NSMutableDictionary *fallback = [HCReport(NO) mutableCopy];
-    fallback[@"kernelProbeRequested"] = @YES;
+    fallback[@"kernelProbeRequested"] = inspectGame ? @NO : @YES;
     fallback[@"appUID"] = @(getuid()); fallback[@"appEUID"] = @(geteuid());
     fallback[@"callerEntitlements"] = HCEntitlements();
     fallback[@"helperStage"] = @"preflight";
@@ -333,7 +344,7 @@ static NSDictionary *HCDiagnose(void) {
     if (!result) result = posix_spawn_file_actions_addclose(&actions, output);
     if (!result) result = posix_spawn_file_actions_addclose(&actions, errors);
     pid_t child = -1;
-    char *arguments[] = {(char *)helper.fileSystemRepresentation, "--kernel-read", NULL};
+    char *arguments[] = {(char *)helper.fileSystemRepresentation, inspectGame ? "--inspect-game" : "--kernel-read", NULL};
     char *environment[] = {"PATH=/usr/bin:/bin:/usr/sbin:/sbin", NULL};
     if (!result) result = posix_spawn(&child, helper.fileSystemRepresentation, &actions, &attributes, arguments, environment);
     if (actionsReady) posix_spawn_file_actions_destroy(&actions);
@@ -420,7 +431,7 @@ static NSDictionary *HCDiagnose(void) {
     if (errorText.length) report[@"helperError"] = errorText;
     return report;
 #else
-    return HCReport(YES);
+    return inspectGame ? HCGameReport(NO) : HCReport(YES);
 #endif
 }
 
@@ -445,22 +456,28 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
             return HCEncode(@{@"protocolVersion": @1, @"ok": @NO, @"message": @"Invalid v1 request"});
         }
         NSString *action = parsed[@"action"];
-        if (![action isEqual:@"status"] && ![action isEqual:@"diagnose"] && ![action isEqual:@"apply"]) {
+        if (![@[@"status", @"diagnose", @"inspectGame", @"apply"] containsObject:action]) {
             return HCEncode(@{@"protocolVersion": @1, @"ok": @NO, @"message": @"Unsupported action"});
         }
         BOOL apply = [action isEqual:@"apply"];
         // Status polling never invokes kernel primitives. Explicit diagnose is
         // still subject to the root precondition inside HCReport.
         if (!HCSessionReport || [action isEqual:@"diagnose"]) {
-            HCSessionReport = [action isEqual:@"diagnose"] ? HCDiagnose() : HCReport(NO);
+            HCSessionReport = [action isEqual:@"diagnose"] ? HCDiagnose(NO) : HCReport(NO);
         }
+        if ([action isEqual:@"inspectGame"]) HCGameSessionReport = HCDiagnose(YES);
         NSDictionary *report = HCSessionReport;
-        NSString *message = apply ? @"Chưa có game adapter; cấu hình chưa được áp dụng." : report[@"summary"];
-        NSDictionary *snapshot = @{
-            @"protocolVersion": @1, @"backendName": @"Dopamine diagnostics 0.3.2",
-            @"connected": @NO, @"gameRunning": @NO, @"gameInspectionAvailable": @NO, @"supportedKeys": @[],
+        NSDictionary *game = HCGameSessionReport[@"gameInspection"];
+        NSString *message = apply ? @"Chưa có game adapter; cấu hình chưa được áp dụng." :
+            [action isEqual:@"inspectGame"] ? HCGameSessionReport[@"summary"] : report[@"summary"];
+        NSMutableDictionary *snapshot = [@{
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.5.0",
+            @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
+            @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
-        };
+        } mutableCopy];
+        if (game) snapshot[@"gameInspection"] = game;
+        if (HCGameSessionReport) snapshot[@"gameProbeDiagnostics"] = HCGameSessionReport;
         // C's ! operator has type int, so @(!apply) serializes as 0/1, not
         // JSON false/true. Swift's Bool decoder correctly rejects those numbers.
         return HCEncode(@{@"protocolVersion": @1, @"ok": apply ? @NO : @YES, @"message": message, @"snapshot": snapshot});
@@ -587,14 +604,14 @@ int main(int argc, char **argv) {
         }
         if (argc == 2 && strcmp(argv[1], "--fd-self-test") == 0) return HCFDRegression(argv[0]);
         if (argc == 2 && strcmp(argv[1], "--self-test") == 0) return HCSelfTest();
-        if (argc != 2 || (strcmp(argv[1], "--inspect") != 0 && strcmp(argv[1], "--kernel-read") != 0)) {
-            fprintf(stderr, "Usage: hero-kernel-check --inspect | --kernel-read\n");
+        if (argc != 2 || (strcmp(argv[1], "--inspect") != 0 && strcmp(argv[1], "--kernel-read") != 0 && strcmp(argv[1], "--inspect-game") != 0)) {
+            fprintf(stderr, "Usage: hero-kernel-check --inspect | --kernel-read | --inspect-game\n");
             return 64;
         }
         signal(SIGALRM, HCTimeout);
         alarm(15);
         HCTraceStagesEnabled = strcmp(argv[1], "--kernel-read") == 0;
-        int result = HCWriteIsolatedReport(HCTraceStagesEnabled, HCReport);
+        int result = HCWriteIsolatedReport(HCTraceStagesEnabled, strcmp(argv[1], "--inspect-game") == 0 ? HCGameReport : HCReport);
         alarm(0);
         return result;
     }

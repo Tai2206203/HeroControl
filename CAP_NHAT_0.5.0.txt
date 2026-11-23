@@ -1,0 +1,57 @@
+HERO CONTROL 0.5.0 — BUILD 13
+
+SỬA LỖI MÀN HÌNH KHÔNG NHẬN CHẠM
+
+Cửa sổ hosting phủ toàn màn hình có thể giữ hit-test trước khi hàm
+hitTest của UIView trả nil. Nay _ignoresHitTest luôn YES: ứng dụng phía
+dưới nhận chạm. Menu vẫn xử lý sự kiện từ AX/HID monitor riêng.
+
+Giới hạn: chạm HC/menu có thể đồng thời truyền xuống ứng dụng bên dưới.
+Đây chưa phải chặn chạm chọn lọc theo vùng. Mở menu khi đang ở Hero
+Control; thu menu trước khi quay lại game. Cần xác nhận trên thiết bị.
+
+ƯU TIÊN BACKEND GAME
+
+Thêm action inspectGame chạy trong helper root đã có, không cần .deb.
+Nhận diện đúng bundle com.garena.game.kgvn và CFBundleExecutable của
+tiến trình, không nhận PID/địa chỉ do người gọi tùy ý cung cấp.
+Thử task_for_pid, TASK_DYLD_INFO và đọc danh sách module 64-bit có giới
+hạn. Đọc header/load commands UnityFramework đang chạy, so LC_UUID với
+298E718A-DA06-33B8-8253-910447B649E3 lấy từ bộ dump người dùng cung cấp.
+Không dùng địa chỉ ASLR cố định, không sửa mã game hoặc file HeroSkin.
+
+Báo riêng: không thấy game / không có API / từ chối task port / đọc
+dyld thất bại / UUID không khớp / đọc module và UUID khớp. Dữ liệu hiển
+thị là kết quả tại timestamp lần kiểm tra, không phải giám sát liên tục.
+Giữ nguyên kết quả chẩn đoán kernel và lưu báo cáo probe game riêng.
+
+ĐÂY CHƯA PHẢI TRIỂN KHAI ESP, CAMERA HAY CHECK TỐ CÁO.
+Việc đọc kernel header trước đây chưa xác minh được khả năng đọc game.
+inspectGame kiểm tra bước truy cập thực tế cần có trước khi triển khai
+đọc đối tượng camera/tướng. Apply vẫn bị từ chối cho đến khi có xử lý thật.
+Mã cũ check tố cáo còn cần Lua và phản hồi máy chủ; chưa có nguồn dữ
+liệu tương đương được xác minh từ ứng dụng riêng.
+
+KIỂM TRA
+
+Tại CMD trong thư mục HeroControl: git push.
+Chờ lượt Actions mới xanh, cài .tipa 0.5.0 build 13.
+1. Mở Hero Control; kiểm tra có thể cuộn và chạm các nút khi HC xuất hiện.
+2. Thu menu. Mở Liên Quân vào sảnh rồi quay lại Hero Control.
+3. Bấm Kiểm tra truy cập game, chờ hoàn tất.
+4. Chọn menu ba chấm -> Xuất cấu hình & chẩn đoán, gửi toàn bộ JSON.
+   Báo cáo có snapshot.gameInspection và gameProbeDiagnostics.
+5. Nếu còn lỗi chạm/nút nổi, gửi thêm Xuất báo cáo nút nổi.
+
+KIỂM THỬ
+
+Đã mở rộng kiểm thử C ABI -> JSON -> production Swift trên macOS: action
+inspectGame phải từ chối đọc tiến trình khác trên host, giữ connected=false
+và supportedKeys rỗng, giải mã được báo cáo probe mới. Kiểm thử native
+chạy bởi GitHub Actions; Windows chỉ kiểm tra cú pháp/project/Python.
+
+API tham khảo chính thức:
+https://github.com/apple-oss-distributions/xnu/blob/main/libsyscall/wrappers/libproc/libproc.h
+https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/mach/task_info.h
+https://github.com/apple-oss-distributions/dyld/blob/main/include/mach-o/dyld_images.h
+Bundle ID đối chiếu Apple lookup: https://itunes.apple.com/lookup?id=1150288115&country=vn
