@@ -17,12 +17,13 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     overlayCard
+                    combinedCheck
                     statusCard
                     groupPicker
                     controls
                     if let error = store.persistenceError { Text(error).foregroundStyle(.orange).font(.footnote) }
                     if let error = exportError { Text(error).foregroundStyle(.orange).font(.footnote) }
-                    if store.selectedGroup != .camera {
+                    if store.selectedGroup == .style || store.selectedGroup == .skins {
                       Button { Task { await store.apply() } } label: {
                         HStack {
                             if store.busy { ProgressView().tint(.black) }
@@ -62,11 +63,36 @@ struct ContentView: View {
                 guard scenePhase == .active else { return }
                 while !Task.isCancelled {
                     await store.refresh()
+                    await overlay.refresh()
                     do { try await Task.sleep(nanoseconds: 3_000_000_000) }
                     catch { break }
                 }
             }
         }.tint(accent)
+    }
+
+    private var combinedCheck: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("KIỂM CHỨNG ĐỒNG THỜI", systemImage: "checklist").font(.headline)
+            Text("Camera: \(overlay.state?.camera?.code ?? "chưa chạy") • lần ghi: \(overlay.state?.camera?.writeCount ?? 0)")
+            Text("ESP: \(overlay.state?.esp?.code ?? "chưa chạy") • chiếu được: \(overlay.state?.esp?.projectedCount ?? 0)/\(overlay.state?.esp?.targetCount ?? 0)")
+            Text("Tố cáo: chưa hỗ trợ — chưa có nguồn dữ liệu.").foregroundStyle(.orange)
+            if let error = overlay.state?.settingsError, !error.isEmpty { Text(error).foregroundStyle(.orange) }
+            Button("Bật thử camera 1.50× + toàn bộ lớp ESP") {
+                store.prepareCombinedCheck()
+                Task {
+                    if !overlay.running, let profile = store.prepareOverlayProfile() { await overlay.start(profile: profile) }
+                    await store.inspectGame()
+                    await overlay.refresh()
+                }
+            }.disabled(store.busy || overlay.busy)
+            Text("Sau khi bật, vào trận tập và thu menu. Chưa có kiểm chứng hình ảnh tự động; số lần ghi và số mục tiêu không thay thế việc đối chiếu trực tiếp.")
+                .font(.caption).foregroundStyle(.secondary)
+            Button("Xuất kết quả chung", systemImage: "square.and.arrow.up") {
+                do { shareItem = ShareItem(url: try store.exportDiagnostics(overlayState: overlay.state)); exportError = nil }
+                catch { exportError = error.localizedDescription }
+            }
+        }.font(.footnote).padding(16).background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var overlayCard: some View {
@@ -78,7 +104,7 @@ struct ContentView: View {
             if let camera = overlay.state?.camera, camera.code != "camera_disabled" {
                 Label("Camera xa: \(camera.message)", systemImage: "camera").font(.footnote)
             }
-            Text("Chạm HC để mở/thu menu; kéo để di chuyển. Nút tiếp tục chạy khi chuyển ứng dụng. Các lựa chọn hiện chỉ lưu cấu hình.")
+            Text("Chạm HC để mở/thu menu; kéo để di chuyển. Camera và ESP đọc cấu hình khi nút nổi đang chạy.")
                 .font(.footnote).foregroundStyle(.secondary)
             Text("Chế độ tránh chặn màn hình: chạm menu nổi có thể đồng thời chạm ứng dụng phía dưới. Nên mở menu khi đang ở Hero Control và thu menu trước khi vào game.")
                 .font(.footnote).foregroundStyle(.orange)
@@ -144,7 +170,7 @@ struct ContentView: View {
     private var groupPicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 9) {
-                ForEach(FeatureGroup.allCases) { group in
+                ForEach([FeatureGroup.esp, .camera, .reports]) { group in
                     Button { store.selectedGroup = group } label: {
                         Label(group.rawValue, systemImage: group.symbol)
                             .font(.subheadline.bold()).padding(.horizontal, 14).padding(.vertical, 12)
@@ -164,6 +190,7 @@ struct ContentView: View {
                     Toggle(feature.title, isOn: Binding(
                         get: { store.settings.flags[feature.key] ?? false },
                         set: { store.setFlag(feature.key, $0) }))
+                        .disabled(store.selectedGroup == .reports)
                     if store.connected && !store.supports(feature.key) {
                         Text("Backend chưa hỗ trợ").font(.caption).foregroundStyle(.orange)
                     }
@@ -175,7 +202,7 @@ struct ContentView: View {
             case .skins: skinControls
             case .reports: reportControls
             case .esp:
-                Text("Box, icon, HP và minimap cần dữ liệu cùng bộ vẽ overlay do backend cung cấp.")
+                Text("Bộ đọc ESP chạy cùng camera trong nút nổi. Icon hiện là mã tướng; Map là radar tương đối ±60m. Vị trí khuất tầm nhìn có thể cũ. Kiểm tra số mục tiêu chiếu được rồi đối chiếu trong trận.")
                     .font(.footnote).foregroundStyle(.secondary)
             case .style:
                 Text("Lựa chọn này cần backend áp dụng vào tài nguyên và hành vi game lúc chạy.")
@@ -205,7 +232,7 @@ struct ContentView: View {
                     Text(String(format: "Giá trị game: %.3f → ghi: %.3f", source, written)).font(.caption)
                 }
             }
-            Text("Camera tự cập nhật khi bật, không dùng nút Áp dụng chung. Tắt công tắc để yêu cầu hoàn tác. ESP và Reports chưa có xử lý game.")
+            Text("Camera và ESP tự cập nhật khi bật. Tắt camera để yêu cầu hoàn tác. Theo dõi tố cáo chưa được triển khai.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
     }

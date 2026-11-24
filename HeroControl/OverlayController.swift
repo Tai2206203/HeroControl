@@ -12,6 +12,44 @@ struct OverlayState: Codable {
     let touchEvents: Int?
     let settingsError: String?
     let camera: CameraStatus?
+    let esp: EspStatus?
+    let reports: FeatureCheckStatus?
+}
+
+struct FeatureCheckStatus: Codable {
+    let code: String
+    let message: String
+}
+
+struct EspStatus: Codable {
+    let code: String
+    let message: String
+    let memoryStatus: Int?
+    let targetCount: Int?
+    let projectedCount: Int?
+    let listCount: Int?
+    let matricesValid: Bool?
+    let pid: Int?
+    let timestamp: String?
+    let hasHostPosition: Bool?
+    let hostX: Double?
+    let hostZ: Double?
+    let targets: [EspTargetStatus]?
+}
+
+struct EspTargetStatus: Codable {
+    let objectID: UInt32
+    let heroID: Int
+    let hp: Int
+    let maxHP: Int
+    let worldX: Double
+    let worldZ: Double
+    let x: Double
+    let feetY: Double
+    let headY: Double
+    let visible: Bool
+    let onScreen: Bool
+    let cooldowns: [Int]
 }
 
 struct CameraStatus: Codable {

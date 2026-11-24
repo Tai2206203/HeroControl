@@ -59,7 +59,7 @@ def send_document(token, chat_id, path, opener=urllib.request.urlopen):
     caption = f"Hero Control | commit {commit}\nSHA-256: {digest}"
     if repo and run_id:
         caption += f"\n{server}/{repo}/actions/runs/{run_id}"
-    caption += "\nCamera xa có mã thực thi, cần kiểm tra trên iPhone. ESP/Reports chưa triển khai."
+    caption += "\n0.7.0 build 16: thử camera + ESP đồng thời, cần đối chiếu trên iPhone. Tố cáo chưa hỗ trợ."
     boundary = "HeroControl" + uuid.uuid4().hex
     body = multipart(chat_id, caption, path.name, payload, boundary)
     request = urllib.request.Request(

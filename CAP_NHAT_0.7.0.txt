@@ -1,0 +1,57 @@
+HERO CONTROL 0.7.0 — BUILD 16
+
+BẢN THỬ CAMERA + ESP ĐỒNG THỜI, CHƯA XÁC NHẬN TRÊN IPHONE
+
+Đã sửa:
+- Menu cũ có thể ghi công tắc thành số 0/1, làm Swift không đọc được cấu hình.
+  App chuyển đúng các giá trị 0/1 đã biết sang boolean, giữ cameraEnabled.
+  JSON trả lời backend vẫn kiểm tra kiểu nghiêm ngặt; không chấp nhận ok:1.
+- Con trỏ native Unity Object nằm ở managed+0x8, không phải +0x10.
+  Bộ đọc camera/ESP đã dùng offset đối chiếu từ lệnh ARM64 trong dump.
+
+Đã bổ sung:
+- Bộ đọc ESP chỉ đọc bộ nhớ, chạy cùng camera trên hàng đợi overlay 10 Hz.
+  Kiểm tra UUID module, chữ ký getter HP và camera trước khi truy cập.
+  Đọc danh sách ActorLinker, lọc phe, HP, vị trí và 3 slot kỹ năng chính.
+  Đọc cache ma trận Camera khi không dirty, chiếu tọa độ và vẽ Box/HP,
+  mã tướng và cooldown; dữ liệu không hợp lệ bị bỏ qua, cooldown chưa biết là ?.
+- Map là radar tương đối ±60m quanh người chơi, không trùng minimap game.
+  Icon là mã tướng, chưa có ảnh chân dung. Vị trí khuất có thể là dữ liệu cũ
+  do client giữ lại; chưa xác minh vị trí máy chủ khi ngoài tầm nhìn.
+- Nút “Bật thử camera 1.50× + toàn bộ lớp ESP” lưu một cấu hình chung:
+  camera bật, các lớp ESP bật, Unseen only tắt, theo dõi tố cáo tắt.
+- Bảng “KIỂM CHỨNG ĐỒNG THỜI” hiển thị mã camera, số lần ghi,
+  mã ESP và số mục tiêu chiếu được. Xuất kết quả chung chứa cả hai.
+- Style/Skins được ẩn khỏi bộ chọn; khóa cấu hình cũ vẫn được giữ để tương thích.
+
+GIỚI HẠN
+Theo dõi tố cáo CHƯA TRIỂN KHAI và chưa có nguồn dữ liệu. Không hiển thị
+trống thành “không có tố cáo”. Không thể kiểm chứng chức năng này bằng nút bật.
+Backend chẩn đoán chung vẫn connected:false/supportedKeys:[] vì không nhận
+lệnh apply tổng quát. Kết quả camera/ESP nằm riêng ở overlay.camera/overlay.esp;
+không đánh đồng “UUID khớp” hoặc “đọc kernel được” với áp dụng chức năng.
+
+CÁCH BUILD VÀ THỬ MỘT LƯỢT
+1. Các thay đổi đã commit cục bộ. Trong C:\Users\Admin\Downloads\HeroControl:
+   git push
+2. Chờ GitHub Actions hoàn tất build, kiểm thử native và Simulator. Khi xanh,
+   lấy HeroControl.tipa ở artifact HeroControl-TIPA-diagnostics hoặc Telegram
+   nếu hai secrets TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID đã được cấu hình.
+3. Cài đè bằng TrollStore. Mở Hero Control, kiểm tra phiên bản 0.7.0 build 16.
+   Nếu overlay cũ còn chạy, tắt rồi bật lại nút nổi để thay tiến trình.
+4. Bấm “Bật thử camera 1.50× + toàn bộ lớp ESP”, mở Liên Quân vào trận tập
+   có tướng địch. Thu menu để không vướng thao tác; đợi khoảng 10 giây.
+5. Đối chiếu đồng thời: góc nhìn xa hơn, box bám tướng, thanh HP thay đổi,
+   mã tướng, số cooldown và các chấm radar. Thử xoay màn hình hai chiều.
+   Sau đó tắt/bật từng lớp để chắc chắn hình đó do Hero Control vẽ.
+6. Tắt camera: cần quan sát camera về bình thường và mã camera_restored,
+   hoặc camera_restore_skipped nếu game đã thay đối tượng/giá trị.
+7. Quay lại app, dùng “Xuất kết quả chung”. Gửi JSON cùng mô tả lớp nào
+   đúng/sai. writeCount>0 chỉ xác minh ghi/đọc lại, chưa chứng minh hiệu ứng hình ảnh.
+   projectedCount>0 chỉ xác minh phép chiếu có kết quả, chưa chứng minh box bám đúng.
+
+ĐÃ KIỂM TRA TẠI WINDOWS
+Camera và ESP portable C được biên dịch/thực thi bằng Zig 0.15.2/Clang,
+-std=c11 -Wall -Wextra -Werror, trên bộ nhớ mô phỏng. Không truy cập iPhone.
+11 kiểm thử Python về ký/Telegram qua, kiểm tra project và cú pháp qua.
+Xcode, Objective-C SDK iPhone và XCTest phải chạy trong GitHub Actions.

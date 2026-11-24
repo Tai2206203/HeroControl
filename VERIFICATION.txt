@@ -1,4 +1,16 @@
-HERO CONTROL 0.6.0 — BUILD 15
+HERO CONTROL 0.7.0 — BUILD 16
+
+Camera + ESP portable C đã biên dịch/thực thi bằng Zig 0.15.2/Clang
+với -std=c11 -Wall -Wextra -Werror trên bộ nhớ mô phỏng Windows.
+ESP kiểm tra phép chiếu, cached pointer +8, lọc phe/tầm nhìn, HP,
+cache ma trận dirty, giới hạn danh sách, đổi danh sách giữa lúc đọc,
+cooldown làm tròn và giá trị ngoài giới hạn. Không truy cập iPhone.
+11 kiểm thử Python qua. Project, plist và cú pháp Swift/Objective-C qua.
+Đã thêm XCTest chuyển profile 0/1 và cấu hình thử chung; cần Actions chạy.
+Chưa biên dịch worker Objective-C bằng SDK iPhone hoặc chạy trên thiết bị.
+Xem CAP_NHAT_0.7.0.txt để thử chung; Reports chưa hỗ trợ.
+
+LỊCH SỬ 0.6.0 — BUILD 15:
 
 Camera memory core đã được biên dịch và thực thi trên Windows bằng
 Zig 0.15.2/Clang, -std=c11 -Wall -Wextra -Werror. Tất cả trường hợp

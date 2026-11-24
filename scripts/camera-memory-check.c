@@ -34,10 +34,10 @@ static Fixture createFixture(void) {
     pointer(&f.regions[2], 0x10, 0x30040); strcpy((char *)f.regions[7].bytes + 0x40, "MonoSingleton`1");
     pointer(&f.regions[2], 0xB8, 0x22000);
     pointer(&f.regions[3], 0, 0x23000);
-    pointer(&f.regions[4], 0, 0x20000); pointer(&f.regions[4], 0x10, 0x40000);
+    pointer(&f.regions[4], 0, 0x20000); pointer(&f.regions[4], 8, 0x40000);
     pointer(&f.regions[4], 0x18, 0x25000); scalar(&f.regions[4], 0x8C, 1.5f);
     pointer(&f.regions[5], 0x10, 0x30080); strcpy((char *)f.regions[7].bytes + 0x80, "Moba_Camera");
-    pointer(&f.regions[6], 0, 0x24000); pointer(&f.regions[6], 0x10, 0x50000); scalar(&f.regions[6], 0x98, 1.5f);
+    pointer(&f.regions[6], 0, 0x24000); pointer(&f.regions[6], 8, 0x50000); scalar(&f.regions[6], 0x98, 1.5f);
     return f;
 }
 int main(void) {

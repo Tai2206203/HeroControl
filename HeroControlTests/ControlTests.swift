@@ -2,6 +2,32 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    func testLegacyNumericProfileFlagsAreRepairedWithoutWeakeningWireTypes() throws {
+        let old = Data(#"{"schemaVersion":1,"settings":{"flags":{"__ifxEnemyEspEnabledV1":1,"DoroCheat.Reference.R1.HP":0},"cameraScale":1.6,"cameraEnabled":1,"selectedSkins":{}}}"#.utf8)
+        let (profile, migrated) = try ProfileCodec.decode(old)
+        XCTAssertTrue(migrated)
+        XCTAssertEqual(profile.settings.cameraEnabled, true)
+        XCTAssertEqual(profile.settings.cameraScale, 1.6)
+        XCTAssertEqual(profile.settings.flags["__ifxEnemyEspEnabledV1"], true)
+        XCTAssertEqual(profile.settings.flags["DoroCheat.Reference.R1.HP"], false)
+        let valid = try JSONEncoder().encode(profile)
+        XCTAssertFalse(try ProfileCodec.decode(valid).1)
+        XCTAssertThrowsError(try ProfileCodec.decode(Data(String(decoding: old, as: UTF8.self).replacingOccurrences(of: ":1,\"Doro", with: ":2,\"Doro").utf8)))
+    }
+    @MainActor
+    func testCombinedCheckEnablesCameraAndEspButDoesNotClaimReports() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = ControlStore(directory: folder)
+        store.prepareCombinedCheck()
+        XCTAssertEqual(store.settings.cameraEnabled, true)
+        XCTAssertEqual(store.settings.cameraScale, 1.5)
+        XCTAssertEqual(store.settings.flags["__ifxEnemyEspEnabledV1"], true)
+        XCTAssertEqual(store.settings.flags["DoroCheat.Reference.R1.Unseen"], false)
+        XCTAssertEqual(store.settings.flags["reports.enabled"], false)
+        XCTAssertFalse(store.isApplied)
+    }
     @MainActor
     func testLegacyProfileDoesNotEnableCameraAndCanPersistExplicitOptIn() throws {
         let old = Data(#"{"flags":{},"cameraScale":1.6,"selectedSkins":{}}"#.utf8)

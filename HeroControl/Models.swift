@@ -1,4 +1,31 @@
 import Foundation
+import CoreFoundation
+
+// Repair only the known profile-writing bug from the old native toggle. Wire
+// replies still use strict Bool decoding (numeric `ok` remains invalid).
+enum ProfileCodec {
+    static func decode(_ data: Data) throws -> (SavedProfile, Bool) {
+        guard data.count <= 131072 else { throw CocoaError(.fileReadTooLarge) }
+        var changed = false
+        var payload = data
+        if var root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+           var settings = root["settings"] as? [String: Any], var flags = settings["flags"] as? [String: Any] {
+            for key in Feature.all.map(\.key) {
+                if let n = flags[key] as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID(), n.doubleValue == 0 || n.doubleValue == 1 {
+                    flags[key] = n.doubleValue == 1; changed = true
+                }
+            }
+            if let n = settings["cameraEnabled"] as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID(), n.doubleValue == 0 || n.doubleValue == 1 {
+                settings["cameraEnabled"] = n.doubleValue == 1; changed = true
+            }
+            if changed {
+                settings["flags"] = flags; root["settings"] = settings
+                payload = try JSONSerialization.data(withJSONObject: root)
+            }
+        }
+        return (try JSONDecoder().decode(SavedProfile.self, from: payload), changed)
+    }
+}
 
 enum FeatureGroup: String, CaseIterable, Identifiable {
     case esp = "ESP", camera = "Camera", style = "Style", skins = "Skins", reports = "Reports"
@@ -22,9 +49,9 @@ struct Feature: Identifiable {
     static let all: [Feature] = [
         .init(key: "__ifxEnemyEspEnabledV1", title: "Enable ESP", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Box", title: "ESP Box", group: .esp),
-        .init(key: "DoroCheat.Reference.R1.Icon", title: "ESP Icon", group: .esp),
+        .init(key: "DoroCheat.Reference.R1.Icon", title: "ESP Icon (mã tướng)", group: .esp),
         .init(key: "DoroCheat.Reference.R1.HP", title: "ESP HP", group: .esp),
-        .init(key: "DoroCheat.Reference.R1.Map", title: "ESP Minimap", group: .esp),
+        .init(key: "DoroCheat.Reference.R1.Map", title: "ESP Map (radar ±60m)", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Unseen", title: "Unseen only", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Check", title: "ESP Check / kỹ năng", group: .esp),
         .init(key: "DoroCheat.Style.Buttons", title: "Skin Buttons", group: .style),

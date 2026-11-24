@@ -42,11 +42,11 @@ static inline int HCCameraLocate(HCCameraMemory m, uint64_t base, HCCameraSnapsh
     out->camera = camera;
     if (!HCCameraPointer(camera) || destroyed) return HC_CAMERA_NOT_READY;
     if (!m.read(m.context, camera, &objectClass, 8) || objectClass != klass ||
-        !m.read(m.context, camera + 0x10, &native, 8) || !native ||
+        !m.read(m.context, camera + 0x08, &native, 8) || !native ||
         !m.read(m.context, camera + 0x18, &moba, 8) || !HCCameraPointer(moba)) return HC_CAMERA_NOT_READY;
     out->moba = moba;
     if (!m.read(m.context, moba, &objectClass, 8) || !HCCameraName(m, objectClass, "Moba_Camera") ||
-        !m.read(m.context, moba + 0x10, &native, 8) || !native) return HC_CAMERA_BAD_LAYOUT;
+        !m.read(m.context, moba + 0x08, &native, 8) || !native) return HC_CAMERA_BAD_LAYOUT;
     float source = 0, actual = 0;
     if (!m.read(m.context, camera + 0x8C, &source, 4) || !m.read(m.context, moba + 0x98, &actual, 4) ||
         !m.read(m.context, moba + 0xDC, &dirty, 1)) return HC_CAMERA_READ_FAILED;

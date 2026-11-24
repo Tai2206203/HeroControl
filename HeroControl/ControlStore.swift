@@ -21,10 +21,11 @@ final class ControlStore: ObservableObject {
         profileURL = folder.appendingPathComponent("HeroControl.profile.json")
         do {
             if FileManager.default.fileExists(atPath: profileURL.path) {
-                let saved = try JSONDecoder().decode(SavedProfile.self, from: Data(contentsOf: profileURL))
+                let (saved, migrated) = try ProfileCodec.decode(Data(contentsOf: profileURL))
                 guard saved.schemaVersion == 1 else { throw BackendError.unavailable("Phiên bản cấu hình không hỗ trợ.") }
                 settings = saved.settings
                 settings.normalize()
+                if migrated { persist() }
             }
         } catch { persistenceError = "Không đọc được cấu hình: \(error.localizedDescription)" }
     }
@@ -50,6 +51,17 @@ final class ControlStore: ObservableObject {
     }
     func setCamera(_ value: Double) { reloadProfileIfChanged(); settings.cameraScale = value; changed() }
     func setCameraEnabled(_ value: Bool) { reloadProfileIfChanged(); settings.cameraEnabled = value; changed() }
+    func prepareCombinedCheck() {
+        reloadProfileIfChanged()
+        guard persistenceError == nil else { return }
+        for feature in Feature.all where feature.group == .esp {
+            settings.flags[feature.key] = feature.key != "DoroCheat.Reference.R1.Unseen"
+        }
+        settings.flags["reports.enabled"] = false
+        settings.cameraScale = 1.5
+        settings.cameraEnabled = true
+        changed()
+    }
     func setSkin(hero: UInt32, skin: Int?) {
         reloadProfileIfChanged()
         if let skin, let entry = snapshot?.heroes.first(where: { $0.id == hero }),
@@ -66,13 +78,14 @@ final class ControlStore: ObservableObject {
         do {
             let data = try Data(contentsOf: profileURL)
             guard data.count <= 131072 else { throw BackendError.unavailable("Cấu hình quá lớn.") }
-            let saved = try JSONDecoder().decode(SavedProfile.self, from: data)
+            let (saved, migrated) = try ProfileCodec.decode(data)
             guard saved.schemaVersion == 1 else { throw BackendError.unavailable("Phiên bản cấu hình không hỗ trợ.") }
             var imported = saved.settings; imported.normalize()
             if imported != settings {
                 settings = imported; revision = UUID().uuidString; confirmedRevision = nil
             }
             persistenceError = nil
+            if migrated { persist() }
         } catch { persistenceError = "Không đọc được cấu hình từ menu nổi: \(error.localizedDescription)" }
     }
     func prepareOverlayProfile() -> URL? {

@@ -26,4 +26,7 @@ python3 "$ROOT/scripts/check-overlay-lock.py" "$OUTPUT/overlay-lock-check"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/camera-memory-check.c" -o "$OUTPUT/camera-memory-check"
 "$OUTPUT/camera-memory-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/esp-memory-check.c" -o "$OUTPUT/esp-memory-check"
+"$OUTPUT/esp-memory-check"
 printf 'Built independent Hero Control overlay: %s\n' "$OUTPUT"
