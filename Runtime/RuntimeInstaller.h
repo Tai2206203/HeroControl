@@ -111,6 +111,7 @@ static NSDictionary *HCRuntimeReport(NSString *action, NSDictionary *config) {
             if ([manager fileExistsAtPath:library] && ![manager removeItemAtPath:library error:&error]) goto failed;
             if ([manager fileExistsAtPath:directory])
                 HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"enabled":@NO},[directory stringByAppendingPathComponent:@"config.json"],NULL);
+            HCRuntimeWriteJSON(@{@"enabled":@NO},[directory stringByAppendingPathComponent:@"installed.json"],NULL);
             report[@"code"]=@"runtime_removed_restart_required";
             report[@"summary"]=@"Đã gỡ bộ nạp HeroControl. Đóng hoàn toàn và mở lại game để gỡ hook trong bộ nhớ. Nhật ký được giữ lại.";
         } else {
@@ -159,6 +160,9 @@ static NSDictionary *HCRuntimeReport(NSString *action, NSDictionary *config) {
                 NSString *path=[loader stringByAppendingPathComponent:name];
                 if (!HCRuntimeInstallFile([source stringByAppendingPathComponent:name],path,0,0644,report,&error)) goto failed;
             }
+            report[@"installStage"]=@"write_install_stamp";
+            if(!HCRuntimeWriteJSON(@{@"enabled":@YES,@"runtimeBuild":@HC_RUNTIME_BUILD,@"generation":@HC_RUNTIME_GENERATION},
+                [directory stringByAppendingPathComponent:@"installed.json"],&error)) goto failed;
             report[@"code"]=@"runtime_installed_restart_required";
             report[@"summary"]=@"Đã cài payload và bộ lọc riêng cho game. Đóng hoàn toàn rồi mở lại game; chỉ phản hồi adapter mới xác nhận nạp thành công.";
         }

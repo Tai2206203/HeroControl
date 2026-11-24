@@ -53,12 +53,23 @@ final class ControlStore: ObservableObject {
     func supports(_ key: String) -> Bool { snapshot?.supportedKeys.contains(key) == true }
     func setFlag(_ key: String, _ value: Bool) {
         guard Feature.all.contains(where: { $0.key == key }) else { return }
+        if key == "reports.enabled" { setReportsEnabled(value); return }
         edit { settings.flags[key] = value }
     }
     func setCamera(_ value: Double) { edit { settings.cameraScale = value } }
     func setCameraEnabled(_ value: Bool) { edit { settings.cameraEnabled = value } }
     func setReportsPeriod(_ value: String) { edit { settings.reportsPeriod = value } }
-    func refreshReports() { edit { settings.reportsRefreshID = UUID().uuidString; settings.flags["reports.enabled"] = true } }
+    func setReportsEnabled(_ value: Bool) {
+        edit {
+            settings.flags["reports.enabled"] = value
+            if value {
+                settings.gameRuntimeEnabled = true
+                settings.reportsRefreshID = UUID().uuidString
+                if settings.reportsPeriod == nil { settings.reportsPeriod = "all" }
+            }
+        }
+    }
+    func refreshReports() { setReportsEnabled(true) }
     func setCaptureProtected(_ value: Bool) { edit { settings.espCaptureProtected = value } }
     func setMinimap(_ key: String, _ value: Double) {
         edit {
@@ -178,8 +189,9 @@ final class ControlStore: ObservableObject {
         guard !busy else { return }
         await requestStatus(action: "removeRuntime")
         if snapshot?.runtimeDiagnostics?.code == "runtime_removed_restart_required" {
-            // Keep external workers off until the user has restarted the game;
-            // the old in-memory hooks cannot be removed by deleting a dylib.
+            edit { settings.flags["reports.enabled"] = false; settings.gameRuntimeEnabled = false }
+            // Cancel automatic report preparation until the next explicit ON.
+            // Existing in-memory hooks still require a game restart.
             message = "Đã gỡ bộ nạp. Đóng hoàn toàn và mở lại game để gỡ các hook trong bộ nhớ."
         }
     }

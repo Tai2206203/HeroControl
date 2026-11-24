@@ -1,0 +1,13 @@
+Hero Control 0.13.0 — build 30
+
+CHECK TỐ CÁO TỰ ĐỘNG
+Một lần ON trong app tự lưu ý định, bật worker và bắt đầu chuẩn bị. ON trong menu nổi cũng chạy cùng luồng. Worker tự kiểm tra stamp build/generation, dùng bản hiện có hoặc gọi helper cài/cập nhật adapter. Chờ game nếu chưa tìm được container/module và thử lại mỗi 5 giây. Không đổi các cờ ESP/camera.
+Khi lần đầu cài/cập nhật adapter, game cần đóng/mở lại một lần. Không tự đóng game. Khi đã có adapter cùng bản, bật lại không cài lại. OFF dừng truy vấn qua đồng bộ cấu hình; yêu cầu đã gửi có thể vẫn có phản hồi.
+Giao diện mới có công tắc duy nhất, trạng thái chuẩn bị/chờ game/chờ người chơi, ba bộ đếm, Thử lại, Copy log và lịch sử lọc tất cả/tuần/tháng. Chi tiết kỹ thuật nằm trong mục chẩn đoán.
+
+CAMERA
+Thanh kéo trong menu lưu khi đang kéo (giới hạn khoảng 8 lần/giây) và luôn lưu vị trí cuối khi nhấc tay. Thay đổi profile đặt lại lịch ghi camera để áp dụng ở nhịp kế tiếp. Có nút −/+ 0.05 trong app và menu, không cần OFF để chỉnh.
+Đối chiếu lại VM_075 và VM_083: donor camera nhân hệ số trong GetZoomRate và gọi OnCameraHeightChanged khi preference thay đổi. Adapter vẫn để hệ số donor trung tính; worker camera độc lập là nơi ghi hệ số. Không thêm cơ chế đòi adapter cho camera.
+
+KIỂM CHỨNG
+Host tests không xác nhận thao tác cảm ứng, cài helper hoặc phản hồi máy chủ trên iPhone. Cần đối chiếu bản build trên thiết bị; log copy giữ mã lỗi chuẩn bị và trạng thái thực tế. Danh sách rỗng không đồng nghĩa không bị tố cáo.

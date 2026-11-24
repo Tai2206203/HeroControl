@@ -159,6 +159,32 @@ final class ControlTests: XCTestCase {
         XCTAssertEqual(ControlStore(directory: folder).revision, store.revision)
     }
     @MainActor
+    func testReportsOnPreparesAllDependenciesWithoutChangingCameraOrESP() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = ControlStore(directory: folder)
+        store.setFlag("DoroCheat.Reference.R1.Map", true)
+        store.setCameraEnabled(true);store.setCamera(1.8)
+        let flags = store.settings.flags
+        store.setFlag("reports.enabled", true)
+        XCTAssertTrue(store.settings.flags["reports.enabled"] == true)
+        XCTAssertTrue(store.settings.gameRuntimeEnabled == true)
+        let token = try XCTUnwrap(store.settings.reportsRefreshID)
+        for (key, value) in flags where key != "reports.enabled" { XCTAssertEqual(store.settings.flags[key], value) }
+        XCTAssertEqual(store.settings.cameraEnabled, true)
+        XCTAssertEqual(store.settings.cameraScale, 1.8)
+        store.setCamera(2.1) // Editing while ON must leave it ON and persist the new scale.
+        XCTAssertEqual(store.settings.cameraEnabled, true)
+        XCTAssertEqual(ControlStore(directory: folder).settings.cameraScale, 2.1)
+        store.refreshReports()
+        XCTAssertNotEqual(store.settings.reportsRefreshID, token)
+        store.setReportsEnabled(false)
+        XCTAssertFalse(store.settings.flags["reports.enabled"] == true)
+        XCTAssertEqual(store.settings.cameraEnabled, true)
+    }
+
+    @MainActor
     func testReportCopyLogRetainsFailureDiagnosticsWithoutHeroCatalog() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

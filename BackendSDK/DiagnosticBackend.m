@@ -497,7 +497,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
         else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.12.2",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.13.0",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
@@ -554,9 +554,17 @@ static BOOL HCWriteAll(int descriptor, const void *buffer, size_t size) {
 typedef NSDictionary *(*HCReportProducer)(BOOL);
 static NSString *HCCLIRuntimeAction;
 static NSDictionary *HCCLIRuntimeConfig;
+static BOOL HCCLICompactRuntime;
+static NSDictionary *HCCompactRuntimeResult(NSDictionary *report) {
+    NSMutableDictionary *compact=[NSMutableDictionary dictionary];
+    for(NSString *key in @[@"code",@"summary",@"installStage",@"installPath",@"installErrorDomain",@"installErrorCode",@"installPOSIXError"])
+        if(report[key]) compact[key]=report[key];
+    return compact;
+}
 static NSDictionary *HCProduceRuntime(BOOL unused) {
     (void)unused;
-    return HCRuntimeReport(HCCLIRuntimeAction, HCCLIRuntimeConfig);
+    NSDictionary *report=HCRuntimeReport(HCCLIRuntimeAction,HCCLIRuntimeConfig);
+    return HCCLICompactRuntime ? HCCompactRuntimeResult(report) : report;
 }
 static int HCWriteIsolatedReport(BOOL requestRead, HCReportProducer producer) {
     // Preserve the result channel before provider initialization. Some providers
@@ -661,6 +669,8 @@ static int HCSelfTest(void) {
     if (HCRuntimeFresh(stale)) return 6;
     stale=[fresh mutableCopy];stale[@"phase"]=@"failed";
     if (HCRuntimeFresh(stale)) return 7;
+    NSDictionary *compact=HCCompactRuntimeResult(@{@"code":@"runtime_installed_restart_required",@"summary":@"ready",@"runtime":@{@"heroes":@[@1]},@"installPOSIXError":@13});
+    if(compact.count!=3 || compact[@"runtime"] || ![compact[@"installPOSIXError"] isEqual:@13]) return 8;
     puts("Diagnostic ABI tests passed: malformed input, status, apply refusal, runtime freshness/config guards; no kernel primitive invoked.");
     return 0;
 }
@@ -671,8 +681,9 @@ int main(int argc, char **argv) {
         }
         if (argc == 2 && strcmp(argv[1], "--fd-self-test") == 0) return HCFDRegression(argv[0]);
         if (argc == 2 && strcmp(argv[1], "--self-test") == 0) return HCSelfTest();
-        if ((argc==2 || argc==3) && [@[@"--runtime-install",@"--runtime-remove",@"--runtime-status",@"--runtime-apply"] containsObject:[NSString stringWithUTF8String:argv[1]]]) {
-            HCCLIRuntimeAction=[NSString stringWithUTF8String:argv[1]];
+        if ((argc==2 || argc==3) && [@[@"--runtime-prepare",@"--runtime-install",@"--runtime-remove",@"--runtime-status",@"--runtime-apply"] containsObject:[NSString stringWithUTF8String:argv[1]]]) {
+            HCCLICompactRuntime=strcmp(argv[1],"--runtime-prepare")==0;
+            HCCLIRuntimeAction=HCCLICompactRuntime ? @"--runtime-install" : [NSString stringWithUTF8String:argv[1]];
             if (argc==3 && strnlen(argv[2],131073)<=131072) {
                 NSData *data=[[NSString stringWithUTF8String:argv[2]] dataUsingEncoding:NSUTF8StringEncoding];
                 id value=data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;

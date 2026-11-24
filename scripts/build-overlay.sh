@@ -20,6 +20,11 @@ xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
     "-DHC_RUNTIME_GENERATION=\"$GENERATION\"" \
     -framework Foundation -install_name @rpath/HeroOverlayBridge.dylib \
     "$ROOT/Overlay/OverlayBridge.m" -o "$OUTPUT/HeroOverlayBridge.dylib"
+# Compile and exercise the actual preparation preflight without an iPhone/helper.
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -Werror=implicit-function-declaration -framework Foundation \
+    "$ROOT/scripts/reports-preparation-check.m" -o "$OUTPUT/reports-preparation-check"
+"$OUTPUT/reports-preparation-check"
 # Also exercise invalid input/unsupported-host responses of the actual ABI.
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -dynamiclib -fvisibility=hidden -framework Foundation \

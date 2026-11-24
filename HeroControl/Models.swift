@@ -156,7 +156,18 @@ struct BackendSnapshot: Codable {
     var runtimeDiagnostics: KernelDiagnostics? = nil
 }
 
+struct ReportsPreparationStatus: Codable {
+    let code: String?
+    let message: String?
+    let summary: String?
+    let installStage: String?
+    let installPOSIXError: Int?
+    let spawnStatus: Int?
+    let exitStatus: Int?
+}
+
 struct FeatureCheckStatus: Codable {
+    var preparation: ReportsPreparationStatus? = nil
     let code: String
     let message: String
     let available: Bool?

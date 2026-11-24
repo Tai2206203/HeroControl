@@ -1,4 +1,5 @@
 #import "CameraEngine.h"
+#import "ReportsPreparation.h"
 #import "../BackendSDK/GameInspection.h"
 #include "../BackendSDK/CameraMemory.h"
 #include "../BackendSDK/EspMemory.h"
@@ -59,6 +60,11 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     NSString *_lastCode;
     NSString *_profileRevision;
     NSString *_runtimeDirectory;
+    dispatch_queue_t _preparationQueue;
+    BOOL _reportsPreparing;
+    NSString *_reportsPreparationToken;
+    NSDictionary *_reportsPreparationResult;
+    NSTimeInterval _nextReportsPreparationAttempt;
     NSDictionary *_minimapProjection;
     NSTimeInterval _minimapProjectionUptime;
     pid_t _minimapProjectionPID;
@@ -72,6 +78,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         _reportsReport = [reportsReport copy];
         _dateFormatter = [NSISO8601DateFormatter new];
         _frameLock = [NSLock new]; _requestedHz = 60;
+        _preparationQueue=dispatch_queue_create("local.herocontrol.reports.prepare",DISPATCH_QUEUE_SERIAL);
         _queue = dispatch_queue_create("local.herocontrol.camera", DISPATCH_QUEUE_SERIAL);
     }
     return self;
@@ -105,7 +112,46 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     }
     _hasWritten = NO;
 }
+- (void)prepareReports:(NSDictionary *)settings {
+    if(![settings[@"flags"][@"reports.enabled"] isEqual:@YES]) return;
+    NSString *token=settings[@"reportsRefreshID"] ?: @"legacy-on";
+    NSString *failure=_reportsPreparationResult[@"code"];
+    BOOL waitingGame=[failure isEqual:@"runtime_install_requires_matching_game"] || [failure isEqual:@"runtime_container_unavailable"];
+    if(waitingGame && NSProcessInfo.processInfo.systemUptime>=_nextReportsPreparationAttempt) _reportsPreparationToken=nil;
+    if(_reportsPreparing || [_reportsPreparationToken isEqual:token]) return;
+    _reportsPreparationToken=[token copy];
+    NSString *revision=_profileRevision ?: NSUUID.UUID.UUIDString;
+    NSString *directory=HCRuntimeFindDirectory();
+    NSDictionary *stamp=directory ? HCRuntimeReadJSON([directory stringByAppendingPathComponent:@"installed.json"],8192) : nil;
+    if([stamp[@"enabled"] isEqual:@YES] && [stamp[@"runtimeBuild"] isEqual:@HC_RUNTIME_BUILD] && [stamp[@"generation"] isEqual:@HC_RUNTIME_GENERATION]) {
+        // Re-enable an existing installation without reinstalling or restarting.
+        NSError *error=nil;
+        if(!HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"enabled":@YES,@"revision":revision,@"settings":settings},
+            [directory stringByAppendingPathComponent:@"config.json"],&error))
+            _reportsPreparationResult=@{@"code":@"reports_prepare_config_failed",@"message":error.localizedDescription ?: @"Không ghi được cấu hình."};
+        else _reportsPreparationResult=nil;
+        return;
+    }
+    _reportsPreparing=YES;_reportsPreparationResult=nil;
+    NSDictionary *request=@{@"revision":revision,@"settings":settings};
+    dispatch_async(_preparationQueue,^{
+        NSDictionary *result=HCPrepareReportRuntime(request);
+        dispatch_async(self->_queue,^{
+            self->_reportsPreparing=NO;
+            self->_reportsPreparationResult=result;
+            self->_nextReportsPreparationAttempt=NSProcessInfo.processInfo.systemUptime+5;
+            self->_nextRuntimeSync=0;
+            if(![self->_settings[@"flags"][@"reports.enabled"] isEqual:@YES]) {
+                NSString *directory=HCRuntimeFindDirectory();
+                if(directory && self->_profileRevision && self->_settings)
+                    HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"enabled":@YES,@"revision":self->_profileRevision,@"settings":self->_settings},
+                        [directory stringByAppendingPathComponent:@"config.json"],NULL);
+            }
+        });
+    });
+}
 - (void)syncRuntime:(NSDictionary *)settings now:(NSTimeInterval)now {
+    [self prepareReports:settings];
     if (now<_nextRuntimeSync) return;
     _nextRuntimeSync=now+1;
     _runtimeDirectory=HCRuntimeFindDirectory();
@@ -128,7 +174,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     BOOL responding=HCRuntimeFresh(state);
     _minimapProjection=responding && [state[@"minimapProjection"] isKindOfClass:NSDictionary.class] ? state[@"minimapProjection"] : nil;
     _minimapProjectionUptime=[state[@"heartbeat"] doubleValue];_minimapProjectionPID=[state[@"pid"] intValue];
-    NSString *message=state[@"message"] ?: @"Chưa có adapter game phản hồi. Cài adapter trong Hero Control rồi khởi động lại game.";
+    NSString *message=state[@"message"] ?: @"Chưa có phản hồi game. Mở game; nếu vừa chuẩn bị adapter, đóng/mở lại game một lần.";
     if (!responding && [state[@"phase"] isEqual:@"active"]) message=@"Phản hồi adapter đã cũ. Không sử dụng mẫu này làm trạng thái hiện tại.";
     NSDictionary *lastReports=[state[@"reports"] isKindOfClass:NSDictionary.class] ? state[@"reports"] : nil;
     NSMutableDictionary *reports=lastReports ? [lastReports mutableCopy] :
@@ -143,6 +189,23 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     reports[@"runtimeMessage"]=message;
     for(NSString *key in @[@"runtimeBuild",@"generation",@"pid",@"sessionID",@"timestamp"])
         if(state[key]) reports[key]=state[key];
+    if(!responding && state && (![state[@"runtimeBuild"] isEqual:@HC_RUNTIME_BUILD] || ![state[@"generation"] isEqual:@HC_RUNTIME_GENERATION])) {
+        reports[@"code"]=@"runtime_installed_restart_required";
+        reports[@"message"]=@"Game còn giữ adapter bản trước. Đóng hoàn toàn rồi mở lại game để nạp bản đã chuẩn bị.";
+    }
+    BOOL requested=[settings[@"flags"][@"reports.enabled"] isEqual:@YES];
+    if(!requested) {
+        reports[@"code"]=@"reports_disabled";reports[@"message"]=@"Check tố cáo đang tắt.";
+    } else if(_reportsPreparing) {
+        reports[@"code"]=@"reports_preparing";reports[@"message"]=@"Đang tự chuẩn bị adapter và luồng kiểm tra…";
+    } else if(_reportsPreparationResult && !responding) {
+        NSString *code=_reportsPreparationResult[@"code"];
+        reports[@"code"]=code ?: @"reports_prepare_failed";
+        reports[@"message"]=[code isEqual:@"runtime_installed_restart_required"] ?
+            @"Đã tự chuẩn bị xong. Đóng hoàn toàn rồi mở lại game một lần để bắt đầu." :
+            (_reportsPreparationResult[@"summary"] ?: _reportsPreparationResult[@"message"] ?: @"Chuẩn bị chưa thành công. Bấm Thử lại.");
+        reports[@"preparation"]=_reportsPreparationResult;
+    }
     [self emitReports:reports];
 }
 - (void)restore {
@@ -287,7 +350,10 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             NSData *data = [NSData dataWithContentsOfFile:_profile];
             id root = data && data.length < 131072 ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
             id settings = [root isKindOfClass:NSDictionary.class] && [root[@"schemaVersion"] isEqual:@1] ? root[@"settings"] : nil;
-            _settings = [settings isKindOfClass:NSDictionary.class] ? settings : nil;
+            NSDictionary *nextSettings=[settings isKindOfClass:NSDictionary.class] ? settings : nil;
+            if(![nextSettings[@"cameraScale"] isEqual:_settings[@"cameraScale"]] ||
+               ![nextSettings[@"cameraEnabled"] isEqual:_settings[@"cameraEnabled"]]) _nextCameraTick=0;
+            _settings=nextSettings;
             _profileRevision=[root isKindOfClass:NSDictionary.class] && [root[@"revision"] isKindOfClass:NSString.class] ? root[@"revision"] : nil;
         }
         NSDictionary *settings = _settings;
@@ -299,7 +365,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             [self emitEsp:@{@"code":@"profile_invalid",@"message":@"Cấu hình không hợp lệ.",@"targets":@[]}];
             return;
         }
-        BOOL runtimeMode=[settings[@"gameRuntimeEnabled"] isEqual:@YES];
+        BOOL runtimeMode=[settings[@"gameRuntimeEnabled"] isEqual:@YES] || [flags[@"reports.enabled"] isEqual:@YES];
         // Runtime is a report transport, never the owner of external camera/ESP.
         if (runtimeMode) [self syncRuntime:settings now:now];
         if(!runtimeMode && now>=_nextRuntimeSync) {

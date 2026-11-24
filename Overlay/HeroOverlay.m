@@ -126,7 +126,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.12.2", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.13.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -161,6 +161,7 @@ static void HCStop(NSString *message, BOOL failed) {
 @property(nonatomic) BOOL dragged;
 @property(nonatomic, copy) NSString *reportCopyMessage;
 @property(nonatomic) NSTimeInterval reportCopyUntil;
+@property(nonatomic) NSTimeInterval cameraLastSave;
 - (void)reloadSettings;
 - (void)drawEsp;
 - (void)refreshEspSurface;
@@ -346,6 +347,8 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         chmod(HCProfile.fileSystemRepresentation, 0644);
         chown(HCProfile.fileSystemRepresentation, 501, 501);
         HCSettingsError = nil;
+        NSMutableDictionary *baseline=[self.settings mutableCopy];
+        baseline[@"flags"]=[self.settings[@"flags"] copy];self.baseSettings=baseline;
     }
     flock(editLock,LOCK_UN);close(editLock);
     HCState(); [self setNeedsDisplay];
@@ -511,7 +514,10 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             [[UIColor colorWithWhite:0.8 alpha:1] setFill];UIRectFill(CGRectMake(slider.origin.x,slider.origin.y+15,slider.size.width,4));
             CGFloat knob=slider.origin.x+(scale-1)/1.3*slider.size.width;
             [HCMenuAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-9,slider.origin.y+8,18,18)] fill];[self target:@"camera" rect:slider];
-            HCText(HCCameraStatus[@"message"] ?: @"Bật camera và kiểm tra trong trận.",CGRectMake(c.origin.x,c.origin.y+155,c.size.width,75),12,UIColor.darkGrayColor,NO);
+            CGRect minus=CGRectMake(c.origin.x,c.origin.y+136,50,24),plus=CGRectMake(CGRectGetMaxX(c)-50,c.origin.y+136,50,24);
+            HCText(@"− 0.05",minus,12,HCMenuAccent(),YES);HCText(@"+ 0.05",plus,12,HCMenuAccent(),YES);
+            [self target:@"camera-minus" rect:minus];[self target:@"camera-plus" rect:plus];
+            HCText(HCCameraStatus[@"message"] ?: @"Bật camera và kiểm tra trong trận.",CGRectMake(c.origin.x,c.origin.y+170,c.size.width,60),12,UIColor.darkGrayColor,NO);
         } else if(self.group==3) {
             NSArray *fields=HCCalibrationFields();NSUInteger pages=(fields.count+4)/5;
             _calibrationPage=MAX(0,MIN((NSInteger)pages-1,_calibrationPage));
@@ -538,34 +544,45 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             CGRect rotate=CGRectMake(c.origin.x+c.size.width*0.56,CGRectGetMaxY(c)-28,c.size.width*0.44,24);
             HCText([self.settings[@"minimapRotated"] boolValue] ? @"XOAY 180°: ON" : @"XOAY 180°: OFF",rotate,9,UIColor.blackColor,NO);[self target:@"minimap-rotate" rect:rotate];
         } else if(self.group==4) {
-            CGRect row=CGRectMake(c.origin.x,c.origin.y,c.size.width,40);
-            HCText([self.settings[@"flags"][@"reports.enabled"] boolValue] ? @"TRUY VẤN TỐ CÁO: ON" : @"TRUY VẤN TỐ CÁO: OFF",row,16,HCMenuAccent(),YES);
-            [self target:@"flag:reports.enabled" rect:row];
-            NSString *reportMessage=[HCReportsStatus[@"querySupported"] isEqual:@YES] ? HCReportsStatus[@"message"] : @"CHƯA TRUY VẤN MÁY CHỦ. Kích hoạt adapter trong app; cache rỗng không có nghĩa không bị tố cáo.";
-            HCText(reportMessage ?: @"CHƯA XÁC ĐỊNH",CGRectMake(c.origin.x,c.origin.y+32,c.size.width,43),10,UIColor.blackColor,NO);
-            CGRect refresh=CGRectMake(c.origin.x,c.origin.y+77,c.size.width*0.45,22);
-            HCText(@"TRUY VẤN LẠI",refresh,11,HCMenuAccent(),YES);[self target:@"reports-refresh" rect:refresh];
-            CGRect copy=CGRectMake(c.origin.x+c.size.width*0.48,c.origin.y+77,c.size.width*0.52,22);
+            BOOL enabled=[self.settings[@"flags"][@"reports.enabled"] boolValue];
+            CGRect toggle=CGRectMake(c.origin.x,c.origin.y,c.size.width,27);
+            HCText(enabled ? @"CHECK TỐ CÁO TỰ ĐỘNG   ON" : @"CHECK TỐ CÁO TỰ ĐỘNG   OFF",toggle,13,HCMenuAccent(),YES);
+            [self target:@"flag:reports.enabled" rect:toggle];
+            CGRect status=CGRectMake(c.origin.x,c.origin.y+30,c.size.width,39);
+            [[UIColor colorWithRed:0.93 green:0.97 blue:0.96 alpha:1] setFill];
+            [[UIBezierPath bezierPathWithRoundedRect:status cornerRadius:8] fill];
+            HCText(enabled ? (HCReportsStatus[@"message"] ?: @"Tự chuẩn bị adapter, lấy người chơi và theo dõi phản hồi…") : @"Bật một lần để tự chuẩn bị và theo dõi.",CGRectInset(status,7,4),9,UIColor.darkGrayColor,NO);
+            NSArray *values=@[HCReportsStatus[@"candidateCount"] ?: @0,HCReportsStatus[@"sentRequestCount"] ?: @0,HCReportsStatus[@"receivedResponseCount"] ?: @0];
+            NSArray *labels=@[@"NGƯỜI CHƠI",@"ĐÃ GỬI",@"PHẢN HỒI"];
+            for(NSInteger i=0;i<3;i++) {
+                CGFloat x=c.origin.x+i*c.size.width/3;
+                HCText([NSString stringWithFormat:@"%@  %@",values[i],labels[i]],CGRectMake(x,c.origin.y+74,c.size.width/3,20),9,HCMenuAccent(),YES);
+            }
+            CGRect retry=CGRectMake(c.origin.x,c.origin.y+99,c.size.width*0.45,23);
+            HCText(@"↻ THỬ LẠI",retry,11,HCMenuAccent(),YES);[self target:@"reports-refresh" rect:retry];
+            CGRect copy=CGRectMake(c.origin.x+c.size.width*0.48,c.origin.y+99,c.size.width*0.52,23);
             HCText(self.reportCopyUntil>NSProcessInfo.processInfo.systemUptime ? self.reportCopyMessage : @"COPY LOG TỐ CÁO",copy,10,HCMenuAccent(),YES);
             [self target:@"reports-copy" rect:copy];
             NSArray *periods=@[@"all",@"week",@"month"],*titles=@[@"TẤT CẢ",@"TUẦN NÀY",@"THÁNG NÀY"];
             NSString *period=self.settings[@"reportsPeriod"] ?: @"all";
             for(NSInteger i=0;i<3;i++) {
-                CGRect filter=CGRectMake(c.origin.x+i*c.size.width/3,c.origin.y+102,c.size.width/3-3,22);
-                if([period isEqual:periods[i]]) { [[HCMenuAccent() colorWithAlphaComponent:0.15] setFill];UIRectFill(filter); }
+                CGRect filter=CGRectMake(c.origin.x+i*c.size.width/3,c.origin.y+128,c.size.width/3-3,22);
+                [[UIColor colorWithWhite:0.95 alpha:1] setFill];UIRectFill(filter);
+                if([period isEqual:periods[i]]) { [[HCMenuAccent() colorWithAlphaComponent:0.14] setFill];UIRectFill(filter); }
                 HCText(titles[i],CGRectInset(filter,3,4),9,UIColor.blackColor,YES);[self target:[@"period:" stringByAppendingString:periods[i]] rect:filter];
             }
             NSArray *records=HCFilteredReports(HCReportsStatus,period);
             _reportRecordIndex=MAX(0,MIN(_reportRecordIndex,(NSInteger)records.count-1));
-            NSString *recordText=@"Chưa có bản ghi phù hợp trong dữ liệu đã thu thập. Không kết luận không bị tố cáo.";
+            NSString *recordText=@"Chưa có bản ghi đã nhận. Chưa thể kết luận có hoặc không bị tố cáo.";
             if(records.count) {
                 NSDictionary *record=records[records.count-1-_reportRecordIndex];
-                recordText=[NSString stringWithFormat:@"%@\n%@\nLý do: %@",record[@"time"] ?: @"Chưa rõ giờ",record[@"information"] ?: @"",record[@"reason"] ?: @"Chưa được cung cấp"];
+                recordText=[NSString stringWithFormat:@"%@ • %@\nLý do: %@",record[@"time"] ?: @"Chưa rõ giờ",record[@"information"] ?: @"",record[@"reason"] ?: @"Chưa được cung cấp"];
             }
-            HCText(recordText,CGRectMake(c.origin.x,c.origin.y+129,c.size.width,56),10,UIColor.blackColor,NO);
-            HCText([NSString stringWithFormat:@"%@/%@ phản hồi • %ld bản ghi",HCReportsStatus[@"receivedResponseCount"] ?: @0,HCReportsStatus[@"sentRequestCount"] ?: @0,(long)records.count],CGRectMake(c.origin.x,c.origin.y+188,c.size.width-65,20),9,UIColor.darkGrayColor,NO);
-            CGRect prev=CGRectMake(CGRectGetMaxX(c)-60,c.origin.y+185,26,24),next=CGRectMake(CGRectGetMaxX(c)-28,c.origin.y+185,26,24);
-            HCText(@"‹",prev,19,UIColor.blackColor,YES);HCText(@"›",next,19,UIColor.blackColor,YES);
+            HCText(recordText,CGRectMake(c.origin.x,c.origin.y+157,c.size.width,MAX(18,MIN(44,c.size.height-179))),10,UIColor.blackColor,NO);
+            CGFloat bottom=CGRectGetMaxY(c)-18;
+            HCText([NSString stringWithFormat:@"LỊCH SỬ ĐÃ THU THẬP • %ld bản ghi",(long)records.count],CGRectMake(c.origin.x,bottom,c.size.width-65,18),8,UIColor.darkGrayColor,YES);
+            CGRect prev=CGRectMake(CGRectGetMaxX(c)-60,bottom,26,20),next=CGRectMake(CGRectGetMaxX(c)-28,bottom,26,20);
+            HCText(@"‹",prev,17,HCMenuAccent(),YES);HCText(@"›",next,17,HCMenuAccent(),YES);
             [self target:@"report-prev" rect:prev];[self target:@"report-next" rect:next];
         } else {
             NSMutableArray *features=[NSMutableArray array];
@@ -728,6 +745,8 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     if (!self.settings) return;
     CGRect c = [self contentRect];
     self.settings[@"cameraScale"] = @(1 + HCClamp((point.x - c.origin.x) / c.size.width, 0, 1) * 1.3);
+    NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;
+    if(now-self.cameraLastSave>=0.12) { self.cameraLastSave=now;[self saveSettings]; }
     [self setNeedsDisplay];
 }
 - (void)receivePoint:(CGPoint)point phase:(UITouchPhase)phase pointer:(NSInteger)pointer {
@@ -767,7 +786,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if (self.dragged || ![[self targetAt:point] isEqual:target]) return;
         if ([target isEqual:@"bubble"] || [target isEqual:@"close"]) [self toggleMenu];
         else if ([target isEqual:@"reports-copy"]) {
-            NSDictionary *log=@{@"schemaVersion":@1,@"appVersion":@"0.12.2",@"appBuild":@29,
+            NSDictionary *log=@{@"schemaVersion":@1,@"appVersion":@"0.13.0",@"appBuild":@30,
                 @"exportedAt":@([NSDate date].timeIntervalSince1970),@"generation":@HC_RUNTIME_GENERATION,
                 @"reportsEnabled":self.settings[@"flags"][@"reports.enabled"] ?: @NO,
                 @"runtimeEnabled":self.settings[@"gameRuntimeEnabled"] ?: @NO,
@@ -814,11 +833,18 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             _reportRecordIndex+=[target isEqual:@"report-next"] ? 1 : -1;[self setNeedsDisplay];
         }
         else if ([target isEqual:@"reports-refresh"]) {
-            [self reloadSettings];self.settings[@"reportsRefreshID"]=NSUUID.UUID.UUIDString;self.settings[@"flags"][@"reports.enabled"]=@YES;[self saveSettings];
+            [self reloadSettings];self.settings[@"reportsRefreshID"]=NSUUID.UUID.UUIDString;self.settings[@"flags"][@"reports.enabled"]=@YES;self.settings[@"gameRuntimeEnabled"]=@YES;[self saveSettings];
         }
         else if ([target isEqual:@"capture"]) {
             [self reloadSettings];
             if(self.settings) { self.settings[@"espCaptureProtected"]=[self.settings[@"espCaptureProtected"] isEqual:@NO] ? @YES : @NO;[self saveSettings];[self refreshEspSurface]; }
+        }
+        else if ([target isEqual:@"camera-minus"] || [target isEqual:@"camera-plus"]) {
+            [self reloadSettings];
+            if(self.settings) {
+                self.settings[@"cameraScale"]=@(HCClamp([self.settings[@"cameraScale"] doubleValue]+([target isEqual:@"camera-plus"] ? 0.05 : -0.05),1,2.3));
+                [self saveSettings];
+            }
         }
         else if ([target isEqual:@"cameraEnabled"]) {
             [self reloadSettings];
@@ -830,7 +856,13 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         else if ([target hasPrefix:@"flag:"]) {
             [self reloadSettings];
             NSString *key = [target substringFromIndex:5];
-            if (self.settings) { self.settings[@"flags"][key] = [self.settings[@"flags"][key] boolValue] ? @NO : @YES; [self saveSettings]; }
+            if (self.settings) {
+                BOOL on=![self.settings[@"flags"][key] boolValue];self.settings[@"flags"][key]=@(on);
+                if(on && [key isEqual:@"reports.enabled"]) {
+                    self.settings[@"gameRuntimeEnabled"]=@YES;self.settings[@"reportsRefreshID"]=NSUUID.UUID.UUIDString;
+                }
+                [self saveSettings];
+            }
         }
         HCState();
     }

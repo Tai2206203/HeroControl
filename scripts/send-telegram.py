@@ -59,7 +59,7 @@ def send_document(token, chat_id, path, opener=urllib.request.urlopen):
     caption = f"Hero Control | commit {commit}\nSHA-256: {digest}"
     if repo and run_id:
         caption += f"\n{server}/{repo}/actions/runs/{run_id}"
-    caption += "\n0.12.2 build 29: khôi phục camera độc lập adapter; tách truy vấn tố cáo khỏi lỗi hộp thư; thêm nút copy log tố cáo trong app và menu nổi. Cập nhật adapter rồi mở lại game để dùng monitor mới."
+    caption += "\n0.13.0 build 30: một lần ON tự chuẩn bị check tố cáo; giao diện tiến trình và lịch sử mới; camera lưu khi kéo, có nút −/+ dùng cả khi ON. Lần cài adapter đầu cần mở lại game một lần."
     boundary = "HeroControl" + uuid.uuid4().hex
     body = multipart(chat_id, caption, path.name, payload, boundary)
     request = urllib.request.Request(

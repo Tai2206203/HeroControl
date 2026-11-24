@@ -49,6 +49,12 @@ int main(void) {
     // Repeated ticks must derive the multiplier from the unchanged game value.
     assert(HCCameraApply(memory, 0x10000000, 1.6f, &object, &written) == HC_CAMERA_OK);
     assert(fabsf(written - 2.4f) < 0.0001f);
+    // Slider changes while the worker is already writing must take effect
+    // without OFF/restore or multiplying the previous written value.
+    assert(HCCameraApply(memory, 0x10000000, 2.0f, &object, &written) == HC_CAMERA_OK);
+    readMemory(&f, 0x25098, &actual, 4); assert(actual == 3.0f);
+    assert(HCCameraApply(memory, 0x10000000, 1.1f, &object, &written) == HC_CAMERA_OK);
+    readMemory(&f, 0x25098, &actual, 4); assert(fabsf(actual - 1.65f) < 0.0001f);
     assert(HCCameraRestore(memory, 0x10000000, object, written) == HC_CAMERA_OK);
     readMemory(&f, 0x25098, &actual, 4); assert(actual == 1.5f);
     int writes = f.writes;

@@ -74,8 +74,12 @@ struct ContentView: View {
             .sheet(isPresented: $showConnection) { connectionDetails }
             .sheet(isPresented: $showKernelCheck) { KernelDiagnosticsView(store: store, overlay: overlay) }
             .sheet(item: $shareItem) { ActivitySheet(items: [$0.url]) }
+            .onChange(of: store.settings.flags["reports.enabled"]) { _, enabled in
+                if enabled == true { Task { await ensureReportWorker() } }
+            }
             .task(id: scenePhase) {
                 guard scenePhase == .active else { return }
+                await ensureReportWorker()
                 while !Task.isCancelled {
                     await store.refresh()
                     await overlay.refresh()
@@ -299,7 +303,7 @@ struct ContentView: View {
     @ViewBuilder private var controls: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(store.selectedGroup.rawValue.uppercased()).font(.caption.bold()).foregroundStyle(.secondary)
-            ForEach(Feature.all.filter { $0.group == store.selectedGroup }) { feature in
+            ForEach(Feature.all.filter { $0.group == store.selectedGroup && $0.group != .reports }) { feature in
                 VStack(alignment: .leading, spacing: 4) {
                     Toggle(feature.title, isOn: Binding(
                         get: { store.settings.flags[feature.key] ?? false },
@@ -360,6 +364,13 @@ struct ContentView: View {
             Slider(value: Binding(get: { store.settings.cameraScale }, set: { store.setCamera($0) }), in: 1...2.3, step: 0.01)
                 .accessibilityLabel("Hệ số camera")
             HStack { Text("1.00×"); Spacer(); Text("2.30×") }.font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button("− 0.05") { store.setCamera(max(1, store.settings.cameraScale - 0.05)) }
+                Spacer()
+                Text("Chỉnh được cả khi ON").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("+ 0.05") { store.setCamera(min(2.3, store.settings.cameraScale + 0.05)) }
+            }.buttonStyle(.bordered)
             Button("Đặt lại camera 1.00×") { store.setCamera(1) }.buttonStyle(.bordered)
             Text(overlay.state?.camera?.message ?? "Mở nút nổi, bật camera xa rồi vào trận tập để thử. Camera không cần adapter.")
                 .font(.footnote).foregroundStyle(.secondary)
@@ -374,55 +385,97 @@ struct ContentView: View {
         }
     }
 
+    private func ensureReportWorker() async {
+        guard store.settings.flags["reports.enabled"] == true, !overlay.running, !overlay.busy else { return }
+        if let profile = store.prepareOverlayProfile() { await overlay.start(profile: profile) }
+    }
+
     private var reportControls: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if store.settings.gameRuntimeEnabled != true {
-                Text("Chưa bật truy vấn máy chủ. Kết quả bên dưới chỉ là cache thư; cần cài adapter thành công và mở lại game.")
-                    .font(.footnote).foregroundStyle(.orange)
+        VStack(alignment: .leading, spacing: 16) {
+            Toggle(isOn: Binding(get: { store.settings.flags["reports.enabled"] == true },
+                                 set: { store.setReportsEnabled($0) })) {
+                Label("Tự động check tố cáo", systemImage: "shield.lefthalf.filled")
+                    .font(.headline)
+            }.tint(accent)
+            Text("Bật một lần: tự mở worker, chuẩn bị adapter, lấy người chơi và theo dõi phản hồi. Nếu vừa cài adapter, chỉ cần đóng/mở lại game một lần.")
+                .font(.footnote).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 9) {
+                Label(reportWorkflowTitle, systemImage: "waveform.path.ecg").font(.headline).foregroundStyle(accent)
+                Text(reportStatus?.message ?? (store.settings.flags["reports.enabled"] == true ? "Đang khởi động luồng kiểm tra…" : "Bật công tắc để bắt đầu."))
+                    .font(.subheadline)
+                if let failure = overlay.failure { Text(failure).font(.caption).foregroundStyle(.orange) }
+                HStack {
+                    reportMetric("Người chơi", reportStatus?.candidateCount ?? 0)
+                    Spacer()
+                    reportMetric("Đã gửi", reportStatus?.sentRequestCount ?? 0)
+                    Spacer()
+                    reportMetric("Phản hồi", reportStatus?.receivedResponseCount ?? 0)
+                }.padding(.top, 5)
+                if reportStatus?.runtimeResponding == false || (!overlay.running && store.snapshot?.runtime?.historicalReports != nil) {
+                    Text("Dữ liệu lần cuối: \(reportStatus?.timestamp ?? store.snapshot?.runtime?.timestamp ?? "chưa rõ"). Chưa phải phản hồi trực tiếp.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+            }.padding(14).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
+            HStack {
+                Button("Thử lại", systemImage: "arrow.clockwise") {
+                    store.refreshReports();Task { await ensureReportWorker() }
+                }.buttonStyle(.bordered)
+                Button("Copy log", systemImage: "doc.on.doc") {
+                    do {
+                        UIPasteboard.general.string = try store.reportDiagnosticsText(overlayState: overlay.state)
+                        reportCopyMessage = "Đã sao chép log tố cáo."
+                    } catch { reportCopyMessage = "Không tạo được log: \(error.localizedDescription)" }
+                }.buttonStyle(.borderedProminent)
             }
-            Text(reportStatus?.message ?? "Cài adapter và bật truy vấn lịch sử tố cáo.")
-            if reportStatus?.runtimeResponding == false || (!overlay.running && store.snapshot?.runtime?.historicalReports != nil) {
-                Text("Dữ liệu lần cuối: \(reportStatus?.timestamp ?? store.snapshot?.runtime?.timestamp ?? "chưa rõ"). Adapter hiện không phản hồi trực tiếp; đây là lịch sử đã lưu.")
-                    .font(.caption).foregroundStyle(.orange)
-            }
-            if let stage = overlay.state?.reports?.stage { Text("Bước đọc: \(stage)/9").font(.caption.monospaced()) }
-            Text("Nguồn: lịch sử máy chủ trả về cho người chơi đã thu thập và nhật ký đã lưu. Có giữ các bản ghi lịch sử ban đầu. Giao thức hiện chưa chứng minh bao phủ mọi tố cáo trên máy chủ; danh sách rỗng không có nghĩa là không bị tố cáo.")
-                .font(.footnote).foregroundStyle(.orange)
-            if let report = reportStatus {
-                Text("Yêu cầu: \(report.sentRequestCount ?? 0) • phản hồi: \(report.receivedResponseCount ?? 0) • người chơi: \(report.candidateCount ?? 0)")
-                    .font(.caption.monospaced())
-                if report.transportFault == true { Text("Luồng phản hồi hết hạn. Đăng nhập lại trước khi tiếp tục truy vấn.").foregroundStyle(.orange) }
-                if report.recordsTruncated == true { Text("Báo cáo giới hạn 2048 bản ghi; nhật ký đầy đủ được giữ trong dữ liệu game.").foregroundStyle(.orange) }
-            }
+            if let reportCopyMessage { Text(reportCopyMessage).font(.caption).foregroundStyle(accent) }
+            Divider()
+            Label("Lịch sử đã thu thập", systemImage: "clock.arrow.circlepath").font(.headline)
             Picker("Thời gian bản ghi (UTC+7)", selection: Binding(get: { store.settings.reportsPeriod ?? "all" }, set: { store.setReportsPeriod($0) })) {
                 Text("Tất cả").tag("all");Text("Tuần này").tag("week");Text("Tháng này").tag("month")
             }.pickerStyle(.segmented)
-            HStack {
-                Button("Truy vấn lại") { store.refreshReports() }
-                Button("Sao chép log tố cáo", systemImage: "doc.on.doc") {
-                    do {
-                        UIPasteboard.general.string = try store.reportDiagnosticsText(overlayState: overlay.state)
-                        reportCopyMessage = "Đã sao chép log tố cáo. Bạn có thể dán và gửi."
-                    } catch { reportCopyMessage = "Không tạo được log: \(error.localizedDescription)" }
-                }
-            }
-            if let reportCopyMessage { Text(reportCopyMessage).font(.caption).foregroundStyle(accent) }
-            if let error = reportStatus?.queryError, !error.isEmpty { Text("Lỗi truy vấn: \(error)").font(.caption) }
-            if let error = reportStatus?.mailError, !error.isEmpty { Text("Lỗi hộp thư: \(error)").font(.caption) }
-            let reports = ReportHistory.filter(reportStatus?.records ?? [], period: store.settings.reportsPeriod ?? "all", now: (reportStatus?.serverTime).map { Date(timeIntervalSince1970: $0) } ?? Date())
-            if !reports.isEmpty {
-                ForEach(reports) { report in
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(report.time).font(.caption.monospaced()).foregroundStyle(accent)
-                        Text(report.information).fontWeight(.medium)
-                        Text(report.reason).font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    Divider()
-                }
+            let records = ReportHistory.filter(reportStatus?.records ?? [], period: store.settings.reportsPeriod ?? "all", now: (reportStatus?.serverTime).map { Date(timeIntervalSince1970: $0) } ?? Date())
+            if records.isEmpty {
+                Text("Chưa có bản ghi trong dữ liệu đã nhận. Chưa thể kết luận có hoặc không bị tố cáo.")
+                    .font(.footnote).foregroundStyle(.secondary).padding(.vertical, 8)
             } else {
-                ContentUnavailableView("Chưa xác định — chưa có bản ghi phù hợp", systemImage: "list.bullet.rectangle",
-                    description: Text("Chưa nhận được bản ghi từ máy chủ/nhật ký. Kiểm tra trạng thái adapter và số phản hồi."))
+                ForEach(records) { record in
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(record.time).font(.caption.monospaced()).foregroundStyle(accent)
+                        Text(record.information).fontWeight(.medium)
+                        Text(record.reason).font(.subheadline).foregroundStyle(.secondary)
+                    }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+                }
             }
+            DisclosureGroup("Chi tiết chẩn đoán") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(reportStatus?.code ?? "reports_idle").font(.caption.monospaced())
+                    if let error = reportStatus?.queryError, !error.isEmpty { Text("Truy vấn: \(error)") }
+                    if let error = reportStatus?.mailError, !error.isEmpty { Text("Hộp thư: \(error)") }
+                    if reportStatus?.transportFault == true { Text("Cần đăng nhập lại sau timeout để tránh nhận nhầm phản hồi.") }
+                    Text("Nguồn: lịch sử máy chủ theo người chơi đã thu thập và thư đã nhận. Không bảo đảm toàn bộ lịch sử tài khoản.")
+                }.font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+    private func reportMetric(_ title: String, _ value: Int) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("\(value)").font(.title3.monospacedDigit().bold())
+            Text(title).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+    private var reportWorkflowTitle: String {
+        guard store.settings.flags["reports.enabled"] == true else { return "Đang tắt" }
+        switch reportStatus?.code {
+        case "reports_preparing": return "Đang chuẩn bị tự động"
+        case "runtime_installed_restart_required": return "Chờ mở lại game"
+        case "runtime_install_requires_matching_game", "runtime_container_unavailable": return "Mở game để tiếp tục"
+        case "reports_waiting_roster": return "Chờ danh sách người chơi"
+        case "reports_records_observed": return "Đã nhận bản ghi"
+        case "reports_transport_fault": return "Cần đăng nhập lại"
+        case "reports_roster_error": return "Chưa đọc được danh sách người chơi"
+        case "reports_query_error", "reports_prepare_failed", "reports_prepare_timeout", "reports_prepare_config_failed", "reports_prepare_helper_missing", "runtime_install_io_failed": return "Cần kiểm tra lỗi"
+        default: return (reportStatus?.receivedResponseCount ?? 0)>0 ? "Đã có phản hồi máy chủ" : "Đang theo dõi tiến trình"
         }
     }
 
