@@ -17,6 +17,10 @@ int main(void) {
         double width=height*0.48,d=HCHeroBadgeDiameter(width,height);
         assert(d==0 || (d+4<=width && d+4<=height && d<=38));
     }
+    assert(HCHeroBadgeSized(100,100,64)==64);
+    assert(HCHeroBadgeSized(30,100,64)==26);
+    assert(HCHeroBadgeSized(100,100,12)==12);
+    assert(HCHeroBadgeSized(100,100,NAN)==0);
     assert(HCMinimapDragPosition(10,-100,896,150)==0);
     assert(HCMinimapDragPosition(10,1000,896,150)==(896.0-150)/896);
     double saved=HCMinimapDragPosition(10,70,896,150);

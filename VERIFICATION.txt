@@ -1,3 +1,18 @@
+HERO CONTROL 0.11.2 — BUILD 26
+
+- 16 unittest Python qua, gồm hash của ảnh người dùng và 3 nền trang phục.
+- 8 fixture C qua với -std=c11 -Wall -Wextra -Werror. Thêm NtfPropertySet
+  maxHP khi actorHpTotal=0, từ chối sai class/maxHP nhỏ hơn HP và mẫu thay đổi
+  trong khi đọc. Kiểm tra cỡ icon tùy chỉnh bị giới hạn theo box.
+- Đường NtfPropertySet được đối chiếu dump.cs và native get_actorHpTotal tại
+  0x495AD60/property index 5. Không gọi hàm game từ xa hoặc đoán maxHP.
+- Bổ sung XCTest lưu/khôi phục và normalize cỡ icon minimap/box/icon ESP.
+- Theme là folder resource của main app (kể cả Simulator), được copy riêng
+  vào overlay. Ảnh gốc không sửa; crop và thumbnail chỉ thực hiện khi hiển thị.
+- Chưa có Xcode/iPhone tại Windows: XCTest, giao diện, HP cache thật và độ trễ
+  screenshot/capture cần CI và thiết bị xác nhận. Không cam kết hết mọi độ
+  trễ do màn hình preview/animation của hệ thống.
+
 HERO CONTROL 0.11.1 — BUILD 25
 
 - 15 unittest Python qua; 130 ảnh offline vẫn đúng hash/catalog.

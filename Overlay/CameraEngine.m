@@ -199,7 +199,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         [targets addObject:@{@"objectID": @(t.objectID), @"heroID": @(t.heroID), @"hp": @(t.hp), @"maxHP": @(t.maxHP),
             @"worldX": @(t.worldX), @"worldZ": @(t.worldZ), @"x": @(t.x), @"feetY": @(t.feetY), @"headY": @(t.headY),
             @"visible": t.visible ? @YES : @NO, @"onScreen": t.onScreen ? @YES : @NO,
-            @"hpKnown": t.hpKnown ? @YES : @NO, @"hpCurrentKnown": t.hpCurrentKnown ? @YES : @NO,
+            @"hpKnown": t.hpKnown ? @YES : @NO, @"maxHPSource": !t.hpKnown ? @"unavailable" : t.hpFromNtfCache ? @"ntf_property" : @"visual", @"hpCurrentKnown": t.hpCurrentKnown ? @YES : @NO,
             @"positionSource": t.logicPosition ? @"logic" : @"visual", @"positionFrame": @(t.positionFrame),
             @"cooldownSource": knownSlots ? (t.logicCooldowns ? @"logic" : @"visual") : @"unavailable",
             @"cooldowns": @[@(t.cooldowns[0]), @(t.cooldowns[1]), @(t.cooldowns[2])]}];

@@ -77,6 +77,7 @@ struct EspTargetStatus: Codable {
     let hpCurrentKnown: Bool?
     let positionSource: String?
     let cooldownSource: String?
+    var maxHPSource: String? = nil
     let positionFrame: UInt32?
 }
 

@@ -64,6 +64,10 @@ final class ControlStore: ObservableObject {
             case "x": settings.minimapX = value
             case "y": settings.minimapY = value
             case "size": settings.minimapSize = value
+            case "iconSize": settings.minimapIconSize = value
+            case "esp.width": settings.espBoxWidthScale = value
+            case "esp.height": settings.espBoxHeightScale = value
+            case "esp.icon": settings.espIconSize = value
             case "extent": settings.minimapWorldExtent = value
             default: break
             }

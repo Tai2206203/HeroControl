@@ -15,6 +15,10 @@ final class ControlTests: XCTestCase {
         store.setMinimap("x", 0.91)
         store.setMinimap("y", 0.83)
         store.setMinimap("size", 180)
+        store.setMinimap("iconSize", 30)
+        store.setMinimap("esp.width", 1.5)
+        store.setMinimap("esp.height", 1.25)
+        store.setMinimap("esp.icon", 44)
         store.setCaptureProtected(false)
         XCTAssertNil(store.persistenceError)
         let restored = ControlStore(directory: folder)
@@ -26,6 +30,10 @@ final class ControlTests: XCTestCase {
         XCTAssertEqual(restored.settings.minimapX, 0.91)
         XCTAssertEqual(restored.settings.minimapY, 0.83)
         XCTAssertEqual(restored.settings.minimapSize, 180)
+        XCTAssertEqual(restored.settings.minimapIconSize, 30)
+        XCTAssertEqual(restored.settings.espBoxWidthScale, 1.5)
+        XCTAssertEqual(restored.settings.espBoxHeightScale, 1.25)
+        XCTAssertEqual(restored.settings.espIconSize, 44)
         XCTAssertEqual(restored.settings.espCaptureProtected, false)
         XCTAssertEqual(ControlStore(directory: folder).settings, restored.settings)
     }
@@ -38,13 +46,25 @@ final class ControlTests: XCTestCase {
         settings.minimapSize = 180
         settings.minimapWorldExtent = 65
         settings.minimapRotated = true
+        settings.minimapIconSize = 28
+        settings.espBoxWidthScale = 1.5
+        settings.espBoxHeightScale = 1.2
+        settings.espIconSize = 40
         let data = try JSONEncoder().encode(settings)
         var decoded = try JSONDecoder().decode(ControlSettings.self, from: data)
         XCTAssertEqual(decoded, settings)
+        decoded.minimapIconSize = 99
+        decoded.espBoxWidthScale = .infinity
+        decoded.espBoxHeightScale = -1
+        decoded.espIconSize = 999
         decoded.minimapX = .nan
         decoded.minimapSize = 999
         decoded.minimapWorldExtent = -1
         decoded.normalize()
+        XCTAssertEqual(decoded.minimapIconSize, 40)
+        XCTAssertEqual(decoded.espBoxWidthScale, 1)
+        XCTAssertEqual(decoded.espBoxHeightScale, 0.5)
+        XCTAssertEqual(decoded.espIconSize, 64)
         XCTAssertEqual(decoded.minimapX, 0.015)
         XCTAssertEqual(decoded.minimapSize, 240)
         XCTAssertEqual(decoded.minimapWorldExtent, 30)

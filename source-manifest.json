@@ -670,6 +670,31 @@
     "sha256": "7c93914ccb542e61a7cf58c9683dc0a17e08c42db247ecc6fb84750e6e737bcf"
   },
   {
+    "path": "Assets/Theme/app-background.jpg",
+    "bytes": 78871,
+    "sha256": "db6c136b37bc07ccc5cfdb97d1f64ac113d0cf7fa42a1e58c432836eca758e27"
+  },
+  {
+    "path": "Assets/Theme/manifest.json",
+    "bytes": 1031,
+    "sha256": "f51878481f8f11c336de10ab9c6ce284d95319a6f96a9335055e26621a13ec12"
+  },
+  {
+    "path": "Assets/Theme/nakroth-loi-quang.png",
+    "bytes": 1698508,
+    "sha256": "ab3a49ac6e84d20dfc21014d9808402d7f9a9e854ef91cd63cdc6cc0cb5357d9"
+  },
+  {
+    "path": "Assets/Theme/nakroth-quy-thuong.jpg",
+    "bytes": 152987,
+    "sha256": "b059bc393c5246553636bc4d210d6ebab3915534a65400721050cb8ce8e53fac"
+  },
+  {
+    "path": "Assets/Theme/nakroth-thu-nguyen.jpg",
+    "bytes": 241825,
+    "sha256": "6679473549db02765dcf8b8d252a65bbbf88ff6e7536eb801d9276e017b55989"
+  },
+  {
     "path": "BackendSDK/CameraMemory.h",
     "bytes": 5398,
     "sha256": "89c53dc3bb214abb00c00f61d93424446cdb8e5d00b6e6cee45ceb693a508f91"
@@ -677,12 +702,12 @@
   {
     "path": "BackendSDK/DiagnosticBackend.m",
     "bytes": 40057,
-    "sha256": "74f73569a0d88a7150e07855b71f332a41d3875a756e59b395ae8fa5d72e0a60"
+    "sha256": "265d45a167511e6090096894f12807ca8174f73f3353be8e226a80c9d54250ae"
   },
   {
     "path": "BackendSDK/EspMemory.h",
-    "bytes": 10577,
-    "sha256": "1bbdde6e0e6cd4fafcc8e63dd0190e4f72aef6b1c1e79d30642894d77918062e"
+    "bytes": 11874,
+    "sha256": "ba4654fca2ebabd4dcbf5feab766289ea9e9a160799953f4c60eaa7afd5b55f6"
   },
   {
     "path": "BackendSDK/EspPresentation.h",
@@ -691,8 +716,8 @@
   },
   {
     "path": "BackendSDK/EspVisualStyle.h",
-    "bytes": 1209,
-    "sha256": "8e85f3c4ff8e9b0b29ea271787b5b9f8146347fa4092636f2ab834c6b3325db9"
+    "bytes": 1377,
+    "sha256": "cc7a2b69e4a20962cdc38995ae1d4f49d82166c22e2046f402857c875ee25fe0"
   },
   {
     "path": "BackendSDK/GameInspection.h",
@@ -763,6 +788,11 @@
     "path": "CAP_NHAT_0.11.1.txt",
     "bytes": 4404,
     "sha256": "b9251d32e874c4d99ea9f24656cf7fbcc19930d26cedb445e26df4e763c16356"
+  },
+  {
+    "path": "CAP_NHAT_0.11.2.txt",
+    "bytes": 3977,
+    "sha256": "2fabd48b72e0a084d1bd8b9838e1de1029d2f96f9dfae6ba345a2e6e07a3eec9"
   },
   {
     "path": "CAP_NHAT_0.2.1.txt",
@@ -857,12 +887,12 @@
   {
     "path": "HUONG_DAN_BUILD.txt",
     "bytes": 4178,
-    "sha256": "d0d3f745a1dfeeb200aecb2ebb57ab98cf313039e337e63a538b7230dae28b3b"
+    "sha256": "aa05301a181a1039944091e4ee1a1d9de0403a94b7c1d3b7a592ee5b5be48bae"
   },
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
-    "bytes": 9369,
-    "sha256": "b0ec09010179ec99cc2d0e615834a6eeebf0e1817fc9467ac19368ee5418dd10"
+    "bytes": 9642,
+    "sha256": "c930a5b5e3aaf76e043aa124a6999ff7b87d0cf6644144868f515862d0b9773a"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -871,13 +901,13 @@
   },
   {
     "path": "HeroControl/ContentView.swift",
-    "bytes": 32818,
-    "sha256": "43bccfb65d76c06a3497189c1b6fe58db3b184a3d8ec878b3efa9f2a38a1149e"
+    "bytes": 34247,
+    "sha256": "6caee805dbd053d80c1ec6c448b541b8707a9100fc6895a3c7b6136c21d0e9e5"
   },
   {
     "path": "HeroControl/ControlStore.swift",
-    "bytes": 14459,
-    "sha256": "8cfa8d44f586d60fbe3238608386fd94b34170875a90932a6c52261cc0446f78"
+    "bytes": 14709,
+    "sha256": "d5dbc24e6e36cb0e77ecd3a3df74f403e44b98b16a39b2cb383416e51d490df6"
   },
   {
     "path": "HeroControl/HeroControlApp.swift",
@@ -887,7 +917,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1051,
-    "sha256": "16465675ea8e17f70a43039c85b81144e592323b821f43c178155e190baf0a09"
+    "sha256": "016a124834f40f5035fe65d9e4ddc55b4742b9caf1c6555eb543a3eea463592f"
   },
   {
     "path": "HeroControl/KernelDiagnosticsView.swift",
@@ -896,8 +926,8 @@
   },
   {
     "path": "HeroControl/Models.swift",
-    "bytes": 10865,
-    "sha256": "30b7195387ea93936324d920a7a382cc572b085ffb75605fb4e8361fdabd6536"
+    "bytes": 11395,
+    "sha256": "fad63ea36e784c6c9908103b0027dfc78f2688cd4c9175da6439eae12693b1a8"
   },
   {
     "path": "HeroControl/NativeBackend.swift",
@@ -906,13 +936,13 @@
   },
   {
     "path": "HeroControl/OverlayController.swift",
-    "bytes": 7157,
-    "sha256": "605384b9fd11a6d876cfb062833ff06925f2212192ec9bce3ed7f37475777436"
+    "bytes": 7192,
+    "sha256": "7c5bbd241b2e329c327e71bcd50e53a00cc074e5e28b6c4b04dc13e8b0d134dc"
   },
   {
     "path": "HeroControlTests/ControlTests.swift",
-    "bytes": 26281,
-    "sha256": "a883ab3eba0d385cb221a29d8faa61ffefea88fd9a4edfe8c4d7ce60c6123b3a"
+    "bytes": 27216,
+    "sha256": "e7275b8d077ecadb46eda5e2d11008203fb9c15fea5b23765f0bcf5876733e5c"
   },
   {
     "path": "Overlay/CameraEngine.h",
@@ -921,8 +951,8 @@
   },
   {
     "path": "Overlay/CameraEngine.m",
-    "bytes": 24176,
-    "sha256": "3eef99beea4ae420e8c55a60e333bfe71396821a98f375750e1263896b2a001b"
+    "bytes": 24270,
+    "sha256": "4b7c51ccc471bc513340db9951af971d471d6caea7614a1fea391f8998f0794c"
   },
   {
     "path": "Overlay/CapturePolicy.h",
@@ -931,18 +961,18 @@
   },
   {
     "path": "Overlay/HeroAssets.h",
-    "bytes": 6320,
-    "sha256": "d87452bc6d262931c5a6e0f20bd328a8794d0d5fd3be8d09ea55d78b4f3a2987"
+    "bytes": 8452,
+    "sha256": "593ccf208d3123ec7ec28b82f9aacb4b400802ee1c591d7fb02f5b787817fbf4"
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 57024,
-    "sha256": "75d98333c71f4f3219d5eced552c01354171d7605c3794a3492eaa23141e387f"
+    "bytes": 60799,
+    "sha256": "8be58f25f9af3b3c173b65ae45b0fbc866e10c1fd784a57e474b2ddeed641beb"
   },
   {
     "path": "Overlay/Info.plist",
     "bytes": 840,
-    "sha256": "3e446a1580ea1a7563d2abf072c36a50746e70d4d65cc2068a09eb0a775cc7f8"
+    "sha256": "232fe2238c1652f124c5ef24afede5ec2d6c9f2c7d47382dffb71cc8b28bbbe3"
   },
   {
     "path": "Overlay/OverlayBridge.m",
@@ -1001,8 +1031,8 @@
   },
   {
     "path": "Runtime/RuntimeShared.h",
-    "bytes": 6711,
-    "sha256": "becdb484b554d85b6066cd36ae059fc2349ad1f95e003568976c7541538ff49c"
+    "bytes": 6829,
+    "sha256": "4edf34bfc6f1661c9e7adca1dd13f63aeabc88aa41130125df0b3b75bc19f6a8"
   },
   {
     "path": "Signing/App.entitlements",
@@ -1026,8 +1056,8 @@
   },
   {
     "path": "ThirdParty/HeroIcons-NOTICE.txt",
-    "bytes": 495,
-    "sha256": "f856fd53192e314bd96710743d6b6be0311f88ce1fc80eab56acdf01c56149cf"
+    "bytes": 898,
+    "sha256": "750109214d7585c3c618da9c4a3972bed9083ee1de2bab3a0a34163c9230f3fc"
   },
   {
     "path": "ThirdParty/NOTICE.txt",
@@ -1041,8 +1071,8 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 14897,
-    "sha256": "d6487c15e0f5fa52e54e102f1a16b08b27de0b47cd253c43b4b8b5d04e11e7d1"
+    "bytes": 15965,
+    "sha256": "3b73adb7c370c20b5629a531020b6d0c3d03fbf3d4bf48c02b582fcc802cdc43"
   },
   {
     "path": "scripts/build-diagnostics.sh",
@@ -1056,8 +1086,8 @@
   },
   {
     "path": "scripts/build-overlay.sh",
-    "bytes": 3512,
-    "sha256": "25b7baa92336f8626da06aaf6853d7397e262672294402c25022254b18526c78"
+    "bytes": 3590,
+    "sha256": "ea8ec7d4b24379313833eb2d856abfd66ffc8d2e552e28c3376377faec790460"
   },
   {
     "path": "scripts/build-runtime.sh",
@@ -1091,8 +1121,8 @@
   },
   {
     "path": "scripts/esp-memory-check.c",
-    "bytes": 5597,
-    "sha256": "d250a9d12f931212afd1859480d1bb00e157e5d1a5351669f9b770f435037d79"
+    "bytes": 6554,
+    "sha256": "cbce5be3caa024c01381cb0184d93ef6884857fdb2639fa0135fdb435599ae51"
   },
   {
     "path": "scripts/esp-presentation-check.c",
@@ -1101,8 +1131,8 @@
   },
   {
     "path": "scripts/esp-visual-check.c",
-    "bytes": 1480,
-    "sha256": "a802c2ff7d0ab92c972d7138e3a1b80dc9d3950246ccf00c46c655ae82b0321d"
+    "bytes": 1663,
+    "sha256": "9470776325393d9c23e8093315bfa23a9cef3c9bafbb736c353d8fd5b3a89f85"
   },
   {
     "path": "scripts/fetch-hero-icons.py",
@@ -1116,8 +1146,8 @@
   },
   {
     "path": "scripts/generate-project.py",
-    "bytes": 8732,
-    "sha256": "7d74615eda2eb588f8aa904b67f39d62bbf8a666b76771e72053d8bd8bda5e5c"
+    "bytes": 9035,
+    "sha256": "468551930115592abec2465fddd74d340ca954e10899bac566b6636b058050b1"
   },
   {
     "path": "scripts/import-runtime-reference.py",
@@ -1166,8 +1196,8 @@
   },
   {
     "path": "scripts/send-telegram.py",
-    "bytes": 5771,
-    "sha256": "bbd106f39ab59a41d82e436a877a1d88173c7b61df960ba487792ccbd58de1a9"
+    "bytes": 5786,
+    "sha256": "3e1d8461e887ddab9b4198ec2778cc4941bfb48894f76cb034e4b3ca9c7e31b0"
   },
   {
     "path": "scripts/source-manifest.py",
@@ -1181,8 +1211,8 @@
   },
   {
     "path": "scripts/validate-project.py",
-    "bytes": 5343,
-    "sha256": "6f1b1f04517ca3fa8a511b90de8e030ee834aae94e7649a58f0a5dc8089e185a"
+    "bytes": 5517,
+    "sha256": "874b6e08ed8e36b41b0c0437c9f36e026d3a982890628d8816ae6f19e844f90d"
   },
   {
     "path": "scripts/verify-entitlements.py",
@@ -1196,8 +1226,8 @@
   },
   {
     "path": "tests/test_hero_icons.py",
-    "bytes": 1042,
-    "sha256": "24ff5ec6924f5c8437120ed036dae035295db1188dd3f44d981fdef2fc5ad8fc"
+    "bytes": 1594,
+    "sha256": "f329050b9c038d0c30c330d36f46f451c6e6fdf6485cf412e266dc6992a61456"
   },
   {
     "path": "tests/test_runtime_payload.py",

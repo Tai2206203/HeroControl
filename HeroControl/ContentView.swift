@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var showKernelCheck = false
     @State private var shareItem: ShareItem?
     @State private var exportError: String?
+    private static let appBackdrop: UIImage? = Bundle.main.url(forResource: "app-background", withExtension: "jpg", subdirectory: "Theme").flatMap { UIImage(contentsOfFile: $0.path) }
     private let accent = Color(red: 0.39, green: 0.88, blue: 0.78)
     private var reportStatus: FeatureCheckStatus? {
         store.snapshot?.runtime?.reports ?? store.snapshot?.runtime?.historicalReports ?? overlay.state?.reports
@@ -47,7 +48,7 @@ struct ContentView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(20)
             }
-            .background(Color(red: 0.04, green: 0.055, blue: 0.08))
+            .background { appBackground }
             .navigationTitle("Hero Control")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -81,6 +82,16 @@ struct ContentView: View {
                 }
             }
         }.tint(accent)
+    }
+
+    private var appBackground: some View {
+        GeometryReader { geometry in
+            if let image = Self.appBackdrop {
+                Image(uiImage: image).resizable().scaledToFill()
+                    .frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                    .overlay(.black.opacity(0.68))
+            } else { Color(red: 0.04, green: 0.055, blue: 0.08) }
+        }.ignoresSafeArea()
     }
 
     private var heroIconEntries: [HeroIconEntry] {
@@ -324,14 +335,21 @@ struct ContentView: View {
                 }.pickerStyle(.segmented)
                 Text("Menu nổi → ESP → CHỈNH KHUNG MINIMAP: kéo khung để di chuyển, kéo góc ↘ để đổi kích thước, bấm XONG. Tự lưu khi thả tay.")
                     .font(.footnote).foregroundStyle(.secondary)
-                Text("HP quanh icon đổi từ xanh → vàng → đỏ theo lượng máu. Vòng minimap màu đỏ thể hiện lượng máu còn lại; nét đứt xám nghĩa là chưa đọc đủ HP tối đa.")
+                Text("HP quanh icon đổi từ xanh → vàng → đỏ theo lượng máu. Vòng minimap màu đỏ thể hiện lượng máu còn lại; dấu ? nghĩa là chưa đọc đủ HP tối đa.")
                     .font(.footnote).foregroundStyle(.secondary)
                 Text("Các công tắc và vị trí được tự lưu; mở lại sẽ khôi phục cấu hình gần nhất.")
                     .font(.caption).foregroundStyle(.secondary)
+                DisclosureGroup("Kích thước ESP / camera xa") {
+                    minimapSlider("Độ rộng box", key: "esp.width", value: store.settings.espBoxWidthScale ?? 1, range: 0.5...3)
+                    minimapSlider("Độ cao box", key: "esp.height", value: store.settings.espBoxHeightScale ?? 1, range: 0.5...3)
+                    minimapSlider("Kích thước icon trong box", key: "esp.icon", value: store.settings.espIconSize ?? 32, range: 12...64)
+                    Text("Icon luôn căn giữa box và tự thu nhỏ để nằm gọn trong box khi camera xa. Các hệ số box áp dụng theo tọa độ chiếu hiện tại.").font(.footnote)
+                }
                 DisclosureGroup("Căn chỉnh ESP Minimap") {
                     minimapSlider("Vị trí ngang", key: "x", value: store.settings.minimapX ?? 0.015, range: 0...1)
                     minimapSlider("Vị trí dọc", key: "y", value: store.settings.minimapY ?? 0.02, range: 0...1)
-                    minimapSlider("Kích thước", key: "size", value: store.settings.minimapSize ?? 150, range: 80...240)
+                    minimapSlider("Kích thước icon minimap", key: "iconSize", value: store.settings.minimapIconSize ?? 20, range: 8...40)
+                    minimapSlider("Kích thước khung", key: "size", value: store.settings.minimapSize ?? 150, range: 80...240)
                     minimapSlider("Nửa chiều rộng bản đồ thế giới", key: "extent", value: store.settings.minimapWorldExtent ?? 60, range: 30...200)
                     Toggle("Xoay bản đồ 180°", isOn: Binding(get: { store.settings.minimapRotated ?? false }, set: { store.setMinimapRotated($0) }))
                     Text("Căn khung ESP trùng minimap trong game; xoay nếu hai phe dùng hướng bản đồ ngược nhau.").font(.footnote)

@@ -86,23 +86,24 @@ static BOOL HCCaptureProtected, HCSecureHostAvailable, HCCaptureActive, HCCaptur
 static UIView *HCOverlayRootView;
 static UITextField *HCOverlaySecureField;
 static NSInteger HCConfiguredCaptureMode=-1;
-static double HCNextCaptureAttempt;
+static UIView *HCCachedSecureHost;
 static void HCRefreshCaptureHost(UIView *canvas,UIView *espView) {
     if(!HCOverlayRootView) return;
-    HCOverlaySecureField.frame=HCOverlayRootView.bounds;
-    double now=NSProcessInfo.processInfo.systemUptime;
-    BOOL configure=HCConfiguredCaptureMode!=HCCaptureProtected || (HCCaptureProtected && !HCCaptureLayerConfigured && now>=HCNextCaptureAttempt);
+    BOOL sizeChanged=!CGRectEqualToRect(HCOverlaySecureField.frame,HCOverlayRootView.bounds);
+    BOOL configure=HCConfiguredCaptureMode!=HCCaptureProtected;
+    if(sizeChanged) HCOverlaySecureField.frame=HCOverlayRootView.bounds;
     if(configure && HCCaptureProtected) {
         HCOverlaySecureField.secureTextEntry=NO;HCOverlaySecureField.secureTextEntry=YES;
     }
-    [HCOverlaySecureField layoutIfNeeded];
-    UIView *secure=HCSecureCanvas(HCOverlaySecureField);
+    if(sizeChanged || configure) {
+        [HCOverlaySecureField layoutIfNeeded];HCCachedSecureHost=HCSecureCanvas(HCOverlaySecureField);
+    }
+    UIView *secure=HCCachedSecureHost;
     HCSecureHostAvailable=secure!=nil;
     UIView *parent=HCCaptureProtected ? secure : HCOverlayRootView;
-    if(secure) secure.frame=HCOverlayRootView.bounds;
+    if(secure && (sizeChanged || configure)) secure.frame=HCOverlayRootView.bounds;
     if(parent && canvas.superview!=parent) [parent addSubview:canvas];
     if(configure) {
-        HCNextCaptureAttempt=now+1;
         BOOL menuConfigured=HCConfigureCaptureLayer(canvas.layer,secure.layer,HCCaptureProtected);
         BOOL espConfigured=HCConfigureCaptureLayer(espView.layer,secure.layer,HCCaptureProtected);
         HCCaptureLayerConfigured=HCCaptureProtected && menuConfigured && espConfigured;
@@ -125,7 +126,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.11.1", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.11.2", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -161,6 +162,7 @@ static void HCStop(NSString *message, BOOL failed) {
 - (void)reloadSettings;
 - (void)drawEsp;
 - (void)refreshEspSurface;
+- (void)cancelInteraction;
 @property(nonatomic,strong) HCEspDrawingView *espView;
 - (void)toggleMenu;
 - (void)receivePoint:(CGPoint)point phase:(UITouchPhase)phase pointer:(NSInteger)pointer;
@@ -217,7 +219,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     HCCaptureProtected=![self.settings[@"espCaptureProtected"] isEqual:@NO];
     HCCaptureActive=UIScreen.mainScreen.isCaptured;
     self.espView.frame=self.bounds;
+    BOOL wasHidden=self.hidden;
     HCRefreshCaptureHost(self,self.espView);
+    if(self.hidden && !wasHidden) [self cancelInteraction];
     self.espView.hidden=HCLocked;
     if(self.hidden) { HCEspDrawFPS=0;HCEspDraws=0;HCEspDrawWindow=0; }
     [self.espView setNeedsDisplay];
@@ -225,6 +229,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     if(!self.hidden && (HCMenuOpen || _editingMinimap) && now>=_nextMenuRedraw) {
         _nextMenuRedraw=now+0.05;[self setNeedsDisplay];
     }
+}
+- (void)cancelInteraction {
+    BOOL editing=self.activeTarget!=nil;
+    self.activeTarget=nil;self.pointer=-1;self.dragged=NO;
+    if(editing) [self reloadSettings];
 }
 - (void)reloadSettings {
     NSData *data = [NSData dataWithContentsOfFile:HCProfile];
@@ -332,6 +341,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     CGRect map=[self minimapRect];
     return CGRectMake(CGRectGetMaxX(map)-56,MAX(0,map.origin.y-27),56,24);
 }
+- (CGRect)minimapIconButton:(BOOL)increase {
+    CGRect map=[self minimapRect],done=[self minimapDoneRect];
+    CGFloat y=map.size.width>=120 ? done.origin.y : HCClamp(CGRectGetMaxY(map)+4,0,self.bounds.size.height-24);
+    return CGRectMake(map.origin.x+(increase ? 29 : 0),y,26,24);
+}
 - (CGRect)minimapResizeRect {
     CGRect map=[self minimapRect];
     return CGRectMake(CGRectGetMaxX(map)-22,CGRectGetMaxY(map)-22,28,28);
@@ -357,12 +371,14 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 }
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
     return !self.hidden && !HCLocked && (CGRectContainsPoint([self bubbleRect], point) || (HCMenuOpen && CGRectContainsPoint([self panelRect], point)) ||
-        (_editingMinimap && (CGRectContainsPoint([self minimapRect],point) || CGRectContainsPoint([self minimapDoneRect],point) || CGRectContainsPoint([self minimapResizeRect],point))));
+        (_editingMinimap && (CGRectContainsPoint([self minimapRect],point) || CGRectContainsPoint([self minimapDoneRect],point) || CGRectContainsPoint([self minimapResizeRect],point) || CGRectContainsPoint([self minimapIconButton:NO],point) || CGRectContainsPoint([self minimapIconButton:YES],point))));
 }
 - (void)target:(NSString *)key rect:(CGRect)rect { [self.targets addObject:@{@"key": key, @"rect": [NSValue valueWithCGRect:rect]}]; }
 - (NSString *)targetAt:(CGPoint)point {
     if (CGRectContainsPoint([self bubbleRect], point)) return @"bubble";
     if (_editingMinimap) {
+        if(CGRectContainsPoint([self minimapIconButton:NO],point)) return @"minimap-icon-smaller";
+        if(CGRectContainsPoint([self minimapIconButton:YES],point)) return @"minimap-icon-larger";
         if(CGRectContainsPoint([self minimapDoneRect],point)) return @"minimap-done";
         if(CGRectContainsPoint([self minimapResizeRect],point)) return @"minimap-resize";
         if(CGRectContainsPoint([self minimapRect],point)) return @"minimap-move";
@@ -382,6 +398,15 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         double fade=_menuOpenedAt>0 ? HCClamp((NSProcessInfo.processInfo.systemUptime-_menuOpenedAt)/0.18,0,1) : 1;
         CGContextSetAlpha(ctx,fade);
         HCFillGradient(p,[UIColor colorWithRed:0.10 green:0.13 blue:0.18 alpha:0.98],[UIColor colorWithRed:0.035 green:0.05 blue:0.075 alpha:0.98]);
+        CGContextSaveGState(ctx);[outline addClip];
+        NSArray *covers=@[@"nakroth-loi-quang.png",@"nakroth-thu-nguyen.jpg",@"nakroth-quy-thuong.jpg"];
+        double cycle=NSProcessInfo.processInfo.systemUptime/14.0;
+        NSUInteger cover=(NSUInteger)floor(cycle)%covers.count;
+        CGFloat blend=HCClamp((cycle-floor(cycle)-0.88)/0.12,0,1);
+        CGFloat zoom=1.025+0.015*sin(NSProcessInfo.processInfo.systemUptime*0.12);
+        HCDrawImageFill(HCThemeImage(covers[cover]),p,0.38*(1-blend),zoom);
+        if(blend>0) HCDrawImageFill(HCThemeImage(covers[(cover+1)%covers.count]),p,0.38*blend,zoom);
+        CGContextRestoreGState(ctx);
         CGFloat pulse=0.18+0.08*sin(NSProcessInfo.processInfo.systemUptime*1.7);
         [[HCAccent() colorWithAlphaComponent:pulse] setStroke];
         UIBezierPath *accent=[UIBezierPath bezierPath];[accent moveToPoint:CGPointMake(p.origin.x+66,p.origin.y+50)];
@@ -477,15 +502,23 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         UIBezierPath *edge=[UIBezierPath bezierPathWithRect:map];CGFloat dash[]={5,4};[edge setLineDash:dash count:2 phase:0];
         [HCAccent() setStroke];edge.lineWidth=1.5;[edge stroke];
         HCText(@"KÉO KHUNG ĐỂ DI CHUYỂN",CGRectMake(map.origin.x+7,CGRectGetMidY(map)-9,map.size.width-12,28),9,UIColor.whiteColor,YES);
+        for(int i=0;i<2;i++) {
+            CGRect button=[self minimapIconButton:i==1];
+            [[UIColor colorWithWhite:0.15 alpha:0.95] setFill];[[UIBezierPath bezierPathWithRoundedRect:button cornerRadius:5] fill];
+            HCText(i==0 ? @"−" : @"+",CGRectInset(button,7,3),15,UIColor.whiteColor,YES);
+        }
         CGRect done=[self minimapDoneRect];[HCAccent() setFill];[[UIBezierPath bezierPathWithRoundedRect:done cornerRadius:6] fill];
         HCText(@"XONG",CGRectInset(done,9,5),10,UIColor.blackColor,YES);
         CGRect resize=[self minimapResizeRect];[HCAccent() setFill];[[UIBezierPath bezierPathWithRoundedRect:resize cornerRadius:6] fill];
         HCText(@"↘",CGRectInset(resize,5,3),18,UIColor.blackColor,YES);
     }
     CGRect bubble = [self bubbleRect];
-    [HCAccent() setFill]; [[UIBezierPath bezierPathWithOvalInRect:bubble] fill];
-    HCText(HCMenuOpen ? @"×" : @"HC", CGRectMake(bubble.origin.x + (HCMenuOpen ? 17 : 11), bubble.origin.y + 12, 38, 30),
-        HCMenuOpen ? 24 : 20, UIColor.blackColor, YES);
+    CGContextRef bubbleContext=UIGraphicsGetCurrentContext();CGContextSaveGState(bubbleContext);
+    [[UIBezierPath bezierPathWithOvalInRect:bubble] addClip];
+    HCDrawImageFill(HCThemeImage(@"app-background.jpg"),bubble,1,1);
+    CGContextRestoreGState(bubbleContext);
+    [HCAccent() setStroke];UIBezierPath *edge=[UIBezierPath bezierPathWithOvalInRect:bubble];edge.lineWidth=1.5;[edge stroke];
+    if(HCMenuOpen) HCText(@"×",CGRectMake(bubble.origin.x+18,bubble.origin.y+12,25,30),24,UIColor.whiteColor,YES);
 }
 - (void)drawEsp {
     if ([self.settings[@"flags"][@"__ifxEnemyEspEnabledV1"] boolValue] ) {
@@ -529,7 +562,10 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && target[@"worldX"] && target[@"worldZ"]) {
             double u=0,v=0;
             if (HCMinimapProject([target[@"worldX"] doubleValue],[target[@"worldZ"] doubleValue],extent,rotated,&u,&v)) {
-                CGRect icon=CGRectMake(map.origin.x+14+u*(mapSize-28)-10,map.origin.y+14+v*(mapSize-28)-10,20,20);
+                CGFloat iconSize=HCClamp([self.settings[@"minimapIconSize"] doubleValue] ?: 20,8,40);
+                CGFloat margin=iconSize/2+3;
+                CGRect icon=CGRectMake(map.origin.x+margin+u*(mapSize-2*margin)-iconSize/2,
+                    map.origin.y+margin+v*(mapSize-2*margin)-iconSize/2,iconSize,iconSize);
                 HCDrawHeroIcon(mapID,icon);
                 HCDrawHealthRing(target,CGRectInset(icon,-1.5,-1.5),YES,1.2);
             }
@@ -548,17 +584,20 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if(!HCEspSmooth(slot,objectID,heroID,now,[target[@"x"] floatValue],[target[@"headY"] floatValue],[target[@"feetY"] floatValue])) continue;
         CGFloat x=slot->x*w,top=slot->headY*h,bottom=slot->feetY*h,height=bottom-top;
         if (!isfinite(height) || height < 4 || height > h) continue;
-        CGRect box = CGRectMake(x - height * 0.24, top, height * 0.48, height);
+        CGFloat widthScale=HCClamp([self.settings[@"espBoxWidthScale"] doubleValue] ?: 1,0.5,3);
+        CGFloat heightScale=HCClamp([self.settings[@"espBoxHeightScale"] doubleValue] ?: 1,0.5,3);
+        CGFloat boxWidth=height*0.48*widthScale,boxHeight=height*heightScale;
+        CGRect box = CGRectMake(x-boxWidth/2,(top+bottom)/2-boxHeight/2,boxWidth,boxHeight);
         BOOL hpEnabled=[flags[@"DoroCheat.Reference.R1.HP"] boolValue];
-        double diameter=HCHeroBadgeDiameter(box.size.width,box.size.height);
+        double diameter=HCHeroBadgeSized(box.size.width,box.size.height,HCClamp([self.settings[@"espIconSize"] doubleValue] ?: 32,12,64));
         if (diameter>0 && ([flags[@"DoroCheat.Reference.R1.Icon"] boolValue] || hpEnabled)) {
-            CGRect outer=CGRectMake(x-diameter/2,top+2,diameter,diameter);
+            CGRect outer=CGRectMake(CGRectGetMidX(box)-diameter/2,CGRectGetMidY(box)-diameter/2,diameter,diameter);
             HCDrawHeroIcon(heroID,CGRectInset(outer,3.2,3.2));
             if(hpEnabled) HCDrawHealthRing(target,CGRectInset(outer,1.1,1.1),NO,2.2);
         }
         if ([flags[@"HeroControl.ESP.HeroID"] boolValue] && heroID>0) {
             NSString *label=[NSString stringWithFormat:@"ID: %d",heroID];
-            CGRect badge=CGRectMake(x-45,MAX(0,top-24),90,20);
+            CGRect badge=CGRectMake(x-45,MAX(0,CGRectGetMinY(box)-24),90,20);
             [[UIColor.blackColor colorWithAlphaComponent:0.8] setFill];
             [[UIBezierPath bezierPathWithRoundedRect:badge cornerRadius:4] fill];
             HCText(label,CGRectInset(badge,4,1),13,UIColor.whiteColor,YES);
@@ -571,7 +610,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             NSMutableArray *texts = [NSMutableArray array];
             for (NSNumber *cd in target[@"cooldowns"]) [texts addObject:cd.intValue < 0 ? @"?" : cd.stringValue];
             NSString *text = texts.count == 3 ? [NSString stringWithFormat:@"S1:%@  S2:%@  S3:%@", texts[0], texts[1], texts[2]] : @"Chưa đọc CD";
-            HCText(text, CGRectMake(x - 75, bottom + 3, 150, 18), 10, color, YES);
+            HCText(text, CGRectMake(x - 75, CGRectGetMaxY(box) + 3, 150, 18), 10, color, YES);
         }
     }
 }
@@ -622,6 +661,12 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if ([target isEqual:@"bubble"] || [target isEqual:@"close"]) [self toggleMenu];
         else if ([target isEqual:@"minimap-edit"]) {
             _editingMinimap=YES;HCMenuOpen=NO;[self setNeedsDisplay];
+        }
+        else if ([target isEqual:@"minimap-icon-smaller"] || [target isEqual:@"minimap-icon-larger"]) {
+            [self reloadSettings];
+            CGFloat size=[self.settings[@"minimapIconSize"] doubleValue] ?: 20;
+            self.settings[@"minimapIconSize"]=@(HCClamp(size+([target isEqual:@"minimap-icon-larger"] ? 2 : -2),8,40));
+            [self saveSettings];[self refreshEspSurface];
         }
         else if ([target isEqual:@"minimap-done"]) { _editingMinimap=NO;[self setNeedsDisplay]; }
         else if ([target isEqual:@"stop"]) HCStop(@"Đã tắt nút nổi. Mở Hero Control để bật lại.", NO);
@@ -720,6 +765,11 @@ static void HCUpdateLock(void) {
 }
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
     HCStage(@"delegate_launch");
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0), ^{
+        @autoreleasepool {
+            for(NSString *name in @[@"app-background.jpg",@"nakroth-loi-quang.png",@"nakroth-thu-nguyen.jpg",@"nakroth-quy-thuong.jpg"]) (void)HCThemeImage(name);
+        }
+    });
     HCOverlayController *controller = [HCOverlayController new];
     HCCanvas = [[HCOverlayCanvas alloc] initWithFrame:UIScreen.mainScreen.bounds];
     HCOverlayRootView=[[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
@@ -739,6 +789,7 @@ static void HCUpdateLock(void) {
     HCWindow.rootViewController = controller;
     HCWindow.windowLevel = 10000010.0;
     [HCWindow makeKeyAndVisible];
+    HCConfiguredCaptureMode=-1;[HCCanvas refreshEspSurface];
     HCHost = [NSClassFromString(@"SBSAccessibilityWindowHostingController") new];
     if (!HCHost || ![HCHost respondsToSelector:@selector(registerWindowWithContextID:atLevel:)] || ![HCWindow _contextId])
         HCStop(@"Không có API đăng ký cửa sổ overlay trên môi trường này.", YES);
@@ -763,7 +814,10 @@ static void HCUpdateLock(void) {
     HCStartupStage = @"ready";
     HCPhase = @"visible"; HCMessage = @"Đã đăng ký nút nổi Hero Control. Chạm để mở/thu menu; kéo để di chuyển.";
     [NSNotificationCenter.defaultCenter addObserverForName:UIScreenCapturedDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
-        (void)notification;[HCCanvas refreshEspSurface];[CATransaction flush];HCState();
+        (void)notification;[HCCanvas refreshEspSurface];
+    }];
+    [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationUserDidTakeScreenshotNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
+        (void)notification;[HCCanvas cancelInteraction];
     }];
     HCUpdateLock(); HCState();
     HCCamera = [[HCCameraEngine alloc] initWithProfile:HCProfile report:^(NSDictionary *report) {

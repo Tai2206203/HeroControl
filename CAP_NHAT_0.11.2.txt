@@ -1,0 +1,59 @@
+HERO CONTROL 0.11.2 — BUILD 26
+
+KÍCH THƯỚC ESP
+
+Trong app → ESP → Kích thước ESP / camera xa:
+- Độ rộng box và độ cao box: hệ số 0,5–3 theo tọa độ chiếu của camera hiện tại.
+- Kích thước icon trong box: 12–64pt; vẫn thu nhỏ nếu box nhỏ để không tràn.
+Icon nay căn chính giữa box theo cả hai chiều, không nằm sát phần đầu box.
+Khi camera xa làm mục tiêu nhỏ, có thể tăng hệ số box rồi chỉnh cỡ icon.
+Không suy đoán lại khoảng cách camera; dùng tọa độ chiếu đã đọc và các hệ số
+được lưu rõ ràng. Các lựa chọn tự lưu qua profile chung.
+
+Trong app → ESP → Căn chỉnh ESP Minimap có cỡ icon 8–40pt.
+Trong menu nổi → ESP → CHỈNH KHUNG MINIMAP cũng có − / + để chỉnh cỡ icon.
+Kéo khung đổi vị trí, góc ↘ đổi cỡ khung, XONG kết thúc; tự lưu khi thao tác.
+Các nút được bố trí riêng khi khung rất nhỏ để không đè nút XONG.
+
+HP MINIMAP
+
+Nét chấm sọc trước đây là trạng thái chưa có maxHP, không phải chỉ báo HP thật.
+Bổ sung đường đọc NtfPropertySet → mActorValue[5] → NtfValueData.totalValue
+khi ValueLinkerComponent.actorHpTotal chưa hợp lệ. Đối chiếu dump cùng UUID:
+ValueLinkerComponent.mActorValue+0x30; NtfPropertySet.array+8; NtfValueData
+.totalValue+0x24; ValuePropertyComponent.get_actorHpTotal RVA 0x495AD60 dùng
+property index 5. Có kiểm tra class, số phần tử, giới hạn HP và đọc ổn định.
+Không gọi hàm từ xa, không lấy HP hiện tại làm maxHP và không đoán đầy máu.
+Telemetry maxHPSource=ntf_property/visual/unavailable để đối chiếu thiết bị.
+Khi vẫn thiếu dữ liệu, bỏ nét đứt: viền mờ + dấu ? chỉ rõ chưa biết tỷ lệ.
+Khi biết HP, cung đỏ sáng trên minimap hiển thị đúng tỷ lệ đã đọc. Không
+cam kết mọi tướng bị che khuất đều có cache maxHP trong mọi trạng thái game.
+
+NỀN VÀ NÚT NỔI
+
+Dùng nguyên ảnh người dùng gửi cho nền app và nút nổi. Main app có resource
+Theme riêng để dùng cả trong Simulator/TIPA. Nút nổi crop tròn lúc hiển thị.
+Menu dùng ba ảnh trang phục Nakroth từ website chính thức Garena, chuyển
+ảnh nhẹ chu kỳ 14 giây cùng hiệu ứng zoom chậm; giữ menu gọn và chữ dễ đọc.
+Ảnh được đóng gói offline. Theme native được decode thumbnail tối đa 1024px
+và cache, có nạp trước nền để tránh decode ảnh lớn lặp trên từng nhịp vẽ.
+Nguồn: https://lienquan.garena.vn/hoc-vien/tuong-skin/d/nakroth/
+Hash/URL nằm trong Assets/Theme/manifest.json; không sửa byte ảnh gốc.
+
+GIẢM KHỰNG QUAY/CHỤP
+
+Bỏ cấu hình lại secureTextEntry/mask theo vòng lặp khi readback không thành
+công. Chỉ cấu hình khi đổi chế độ và lúc cửa sổ khởi tạo xong; cache secure
+host, chỉ layout lại khi kích thước đổi. Không ép CATransaction.flush hoặc
+ghi trạng thái ra đĩa trong notification capture. Theo dõi quay vẫn hoạt động.
+Khi overlay ẩn, hủy pointer/cử chỉ đang dở; nếu không, sự kiện thả tay bị bỏ
+qua lúc ẩn có thể để menu kẹt cử chỉ khi hiện lại. Notification chụp xong cũng
+hủy cử chỉ dở, không được dùng để tuyên bố chặn ảnh trước đó.
+Chưa đo độ trễ chụp/quay thật trên iPhone. Hệ thống vẫn có thể tạm giữ thao tác
+trong animation/preview ảnh chụp. Cần thử lại ON/OFF và ghi log nếu còn đơ.
+
+CẬP NHẬT
+
+Git push, đợi CI, tắt overlay cũ, cài TIPA mới. Cài lại adapter và mở lại game
+để đồng bộ generation/build. Kiểm thử hình vẽ, maxHP mới và chụp/quay trên máy
+thật; các fixture tại Windows không thay thế kiểm chứng thiết bị.

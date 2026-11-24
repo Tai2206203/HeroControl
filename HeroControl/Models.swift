@@ -76,6 +76,10 @@ struct ControlSettings: Codable, Equatable {
     var minimapX: Double? = nil
     var minimapY: Double? = nil
     var minimapSize: Double? = nil
+    var minimapIconSize: Double? = nil
+    var espBoxWidthScale: Double? = nil
+    var espBoxHeightScale: Double? = nil
+    var espIconSize: Double? = nil
     var minimapWorldExtent: Double? = nil
     var minimapRotated: Bool? = nil
     mutating func normalize() {
@@ -85,6 +89,10 @@ struct ControlSettings: Codable, Equatable {
         if let v = minimapX { minimapX = v.isFinite ? min(1, max(0, v)) : 0.015 }
         if let v = minimapY { minimapY = v.isFinite ? min(1, max(0, v)) : 0.02 }
         if let v = minimapSize { minimapSize = v.isFinite ? min(240, max(80, v)) : 150 }
+        if let v = minimapIconSize { minimapIconSize = v.isFinite ? min(40, max(8, v)) : 20 }
+        if let v = espBoxWidthScale { espBoxWidthScale = v.isFinite ? min(3, max(0.5, v)) : 1 }
+        if let v = espBoxHeightScale { espBoxHeightScale = v.isFinite ? min(3, max(0.5, v)) : 1 }
+        if let v = espIconSize { espIconSize = v.isFinite ? min(64, max(12, v)) : 32 }
         if let v = minimapWorldExtent { minimapWorldExtent = v.isFinite ? min(200, max(30, v)) : 60 }
         selectedSkins = selectedSkins.filter { UInt32($0.key) != nil && $0.value >= 0 && $0.value <= Int(UInt32.max) }
     }

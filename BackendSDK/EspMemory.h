@@ -7,7 +7,7 @@ typedef struct {
     uint32_t objectID; int32_t heroID, hp, maxHP, camp;
     float worldX, worldY, worldZ, x, feetY, headY;
     bool visible, onScreen;
-    bool hpKnown;
+    bool hpKnown, hpFromNtfCache;
     bool hpCurrentKnown, logicPosition, logicCooldowns;
     uint32_t positionFrame;
     int cooldowns[3];
@@ -23,6 +23,22 @@ typedef struct {
     HCEspTarget targets[HC_ESP_MAX_TARGETS];
 } HCEspFrame;
 enum { HC_ESP_OK, HC_ESP_NOT_READY, HC_ESP_BAD_LAYOUT, HC_ESP_READ_FAILED, HC_ESP_MATRICES_PENDING };
+
+// Verified dump: ValueLinkerComponent.mActorValue (+0x30), NtfPropertySet
+// array (+8), HP property index 5, NtfValueData.totalValue (+0x24).
+static inline int32_t HCEspNtfMaxHP(HCCameraMemory m,uint64_t component,int32_t current) {
+    uint64_t set=0,klass=0,array=0,length=0,entry=0,arrayAfter=0;int32_t maximum=0,after=0;
+    if(!m.read(m.context,component+0x30,&set,8) || !HCCameraPointer(set) ||
+       !m.read(m.context,set,&klass,8) || !HCCameraName(m,klass,"NtfPropertySet") ||
+       !m.read(m.context,set+8,&array,8) || !HCCameraPointer(array) ||
+       !m.read(m.context,array+0x10,&length,8) || length<=5 || length>256 ||
+       !m.read(m.context,array+0x18+5*8,&entry,8) || !HCCameraPointer(entry) ||
+       !m.read(m.context,entry,&klass,8) || !HCCameraName(m,klass,"NtfValueData") ||
+       !m.read(m.context,entry+0x24,&maximum,4) || maximum<=0 || maximum>100000000 || current>maximum ||
+       !m.read(m.context,entry+0x24,&after,4) || after!=maximum ||
+       !m.read(m.context,set+8,&arrayAfter,8) || arrayAfter!=array) return 0;
+    return maximum;
+}
 
 static inline bool HCEspProject(const float view[16], const float projection[16], float x, float y, float z, float *outX, float *outY) {
     float point[4] = {x,y,z,1}, eye[4] = {0}, clip[4] = {0};
@@ -129,6 +145,10 @@ static inline int HCEspRead(HCCameraMemory m,uint64_t base,bool unseenOnly,HCEsp
         bool hpRead=m.read(m.context,actor+0x28,&value,8) && HCCameraPointer(value) &&
            m.read(m.context,value,&klass,8) && HCCameraName(m,klass,"ValueLinkerComponent") &&
            m.read(m.context,value+0x40,&t.hp,4) && m.read(m.context,value+0x44,&t.maxHP,4);
+        if(hpRead && (t.maxHP<=0 || t.maxHP<t.hp || t.maxHP>100000000)) {
+            int32_t cached=HCEspNtfMaxHP(m,value,t.hp);
+            if(cached>0) { t.maxHP=cached;t.hpFromNtfCache=true; }
+        }
         if(hpRead && visible && t.hp==0 && t.maxHP>0 && t.maxHP<=100000000) continue;
         t.hpKnown=hpRead && t.hp>0 && t.maxHP>0 && t.hp<=t.maxHP && t.maxHP<=100000000;
         t.hpCurrentKnown=hpRead && t.hp>=0 && t.hp<=100000000;

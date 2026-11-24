@@ -10,10 +10,11 @@ xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
     -miphoneos-version-min=17.0 -fobjc-arc -Wall -Wextra \
     -Werror=implicit-function-declaration -I"$OUTPUT" \
     "-DHC_RUNTIME_GENERATION=\"$GENERATION\"" \
-    -framework Foundation -framework CoreFoundation -framework UIKit -framework QuartzCore -framework CoreGraphics \
+    -framework Foundation -framework CoreFoundation -framework UIKit -framework QuartzCore -framework CoreGraphics -framework ImageIO \
     "$ROOT/Overlay/HeroOverlay.m" "$ROOT/Overlay/CameraEngine.m" -o "$OUTPUT/HeroOverlay.app/hero-overlay"
 cp "$ROOT/Overlay/Info.plist" "$OUTPUT/HeroOverlay.app/Info.plist"
 ditto "$ROOT/Assets/HeroIcons" "$OUTPUT/HeroOverlay.app/HeroIcons"
+ditto "$ROOT/Assets/Theme" "$OUTPUT/HeroOverlay.app/Theme"
 xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
     -miphoneos-version-min=17.0 -fobjc-arc -Wall -Wextra -dynamiclib -fvisibility=hidden \
     "-DHC_RUNTIME_GENERATION=\"$GENERATION\"" \

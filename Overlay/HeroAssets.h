@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
+#import <ImageIO/ImageIO.h>
 #include "../BackendSDK/EspVisualStyle.h"
 
 static NSDictionary *HCHeroCatalog(void) {
@@ -31,6 +32,33 @@ static UIImage *HCHeroIcon(int32_t heroID) {
     if (image) [cache setObject:image forKey:key];
     return image;
 }
+static UIImage *HCThemeImage(NSString *name) {
+    static NSCache *cache;static dispatch_once_t once;
+    dispatch_once(&once,^{ cache=[NSCache new];cache.countLimit=4; });
+    UIImage *image=[cache objectForKey:name];
+    if(!image) {
+        NSURL *url=[NSURL fileURLWithPath:[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:[@"Theme/" stringByAppendingString:name]]];
+        CGImageSourceRef source=CGImageSourceCreateWithURL((__bridge CFURLRef)url,NULL);
+        if(source) {
+            NSDictionary *options=@{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,
+                (__bridge id)kCGImageSourceThumbnailMaxPixelSize:@1024,(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,
+                (__bridge id)kCGImageSourceShouldCacheImmediately:@YES};
+            CGImageRef thumbnail=CGImageSourceCreateThumbnailAtIndex(source,0,(__bridge CFDictionaryRef)options);
+            if(thumbnail) { image=[UIImage imageWithCGImage:thumbnail];CGImageRelease(thumbnail); }
+            CFRelease(source);
+        }
+        if(image) [cache setObject:image forKey:name];
+    }
+    return image;
+}
+static void HCDrawImageFill(UIImage *image,CGRect rect,CGFloat alpha,CGFloat zoom) {
+    if(!image || image.size.width<=0 || image.size.height<=0) return;
+    CGFloat scale=MAX(rect.size.width/image.size.width,rect.size.height/image.size.height)*zoom;
+    CGSize size=CGSizeMake(image.size.width*scale,image.size.height*scale);
+    CGContextRef context=UIGraphicsGetCurrentContext();CGContextSaveGState(context);CGContextClipToRect(context,rect);
+    [image drawInRect:CGRectMake(CGRectGetMidX(rect)-size.width/2,CGRectGetMidY(rect)-size.height/2,size.width,size.height) blendMode:kCGBlendModeNormal alpha:alpha];
+    CGContextRestoreGState(context);
+}
 static void HCDrawHeroIcon(int32_t heroID,CGRect rect) {
     UIImage *image=HCHeroIcon(heroID);
     CGContextRef context=UIGraphicsGetCurrentContext();
@@ -55,8 +83,11 @@ static void HCDrawHealthRing(NSDictionary *target,CGRect ring,BOOL redOnly,CGFlo
     UIBezierPath *track=[UIBezierPath bezierPathWithOvalInRect:ring];
     [[UIColor colorWithWhite:0.12 alpha:0.85] setStroke];track.lineWidth=width;[track stroke];
     if(!health.known) {
-        CGFloat pattern[]={2,3};[track setLineDash:pattern count:2 phase:0];
-        [[UIColor colorWithWhite:0.65 alpha:0.85] setStroke];track.lineWidth=width;[track stroke];return;
+        [(redOnly ? [UIColor colorWithRed:1 green:0.16 blue:0.22 alpha:0.35] : [UIColor colorWithWhite:0.65 alpha:0.45]) setStroke];
+        track.lineWidth=width;[track stroke];
+        [@"?" drawInRect:CGRectMake(CGRectGetMaxX(ring)-6,CGRectGetMaxY(ring)-9,9,11) withAttributes:@{
+            NSFontAttributeName:[UIFont boldSystemFontOfSize:9],NSForegroundColorAttributeName:UIColor.whiteColor,
+            NSStrokeColorAttributeName:UIColor.blackColor,NSStrokeWidthAttributeName:@-3}];return;
     }
     if(health.ratio<=0) return;
     UIColor *color=redOnly ? [UIColor colorWithRed:1 green:0.16 blue:0.22 alpha:1] :

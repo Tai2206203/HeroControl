@@ -11,11 +11,12 @@ static inline HCHeroHealth HCHeroHealthValue(double current,double maximum,bool 
     return result;
 }
 // Outer ring diameter fits inside the box, including its stroke and padding.
-static inline double HCHeroBadgeDiameter(double width,double height) {
-    if(!isfinite(width) || !isfinite(height)) return 0;
-    double diameter=fmin(38,fmin(width,height)-4);
+static inline double HCHeroBadgeSized(double width,double height,double desired) {
+    if(!isfinite(width) || !isfinite(height) || !isfinite(desired) || desired<=0) return 0;
+    double diameter=fmin(desired,fmin(width,height)-4);
     return diameter>=12 ? diameter : 0;
 }
+static inline double HCHeroBadgeDiameter(double width,double height) { return HCHeroBadgeSized(width,height,38); }
 static inline double HCMinimapDragPosition(double origin,double delta,double dimension,double size) {
     if(!isfinite(origin) || !isfinite(delta) || !isfinite(dimension) || !isfinite(size) || dimension<=0 || size>dimension) return 0;
     return fmax(0,fmin(dimension-size,origin+delta))/dimension;

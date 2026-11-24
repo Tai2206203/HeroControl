@@ -3,15 +3,16 @@
 #include <stdio.h>
 
 typedef struct { uint64_t address; unsigned char bytes[2048]; } EspRegion;
-typedef struct { EspRegion regions[30]; int reads, sizeReads, viewReads; bool mutate, mutateView; } EspFixture;
+typedef struct { EspRegion regions[36]; int reads, sizeReads, viewReads, ntfReads; bool mutate, mutateView, mutateNtf; } EspFixture;
 static bool readEspMemory(void *ctx,uint64_t address,void *out,size_t size) {
     EspFixture *f=ctx; f->reads++;
-    for(int i=0;i<30;i++) {
+    for(int i=0;i<36;i++) {
         EspRegion *r=&f->regions[i];
         if(address>=r->address && address-r->address<=sizeof(r->bytes) && size<=sizeof(r->bytes)-(address-r->address)) {
             memcpy(out,r->bytes+(address-r->address),size);
             if(address==0x15010 && ++f->sizeReads>1 && f->mutate) { int32_t bad=63;memcpy(out,&bad,4); }
             if(address==0x26080 && ++f->viewReads>1 && f->mutateView) { float changed=2;memcpy(out,&changed,4); }
+            if(address==0x31024 && ++f->ntfReads>1 && f->mutateNtf) { int32_t changed=4000;memcpy(out,&changed,4); }
             return true;
         }
     }
@@ -24,7 +25,7 @@ static void name(EspFixture *f,int region,const char *value) {
 }
 static EspFixture fixture(void) {
     EspFixture f={0};
-    for(int i=0;i<30;i++) f.regions[i].address=0x10000+(uint64_t)i*0x1000;
+    for(int i=0;i<36;i++) f.regions[i].address=0x10000+(uint64_t)i*0x1000;
     // Shared singleton + enemy list, one visible enemy and one friendly.
     f.regions[0].address=0x10000000+HC_KYRIOS_TYPE_RVA;
     p(&f,0,0,0x11000);name(&f,1,"KyriosFramework");p(&f,1,0x58,0x12000);
@@ -88,6 +89,19 @@ int main(void) {
     assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_READ_FAILED && frame.count==0);
     f=fixture();f.regions[4].bytes[0x18]=0;
     assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_NOT_READY && frame.count==0);
+    f=fixture();n(&f,14,0x44,0);
+    p(&f,14,0x30,0x2E000);p(&f,30,0,0x2F000);name(&f,31,"NtfPropertySet");
+    p(&f,30,8,0x30000);p(&f,32,0x10,46);p(&f,32,0x18+5*8,0x31000);
+    p(&f,33,0,0x32000);name(&f,34,"NtfValueData");n(&f,33,0x24,5000);
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK);
+    assert(frame.targets[0].hpKnown && frame.targets[0].maxHP==5000 && frame.targets[0].hpFromNtfCache);
+    f.ntfReads=0;f.mutateNtf=true;
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK && !frame.targets[0].hpKnown);
+    f.mutateNtf=false;
+    n(&f,33,0x24,100);
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK && !frame.targets[0].hpKnown);
+    n(&f,33,0x24,5000);name(&f,34,"WrongClass");
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK && !frame.targets[0].hpKnown);
     puts("ESP fixture passed: auto/custom view, dirty projection, torn matrix rejection, projection, native header, filters, HP/cooldowns, bounded lists; no device memory accessed.");
     return 0;
 }

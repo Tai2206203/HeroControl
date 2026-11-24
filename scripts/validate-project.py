@@ -61,6 +61,8 @@ assert 'esp-presentation-check.c' in (root / 'scripts/build-overlay.sh').read_te
 assert 'minimap-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'esp-visual-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'Assets/HeroIcons' in (root / 'scripts/build-overlay.sh').read_text('utf8')
+assert 'Assets/Theme' in (root / 'scripts/build-overlay.sh').read_text('utf8')
+assert '../Assets/Theme' in (root / 'HeroControl.xcodeproj/project.pbxproj').read_text('utf8')
 assert 'logic-esp-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'lua-reports-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 overlay_info = plistlib.loads((root / 'Overlay/Info.plist').read_bytes())

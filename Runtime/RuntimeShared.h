@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define HC_RUNTIME_BUILD "25"
+#define HC_RUNTIME_BUILD "26"
 #ifndef HC_RUNTIME_GENERATION
 #define HC_RUNTIME_GENERATION "development"
 #endif
@@ -35,7 +35,7 @@ static inline BOOL HCRuntimeSettingsValid(id settings) {
         id flag=settings[key];
         if (flag && (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID())) return NO;
     }
-    NSDictionary *ranges=@{@"minimapX":@[@0,@1],@"minimapY":@[@0,@1],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200]};
+    NSDictionary *ranges=@{@"minimapX":@[@0,@1],@"minimapY":@[@0,@1],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200],@"minimapIconSize":@[@8,@40],@"espBoxWidthScale":@[@0.5,@3],@"espBoxHeightScale":@[@0.5,@3],@"espIconSize":@[@12,@64]};
     for (NSString *key in ranges) {
         id value=settings[key];NSArray *range=ranges[key];
         if (value && (![value isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)value)==CFBooleanGetTypeID() ||

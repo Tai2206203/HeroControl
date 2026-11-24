@@ -1,0 +1,26 @@
+{
+  "userImage": {
+    "file": "app-background.jpg",
+    "sha256": "db6c136b37bc07ccc5cfdb97d1f64ac113d0cf7fa42a1e58c432836eca758e27"
+  },
+  "skins": [
+    {
+      "file": "nakroth-loi-quang.png",
+      "name": "Nakroth Lôi Quang Sứ",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/4eefc190795ff89d196522b182e776746116ce3ccadec1.png",
+      "sha256": "ab3a49ac6e84d20dfc21014d9808402d7f9a9e854ef91cd63cdc6cc0cb5357d9"
+    },
+    {
+      "file": "nakroth-thu-nguyen.jpg",
+      "name": "Nakroth thứ nguyên vệ thần",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/001dbf5c41b23b35b4142dcd51e15db66594e429c0ce31.jpg",
+      "sha256": "6679473549db02765dcf8b8d252a65bbbf88ff6e7536eb801d9276e017b55989"
+    },
+    {
+      "file": "nakroth-quy-thuong.jpg",
+      "name": "Nakroth Quỷ thương Liệp Đế",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/15014.jpg",
+      "sha256": "b059bc393c5246553636bc4d210d6ebab3915534a65400721050cb8ce8e53fac"
+    }
+  ]
+}

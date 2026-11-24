@@ -5,3 +5,10 @@ SHA-256/URL attribution are recorded in Assets/HeroIcons/catalog.json.
 All rights in the artwork remain with their respective owners.
 130 source images are bundled unmodified (including one GIF); UIKit selects
 the displayed image and clips it at runtime. No game-time downloads.
+
+Menu background skin artwork: Nakroth Loi Quang Su, Thu Nguyen Ve Than,
+and Quy Thuong Liep De from Garena's official Nakroth page:
+https://lienquan.garena.vn/hoc-vien/tuong-skin/d/nakroth/
+Exact image URLs and SHA-256 are in Assets/Theme/manifest.json.
+The app background/floating button photo was supplied by the user; its
+original bytes are bundled unchanged, with display cropping performed by UI.
