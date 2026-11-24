@@ -7,8 +7,8 @@
     <key>CFBundleDisplayName</key><string>Hero Control Overlay</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-    <key>CFBundleVersion</key><string>23</string>
-    <key>CFBundleShortVersionString</key><string>0.10.3</string>
+    <key>CFBundleVersion</key><string>24</string>
+    <key>CFBundleShortVersionString</key><string>0.11.0</string>
     <key>LSRequiresIPhoneOS</key><true/>
     <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
 </dict></plist>

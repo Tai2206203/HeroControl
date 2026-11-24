@@ -1,3 +1,18 @@
+HERO CONTROL 0.11.0 — BUILD 24
+
+- 15 unittest Python qua, gồm đủ 130 ảnh/ID duy nhất, tên, magic bytes,
+  kích thước và SHA-256 khớp catalog nhập từ Excel.
+- 7 fixture C camera/ESP/presentation/logic/Lua cache/CString/minimap qua với
+  Zig/Clang -std=c11 -Wall -Wextra -Werror. Minimap kiểm tra tâm, các góc,
+  xoay 180°, ngoài biên và NaN/infinity. Chỉ dùng dữ liệu mô phỏng.
+- Lua smoke qua; xác nhận flag Icon/Map của donor bị tắt, tránh hai renderer.
+- Project/plist, cú pháp Swift/Objective-C và shell qua.
+- Thêm XCTest round-trip tùy chọn bảo vệ/minimap, giá trị sai được normalize,
+  profile cũ vẫn decode. XCTest chờ CI macOS; Windows không có Xcode.
+- Chưa xác nhận thực tế menu, ảnh trên đầu, căn minimap hay secure canvas
+  loại ESP khỏi ảnh chụp trên iPhone. Telemetry secureHostAvailable chỉ là
+  phát hiện host, không phải kiểm thử chống chụp thành công.
+
 BUILD 23 — ESP ID TRÊN ĐẦU ĐỊCH
 
 Thêm flag HeroControl.ESP.HeroID, menu app/nút nổi và nhãn ID tại tọa độ đầu.

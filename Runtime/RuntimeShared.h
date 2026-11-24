@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define HC_RUNTIME_BUILD "23"
+#define HC_RUNTIME_BUILD "24"
 #ifndef HC_RUNTIME_GENERATION
 #define HC_RUNTIME_GENERATION "development"
 #endif
@@ -31,9 +31,15 @@ static inline BOOL HCRuntimeSettingsValid(id settings) {
     }
     id heroIDFlag=flags[@"HeroControl.ESP.HeroID"];
     if (heroIDFlag && (![heroIDFlag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)heroIDFlag)!=CFBooleanGetTypeID())) return NO;
-    for (NSString *key in @[@"cameraEnabled",@"gameRuntimeEnabled"]) {
+    for (NSString *key in @[@"cameraEnabled",@"gameRuntimeEnabled",@"espCaptureProtected",@"minimapRotated"]) {
         id flag=settings[key];
         if (flag && (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID())) return NO;
+    }
+    NSDictionary *ranges=@{@"minimapX":@[@0,@0.8],@"minimapY":@[@0,@0.8],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200]};
+    for (NSString *key in ranges) {
+        id value=settings[key];NSArray *range=ranges[key];
+        if (value && (![value isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)value)==CFBooleanGetTypeID() ||
+            !isfinite([value doubleValue]) || [value doubleValue]<[range[0] doubleValue] || [value doubleValue]>[range[1] doubleValue])) return NO;
     }
     NSCharacterSet *nonDigits=[[NSCharacterSet characterSetWithCharactersInString:@"0123456789"] invertedSet];
     for (id hero in skins) {

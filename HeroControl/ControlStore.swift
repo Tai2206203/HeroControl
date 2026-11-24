@@ -57,6 +57,19 @@ final class ControlStore: ObservableObject {
     }
     func setCamera(_ value: Double) { edit { settings.cameraScale = value } }
     func setCameraEnabled(_ value: Bool) { edit { settings.cameraEnabled = value } }
+    func setCaptureProtected(_ value: Bool) { edit { settings.espCaptureProtected = value } }
+    func setMinimap(_ key: String, _ value: Double) {
+        edit {
+            switch key {
+            case "x": settings.minimapX = value
+            case "y": settings.minimapY = value
+            case "size": settings.minimapSize = value
+            case "extent": settings.minimapWorldExtent = value
+            default: break
+            }
+        }
+    }
+    func setMinimapRotated(_ value: Bool) { edit { settings.minimapRotated = value } }
     func setEspReadHz(_ value: Int) { edit { settings.espReadHz = value } }
     func prepareCombinedCheck() {
         edit {

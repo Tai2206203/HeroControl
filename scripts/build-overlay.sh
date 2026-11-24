@@ -13,6 +13,7 @@ xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework QuartzCore -framework CoreGraphics \
     "$ROOT/Overlay/HeroOverlay.m" "$ROOT/Overlay/CameraEngine.m" -o "$OUTPUT/HeroOverlay.app/hero-overlay"
 cp "$ROOT/Overlay/Info.plist" "$OUTPUT/HeroOverlay.app/Info.plist"
+ditto "$ROOT/Assets/HeroIcons" "$OUTPUT/HeroOverlay.app/HeroIcons"
 xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
     -miphoneos-version-min=17.0 -fobjc-arc -Wall -Wextra -dynamiclib -fvisibility=hidden \
     "-DHC_RUNTIME_GENERATION=\"$GENERATION\"" \
@@ -34,6 +35,9 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
 "$OUTPUT/esp-memory-check"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/esp-presentation-check.c" -o "$OUTPUT/esp-presentation-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/minimap-check.c" -o "$OUTPUT/minimap-check"
+"$OUTPUT/minimap-check"
 "$OUTPUT/esp-presentation-check"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/logic-esp-check.c" -o "$OUTPUT/logic-esp-check"

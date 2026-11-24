@@ -55,8 +55,12 @@ function HeroControlRuntimePulse(config, directory)
     local prefs=CS.UnityEngine.PlayerPrefs
     for key,value in pairs(settings.flags) do
       if key~='reports.enabled' then
-        prefs.SetInt(key,value and 1 or 0)
-        assert(prefs.GetInt(key,-1)==(value and 1 or 0),'flag_readback:'..key)
+        -- ESP now belongs to the independent capture-protected HUD. Leave
+        -- donor skins/camera/report hooks active without duplicate game ESP.
+        local isEsp=key=='__ifxEnemyEspEnabledV1' or key:match('^DoroCheat%.Reference%.R1%.')
+        local effective=not isEsp and value
+        prefs.SetInt(key,effective and 1 or 0)
+        assert(prefs.GetInt(key,-1)==(effective and 1 or 0),'flag_readback:'..key)
       end
     end
     local scale=settings.cameraEnabled and settings.cameraScale or 1.0
@@ -170,7 +174,7 @@ function HeroControlRuntimePulse(config, directory)
       message='Runtime đã nạp hai patch và đọc lại cấu hình. Cần đối chiếu hình ảnh và phản hồi máy chủ.',
       appliedRevision=config.revision,acknowledgement='preferences_readback',
       effectsVerified=false,catalogError=runtime.catalogError,
-      features={icon='game_sprite',minimap='game_minimap',radar=false,
+      features={icon='bundled_hud_portrait',minimap='calibrated_hud_minimap',radar=false,
         skins='donor_resource_validation',reports='server_available_per_known_player'}}
     local encoded=json(state)
     return encoded:sub(1,-2)..',"reports":'..reportJson..',"heroes":'..listJson(runtime.catalog)..'}'

@@ -58,6 +58,8 @@ assert overlay_entitlements.get('com.apple.system-task-ports') is True
 assert 'Overlay/CameraEngine.m' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'esp-memory-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'esp-presentation-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
+assert 'minimap-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
+assert 'Assets/HeroIcons' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'logic-esp-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'lua-reports-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 overlay_info = plistlib.loads((root / 'Overlay/Info.plist').read_bytes())

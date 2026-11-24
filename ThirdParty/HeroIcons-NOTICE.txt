@@ -1,0 +1,7 @@
+Hero portraits are game artwork from Garena's public Liên Quân website.
+Source URLs, IDs and names were supplied by the user's workbook
+“tuong_lien_quan_ID_hoan_chinh.xlsx”. Workbook SHA-256 and per-file image
+SHA-256/URL attribution are recorded in Assets/HeroIcons/catalog.json.
+All rights in the artwork remain with their respective owners.
+130 source images are bundled unmodified (including one GIF); UIKit selects
+the displayed image and clips it at runtime. No game-time downloads.

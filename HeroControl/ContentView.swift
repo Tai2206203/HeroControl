@@ -131,7 +131,7 @@ struct ContentView: View {
     private var runtimeCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("CHỨC NĂNG GAME GỐC", systemImage: "puzzlepiece.extension").font(.headline)
-            Text("Ảnh tướng, minimap game, kỹ năng, skin và truy vấn tố cáo dùng bộ xử lý trong game đi kèm TIPA.")
+            Text("Ảnh tướng và minimap dùng lớp ESP riêng với 130 ảnh đi kèm. Camera, skin và truy vấn tố cáo vẫn dùng adapter game.")
             Text(store.snapshot?.runtime?.message ?? "Cài adapter khi game đang mở và khớp phiên bản. Sau đó đóng hoàn toàn, mở lại game rồi quay về đây kiểm tra.")
                 .foregroundStyle(.secondary)
             if let phase = store.snapshot?.runtime?.phase { Text("Trạng thái: \(phase)").font(.caption.monospaced()) }
@@ -156,7 +156,7 @@ struct ContentView: View {
             Label("KIỂM CHỨNG ĐỒNG THỜI", systemImage: "checklist").font(.headline)
             if store.settings.gameRuntimeEnabled == true {
                 Text("Adapter: \(store.snapshot?.runtime?.phase ?? "chưa có phản hồi")")
-                Text("ESP do game vẽ bằng sprite và minimap gốc; bộ đếm đọc/vẽ ngoài không áp dụng.")
+                Text("ESP được vẽ trên lớp riêng của nút nổi; ảnh được chọn theo ID tướng từ bộ ảnh offline.")
                 Text("Xác nhận cấu hình: \(store.snapshot?.runtime?.acknowledgement ?? "chưa xác nhận")")
             } else { Group {
                 Text("Camera: \(overlay.state?.camera?.code ?? "chưa chạy") • lần ghi: \(overlay.state?.camera?.writeCount ?? 0)")
@@ -303,30 +303,40 @@ struct ContentView: View {
             case .skins: skinControls
             case .reports: reportControls
             case .esp:
-                if store.settings.gameRuntimeEnabled != true {
-                    Text("Ảnh tướng và minimap chưa được kích hoạt. Cài adapter ở thẻ CHỨC NĂNG GAME GỐC để sử dụng.")
-                        .font(.footnote).foregroundStyle(.orange)
-                    Text("Chống nháy bộ vẽ ngoài: giữ mẫu đã xác minh tối đa 0,6 giây khi đọc lỗi ngắn hạn, rồi tự xóa; vị trí vẽ được làm mượt theo nhịp màn hình.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-                if store.settings.gameRuntimeEnabled != true {
-                    Picker("Nhịp đọc ESP ngoài", selection: Binding(get: { store.settings.espReadHz ?? 60 }, set: { store.setEspReadHz($0) })) {
-                        Text("60 Hz").tag(60)
-                        Text("120 Hz").tag(120)
-                    }.pickerStyle(.segmented)
-                    Text("Nhịp đọc này chỉ dùng cho bộ đọc ngoài. iPhone XR hiển thị tối đa 60 Hz.")
-                        .font(.footnote).foregroundStyle(.orange)
-                } else {
-                    Text("ESP cập nhật theo callback render gốc của game. Cấu hình đọc ngoài 60/120 Hz không điều khiển adapter.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-                Text("ESP Icon dùng ảnh sprite tướng; ESP Minimap cập nhật minimap của game qua adapter. Radar riêng đã bỏ. Cài adapter để sử dụng các chức năng này.")
+                Toggle("Bảo vệ ESP khi quay/chụp màn hình", isOn: Binding(
+                    get: { store.settings.espCaptureProtected ?? true }, set: { store.setCaptureProtected($0) }))
+                Text("ESP vẽ trên lớp riêng. Khi phát hiện đang quay, ESP sẽ tạm ẩn cả trên máy. Chống chụp ảnh dùng lớp bảo mật thử nghiệm, cần thử trên iPhone.")
                     .font(.footnote).foregroundStyle(.secondary)
+                if overlay.state?.secureHostAvailable == false && (store.settings.espCaptureProtected ?? true) {
+                    Text("Máy chưa tạo được lớp bảo mật: ESP đang ẩn. Có thể tắt bảo vệ để kiểm tra hiển thị.")
+                        .font(.footnote).foregroundStyle(.orange)
+                }
+                Text("130 ảnh tướng đã đóng gói từ file Excel. Không tải ảnh mạng trong trận. Bật nút nổi và Enable ESP để vẽ.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Picker("Nhịp đọc ESP", selection: Binding(get: { store.settings.espReadHz ?? 60 }, set: { store.setEspReadHz($0) })) {
+                    Text("60 Hz").tag(60)
+                    Text("120 Hz").tag(120)
+                }.pickerStyle(.segmented)
+                DisclosureGroup("Căn chỉnh ESP Minimap") {
+                    minimapSlider("Vị trí ngang", key: "x", value: store.settings.minimapX ?? 0.015, range: 0...0.8)
+                    minimapSlider("Vị trí dọc", key: "y", value: store.settings.minimapY ?? 0.02, range: 0...0.8)
+                    minimapSlider("Kích thước", key: "size", value: store.settings.minimapSize ?? 150, range: 80...240)
+                    minimapSlider("Nửa chiều rộng bản đồ thế giới", key: "extent", value: store.settings.minimapWorldExtent ?? 60, range: 30...200)
+                    Toggle("Xoay bản đồ 180°", isOn: Binding(get: { store.settings.minimapRotated ?? false }, set: { store.setMinimapRotated($0) }))
+                    Text("Căn khung ESP trùng minimap trong game; xoay nếu hai phe dùng hướng bản đồ ngược nhau.").font(.footnote)
+                }
             case .style:
                 Text("Lựa chọn này cần backend áp dụng vào tài nguyên và hành vi game lúc chạy.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }.padding(18).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func minimapSlider(_ title: String, key: String, value: Double, range: ClosedRange<Double>) -> some View {
+        VStack(alignment: .leading) {
+            Text("\(title): \(value, specifier: "%.2f")").font(.caption)
+            Slider(value: Binding(get: { value }, set: { store.setMinimap(key, $0) }), in: range)
+        }
     }
 
     private var cameraControls: some View {
@@ -437,7 +447,7 @@ struct ContentView: View {
                     }
                 }
                 Section("Bản ứng dụng này") {
-                    Text("TIPA đi kèm adapter nạp bản vá tham khảo trong bộ nhớ game, dùng sprite/minimap và mạng của game. Không thay các tệp HeroSkin gốc. Chức năng chỉ được xác minh sau kiểm thử trên thiết bị.")
+                    Text("TIPA đi kèm ảnh tướng offline và lớp ESP riêng. Adapter xử lý camera, skin và truy vấn máy chủ trong bộ nhớ game. Chức năng cần được đối chiếu trên thiết bị.")
                 }
             }.navigationTitle("Thông tin kết nối")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Đóng") { showConnection = false } } }

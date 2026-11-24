@@ -18,6 +18,10 @@ struct OverlayState: Codable {
     let reports: FeatureCheckStatus?
     let displayLimitHz: Int?
     let overlayDrawFPS: Double?
+    var captureProtected: Bool? = nil
+    var secureHostAvailable: Bool? = nil
+    var screenCaptured: Bool? = nil
+    var iconCount: Int? = nil
 }
 
 struct EspStatus: Codable {

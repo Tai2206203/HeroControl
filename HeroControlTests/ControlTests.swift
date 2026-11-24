@@ -2,6 +2,29 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    func testMinimapAndCaptureOptionsSurviveProfileRoundTripAndNormalize() throws {
+        var settings = ControlSettings()
+        settings.espCaptureProtected = false
+        settings.minimapX = 0.2
+        settings.minimapY = 0.1
+        settings.minimapSize = 180
+        settings.minimapWorldExtent = 65
+        settings.minimapRotated = true
+        let data = try JSONEncoder().encode(settings)
+        var decoded = try JSONDecoder().decode(ControlSettings.self, from: data)
+        XCTAssertEqual(decoded, settings)
+        decoded.minimapX = .nan
+        decoded.minimapSize = 999
+        decoded.minimapWorldExtent = -1
+        decoded.normalize()
+        XCTAssertEqual(decoded.minimapX, 0.015)
+        XCTAssertEqual(decoded.minimapSize, 240)
+        XCTAssertEqual(decoded.minimapWorldExtent, 30)
+        let old = try JSONDecoder().decode(ControlSettings.self, from: Data(#"{"flags":{},"cameraScale":1,"selectedSkins":{}}"#.utf8))
+        XCTAssertNil(old.espCaptureProtected)
+        XCTAssertNil(old.minimapSize)
+    }
+
     func testHeroIconDirectoryMergesUnknownIDsAndEscapesCSV() {
         let entries = HeroIconEntry.collect(heroes: [HeroChoice(id: 123, name: "Tên, \"tướng\"", skins: [])],
                                            observedIDs: [123, 599, 599, -1, 0])

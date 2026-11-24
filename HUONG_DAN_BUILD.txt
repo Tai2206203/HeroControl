@@ -1,4 +1,4 @@
-HERO CONTROL 0.10.3 — BUILD 23
+HERO CONTROL 0.11.0 — BUILD 24
 
 BUILD TỪ THƯ MỤC HIỆN TẠI
 
@@ -33,7 +33,7 @@ triển khai action runtime để dùng cài/gỡ adapter; dependency không đ�
 
 CÀI VÀ THỬ
 
-Đọc CAP_NHAT_0.10.3.txt. Tắt nút nổi cũ trước khi cài đè.
+Đọc CAP_NHAT_0.11.0.txt. Tắt nút nổi cũ trước khi cài đè.
 Mở game vào sảnh, quay lại Hero Control, bấm Cài / cập nhật adapter game.
 Đóng hoàn toàn game rồi mở lại; kiểm tra adapter và thử từng nhóm trong trận tập.
 Nút nổi chuyển cấu hình khi chạy; hoặc bấm Áp dụng. Nếu game bị tạm dừng ở nền,
@@ -45,7 +45,7 @@ không tự cài jailbreak, trust cache hoặc sửa entitlement game. Không s�
 file HeroSkin gốc. Chưa active thì việc chép file chưa chứng minh nạp thành công.
 Gỡ adapter từ app rồi mở lại game để xóa hook khỏi bộ nhớ; nhật ký được giữ lại.
 
-Nguồn ảnh/minimap là sprite/hệ thống game thật. Truy vấn tố cáo dùng giao thức
+Ảnh ESP nay đóng gói từ Excel; minimap là lớp ESP có căn chỉnh. Truy vấn tố cáo dùng giao thức
 donor theo người chơi đã thu thập; chưa chứng minh lấy được mọi bản ghi máy chủ.
 Xuất chẩn đoán có runtime, runtimeDiagnostics, phản hồi gốc và dữ liệu lịch sử.
 Xem phase/code/helperError khi adapter chưa phản hồi.

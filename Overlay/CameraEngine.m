@@ -284,11 +284,10 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             return;
         }
         BOOL runtimeMode=[settings[@"gameRuntimeEnabled"] isEqual:@YES];
-        BOOL idEnabled=[flags[@"HeroControl.ESP.HeroID"] isEqual:@YES];
         if (runtimeMode) {
             [self restoreCamera];
             [self syncRuntime:settings now:now];
-            if (!idEnabled || ![flags[@"__ifxEnemyEspEnabledV1"] isEqual:@YES]) {
+            if (![flags[@"__ifxEnemyEspEnabledV1"] isEqual:@YES]) {
                 [self releaseTarget];
                 if (_timerHz!=10) { _timerHz=10;dispatch_source_set_timer(_timer,DISPATCH_TIME_NOW,100*NSEC_PER_MSEC,10*NSEC_PER_MSEC); }
                 return;
@@ -314,7 +313,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         _espActive = espEnabled;
         if (!cameraEnabled) {
             BOOL wasActive = _hasWritten; [self restoreCamera];
-            if (!wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"] && ![_lastReport[@"code"] isEqual:@"camera_disabled"])
+            if (!runtimeMode && !wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"] && ![_lastReport[@"code"] isEqual:@"camera_disabled"])
                 [self emit:@"camera_disabled" message:@"Camera xa đang tắt." extra:nil];
             if (!espEnabled && !reportsEnabled) { [self releaseTarget]; _nextDiscovery = 0; return; }
         }

@@ -1,0 +1,54 @@
+HERO CONTROL 0.11.0 — BUILD 24
+
+ẢNH TƯỚNG TỪ EXCEL
+
+Đọc 130 dòng ID/tên/link từ tuong_lien_quan_ID_hoan_chinh.xlsx. Workbook chỉ
+có link, không có ảnh nhúng. Đã tải 130 ảnh chính thức và đóng gói offline tại
+Assets/HeroIcons, ánh xạ ID trong catalog.json; mỗi ảnh có URL và SHA-256.
+Không tải ảnh trong trận. Ảnh giữ nguyên byte nguồn (JPEG/PNG/GIF).
+ESP Icon chọn ảnh theo heroID; ID chưa có ảnh hiện số để nhận biết cần bổ sung.
+
+MINIMAP VÀ LỚP VẼ
+
+Toàn bộ ESP nay do lớp riêng của nút nổi vẽ; tắt các flag ESP của renderer
+tham khảo trong game để tránh trùng hình và để phần ESP nằm cùng lớp bảo vệ.
+Camera, skin và truy vấn tố cáo vẫn đi qua adapter. Bật nút nổi và Enable ESP.
+ESP Minimap vẽ ảnh tướng theo worldX/worldZ, không phụ thuộc onScreen.
+Trong tab ESP của app có “Căn chỉnh ESP Minimap”: vị trí ngang/dọc theo tỉ lệ
+màn hình, cạnh khung 80–240pt, giới hạn thế giới và xoay 180°. Mặc định extent
+±60; cần căn khung trùng minimap và đối chiếu hai phe trên điện thoại.
+Đây là overlay tọa độ, không sửa dữ liệu minimap gốc của game.
+Giữ bộ đệm 0,6 giây và làm mượt đã có.
+
+MENU MỚI
+
+Menu nổi theo bố cục ảnh tham khảo: nền xám tối, sidebar biểu tượng, trang
+chủ banner và các ô chức năng ESP/Skins/Camera/Reports. Dùng ảnh tướng đóng
+gói làm họa tiết, không sao chép quảng cáo hay thêm nút aimbot/macro giả.
+Menu điều chỉnh theo màn hình ngang/dọc. Camera slider và các tab vẫn điều
+khiển cấu hình chung. Giao diện cần đối chiếu trên iPhone sau CI.
+
+BẢO VỆ QUAY/CHỤP MÀN HÌNH
+
+Bật mặc định khi trường espCaptureProtected chưa có. Có công tắc trong tab
+ESP của app và dưới menu nổi. ESP nằm trong UIView riêng, menu điều khiển
+độc lập. Thử đặt ESP vào canvas của UITextField.secureTextEntry, kết hợp cửa
+sổ secure vốn có. Đây là cơ chế phụ thuộc UIKit/jailbreak, không phải API
+Apple bảo đảm loại mọi UIView khỏi ảnh chụp. secureHostAvailable chỉ xác nhận
+tìm được canvas, không xác nhận ảnh chụp thực tế đã loại ESP.
+Khi UIScreen.isCaptured báo đang quay/mirror, lớp ESP tạm ẩn cả trên thiết bị.
+Nếu không tìm được canvas bảo mật, ESP cũng ẩn khi chế độ bảo vệ đang bật;
+app báo lý do, có thể tắt bảo vệ để kiểm tra hiển thị.
+Không dùng thông báo chụp xong để tuyên bố đã chặn ảnh trước đó:
+https://developer.apple.com/documentation/uikit/uiapplication/userdidtakescreenshotnotification
+https://developer.apple.com/documentation/uikit/uiscreen/iscaptured
+Cần thử ảnh chụp, quay hệ thống, mirror và quay ReplayKit trên iPhone. Không
+cam kết bảo vệ trước mọi phương thức capture hoặc thiết bị quay bên ngoài.
+
+CẬP NHẬT
+
+Git push, chờ CI, tắt nút nổi cũ và cài TIPA mới. Cài lại adapter rồi đóng hẳn
+và mở lại game để tắt renderer ESP cũ, đồng bộ build/generation.
+Bật nút nổi, Enable ESP, ESP Icon/Minimap. Nếu ESP không hiện, xem trạng thái
+lớp bảo mật; tắt bảo vệ tạm thời để phân biệt lỗi đọc với lỗi secure canvas.
+Xem VERIFICATION.txt cho các kiểm tra mô phỏng và giới hạn kiểm chứng.
