@@ -33,6 +33,9 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/esp-memory-check.c" -o "$OUTPUT/esp-memory-check"
 "$OUTPUT/esp-memory-check"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/esp-presentation-check.c" -o "$OUTPUT/esp-presentation-check"
+"$OUTPUT/esp-presentation-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/logic-esp-check.c" -o "$OUTPUT/logic-esp-check"
 "$OUTPUT/logic-esp-check"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \

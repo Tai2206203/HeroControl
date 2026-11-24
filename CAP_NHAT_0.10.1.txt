@@ -1,0 +1,43 @@
+HERO CONTROL 0.10.1 — BUILD 21
+
+SỬA THEO LOG BUILD 20
+
+1. Helper đã chạy EUID 0 và tìm đúng TweakInject nhưng ghi dylib bị từ chối.
+Bổ sung entitlement com.apple.private.security.storage.AppBundles cho helper,
+đúng yêu cầu RootHide đối với truy cập bundle. Không chmod cả thư mục loader.
+Nguồn: https://github.com/RootHide/Developer/blob/main/entitlements.md
+Đây là sửa thiếu quyền đã xác định; vẫn cần thử trên thiết bị để biết có thêm
+hạn chế filesystem nào khác. Khi lỗi, báo installStage/installPath, domain/code
+Foundation và POSIX bên dưới nếu có. Không còn bỏ mất snapshot khi ok=false;
+trạng thái và thông báo cài lỗi được giữ lại để đọc/export.
+
+2. ESP ngoài game giữ mẫu actor và ma trận đã xác minh tối đa 0,6 giây khi lỗi
+đọc tạm thời. Dữ liệu mới dùng ngay, không sleep luồng và không chờ đủ 0,6 giây.
+Mẫu giữ không tự gia hạn; mẫu rỗng hợp lệ xóa mục tiêu ngay. Đổi phiên, camera,
+đội hoặc tắt ESP sẽ xóa/invalidate cache phù hợp. Chiếu lại từ tọa độ thế giới
+và làm mượt vị trí màn hình với hằng số thời gian 0,06 giây; nhảy lớn sẽ reset.
+Loại tọa độ nằm ngoài viewport; giữ nguyên lỗi đọc thật trong memoryStatus.
+Telemetry bổ sung sampleRetained/sampleAge/holdWindowSeconds/readSampleUptime.
+Đây là cửa sổ giữ mẫu, không phải cam kết hết mọi hiện tượng giật.
+
+3. Ảnh tướng/minimap và truy vấn tố cáo máy chủ cần adapter trong tiến trình
+được cài và nạp thật. Log cũ chỉ có cached_game_mail, querySupported=false,
+records=[]: chưa truy vấn máy chủ và không chứng minh tài khoản không bị tố cáo.
+UI nay nói rõ giới hạn này. Bộ đệm ngoài game không đổi renderer native của
+adapter. Không tuyên bố mọi lịch sử đã được tải hoặc các tính năng đã chạy
+đúng trên điện thoại khi chưa có phản hồi thực tế của adapter.
+
+CÁCH CẬP NHẬT
+
+Sau commit cục bộ, chỉ chạy git push để kích hoạt workflow hiện có.
+Tắt nút nổi cũ, cài TIPA build 21, mở game đúng phiên bản, vào HeroControl cài
+lại adapter. Chỉ sau khi báo cài thành công mới đóng hẳn rồi mở lại game.
+Kiểm tra runtime responding=true và phase=active. Nếu còn unavailable, xuất
+log mới có installStage/installPath/installErrorDomain/installPOSIXError;
+không sửa quyền hệ thống hàng loạt. Đối chiếu ảnh tướng, minimap, độ ổn định
+ESP trong trận và request/response của truy vấn máy chủ.
+
+KIỂM TRA
+
+Xem đầu VERIFICATION.txt. Windows không có Xcode/iPhone SDK; biên dịch native,
+XCTest và kiểm chứng trên điện thoại còn chờ GitHub Actions/thiết bị.

@@ -32,7 +32,14 @@ struct NativeContractCheck {
         do {
             _ = try await backend.send(action: "apply", revision: "must-not-ack", settings: ControlSettings())
             fatalError("Diagnostics backend unexpectedly accepted apply")
-        } catch is BackendError { /* Expected refusal. */ }
+        } catch let BackendError.rejected(_, data) {
+            let refused = try BackendReplyDecoder.decode(data)
+            guard !refused.ok, refused.snapshot?.connected == false else {
+                fatalError("Rejected response lost its diagnostic snapshot")
+            }
+            let refusalTrace = await backend.exchangeTrace()
+            guard refusalTrace?.stage == "rejected" else { fatalError("Missing rejection trace") }
+        }
 
         let numeric = Data(#"{"protocolVersion":1,"ok":1,"message":"old broken response"}"#.utf8)
         let runtimeStatus = try await backend.send(action: "runtimeStatus")

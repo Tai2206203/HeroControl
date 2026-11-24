@@ -3,8 +3,11 @@ import Darwin
 
 enum BackendError: LocalizedError {
     case unavailable(String)
+    case rejected(String, Data)
     var errorDescription: String? {
-        switch self { case .unavailable(let text): return text }
+        switch self {
+        case .unavailable(let text), .rejected(let text, _): return text
+        }
     }
 }
 
@@ -118,7 +121,10 @@ actor NativeBackend: BackendClient {
         guard reply.protocolVersion == 1, (reply.snapshot?.protocolVersion ?? 1) == 1 else {
             throw BackendError.unavailable("Phiên bản giao thức backend không tương thích.")
         }
-        guard reply.ok else { throw BackendError.unavailable(reply.message) }
+        guard reply.ok else {
+            trace?.stage = "rejected"
+            throw BackendError.rejected(reply.message, responseData)
+        }
         trace?.stage = "complete"
         return reply
     }

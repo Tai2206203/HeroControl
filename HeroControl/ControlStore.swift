@@ -190,7 +190,12 @@ final class ControlStore: ObservableObject {
             }
         } catch {
             backendTrace = await backend.exchangeTrace()
-            disconnected(error)
+            if let backendError = error as? BackendError, case .rejected(_, let data) = backendError,
+               let reply = try? BackendReplyDecoder.decode(data), reply.protocolVersion == 1,
+               reply.snapshot?.protocolVersion == 1 {
+                accept(reply.snapshot)
+                message = error.localizedDescription
+            } else { disconnected(error) }
             if action == "installRuntime" || action == "removeRuntime" {
                 runtimeOperationMessage = error.localizedDescription; runtimeOperationTrace = backendTrace
             }

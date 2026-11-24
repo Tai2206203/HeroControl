@@ -227,6 +227,12 @@ struct KernelDiagnostics: Codable {
     let helperStdoutPreview: String?
     let helperDecodeError: String?
     let helperReportedEUID: UInt32?
+    var loaderCandidates: [String]? = nil
+    var installStage: String? = nil
+    var installPath: String? = nil
+    var installErrorDomain: String? = nil
+    var installErrorCode: Int? = nil
+    var installPOSIXError: Int? = nil
 }
 
 struct BackendRequest: Encodable {

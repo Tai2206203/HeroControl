@@ -82,6 +82,11 @@ struct ContentView: View {
             Text(store.snapshot?.runtime?.message ?? "Cài adapter khi game đang mở và khớp phiên bản. Sau đó đóng hoàn toàn, mở lại game rồi quay về đây kiểm tra.")
                 .foregroundStyle(.secondary)
             if let phase = store.snapshot?.runtime?.phase { Text("Trạng thái: \(phase)").font(.caption.monospaced()) }
+            if let code = store.snapshot?.runtimeDiagnostics?.code { Text("Mã cài/kiểm tra: \(code)").font(.caption.monospaced()) }
+            if let report = store.snapshot?.runtimeDiagnostics {
+                if let stage = report.installStage { Text("Bước: \(stage)").font(.caption) }
+                if let value = report.installPOSIXError { Text("Lỗi POSIX: \(value)").font(.caption.monospaced()) }
+            }
             if let result = store.runtimeOperationMessage { Text("Lần cài/gỡ gần nhất: \(result)").font(.caption) }
             if let error = store.snapshot?.runtime?.catalogError { Text("Danh mục skin: \(error)").foregroundStyle(.orange) }
             Button("Cài / cập nhật adapter game") { Task { await store.installRuntime() } }
@@ -246,6 +251,12 @@ struct ContentView: View {
             case .reports: reportControls
             case .esp:
                 if store.settings.gameRuntimeEnabled != true {
+                    Text("Ảnh tướng và minimap chưa được kích hoạt. Cài adapter ở thẻ CHỨC NĂNG GAME GỐC để sử dụng.")
+                        .font(.footnote).foregroundStyle(.orange)
+                    Text("Chống nháy bộ vẽ ngoài: giữ mẫu đã xác minh tối đa 0,6 giây khi đọc lỗi ngắn hạn, rồi tự xóa; vị trí vẽ được làm mượt theo nhịp màn hình.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                if store.settings.gameRuntimeEnabled != true {
                     Picker("Nhịp đọc ESP ngoài", selection: Binding(get: { store.settings.espReadHz ?? 60 }, set: { store.setEspReadHz($0) })) {
                         Text("60 Hz").tag(60)
                         Text("120 Hz").tag(120)
@@ -320,6 +331,10 @@ struct ContentView: View {
 
     private var reportControls: some View {
         VStack(alignment: .leading, spacing: 14) {
+            if store.settings.gameRuntimeEnabled != true {
+                Text("Chưa bật truy vấn máy chủ. Kết quả bên dưới chỉ là cache thư; cần cài adapter thành công và mở lại game.")
+                    .font(.footnote).foregroundStyle(.orange)
+            }
             Text(reportStatus?.message ?? "Cài adapter và bật truy vấn lịch sử tố cáo.")
             if store.snapshot?.runtime?.historicalReports != nil {
                 Text("Dữ liệu lần cuối: \(store.snapshot?.runtime?.timestamp ?? "chưa rõ"). Adapter hiện không phản hồi trực tiếp; đây là lịch sử đã lưu.")

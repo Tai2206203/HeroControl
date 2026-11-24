@@ -7,6 +7,7 @@
 #import "OverlayCommon.h"
 #import "HCFeatures.h"
 #include "OverlayLock.h"
+#include "../BackendSDK/EspPresentation.h"
 #import "CameraEngine.h"
 #include <dlfcn.h>
 #include <notify.h>
@@ -92,7 +93,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.10.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.10.1", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -155,7 +156,12 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     return settings;
 }
 
-@implementation HCOverlayCanvas
+@implementation HCOverlayCanvas {
+    HCEspScreenState _screenStates[HC_ESP_MAX_TARGETS];
+    NSInteger _screenPID;
+    CGSize _screenSize;
+    NSString *_screenCamera;
+}
 - (instancetype)initWithFrame:(CGRect)frame {
     if ((self = [super initWithFrame:frame])) {
         self.backgroundColor = UIColor.clearColor;
@@ -342,13 +348,30 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     NSDictionary *flags = self.settings[@"flags"];
     if ([self.settings[@"gameRuntimeEnabled"] isEqual:@YES]) return;
     if (HCLocked || ![flags[@"__ifxEnemyEspEnabledV1"] boolValue]) return;
-    if (!HCEspStatus[@"sampleUptime"] || NSProcessInfo.processInfo.systemUptime - [HCEspStatus[@"sampleUptime"] doubleValue] > 0.5) return;
+    double now=NSProcessInfo.processInfo.systemUptime;
+    double age=now-[HCEspStatus[@"sampleUptime"] doubleValue];
+    if (!HCEspStatus[@"sampleUptime"] || age<0 || age>HC_ESP_HOLD_SECONDS) return;
+    NSInteger pid=[HCEspStatus[@"pid"] integerValue];
+    NSString *camera=HCEspStatus[@"nativeCamera"];
+    if (pid!=_screenPID || !CGSizeEqualToSize(_screenSize,self.bounds.size) || ![_screenCamera isEqual:camera]) {
+        memset(_screenStates,0,sizeof(_screenStates));_screenPID=pid;_screenSize=self.bounds.size;_screenCamera=[camera copy];
+    }
     CGFloat w = self.bounds.size.width, h = self.bounds.size.height;
     UIColor *color = HCAccent();
     for (NSDictionary *target in HCEspStatus[@"targets"]) {
         if (![target[@"onScreen"] boolValue]) continue;
-        CGFloat x = [target[@"x"] doubleValue] * w, top = [target[@"headY"] doubleValue] * h;
-        CGFloat bottom = [target[@"feetY"] doubleValue] * h, height = bottom - top;
+        uint32_t objectID=[target[@"objectID"] unsignedIntValue];int32_t heroID=[target[@"heroID"] intValue];
+        HCEspScreenState *slot=NULL;
+        for(int i=0;i<HC_ESP_MAX_TARGETS;i++) if(_screenStates[i].valid && _screenStates[i].objectID==objectID && _screenStates[i].heroID==heroID) { slot=&_screenStates[i];break; }
+        if(!slot) {
+            slot=&_screenStates[0];
+            for(int i=0;i<HC_ESP_MAX_TARGETS;i++) {
+                if(!_screenStates[i].valid) { slot=&_screenStates[i];break; }
+                if(_screenStates[i].time<slot->time) slot=&_screenStates[i];
+            }
+        }
+        if(!HCEspSmooth(slot,objectID,heroID,now,[target[@"x"] floatValue],[target[@"headY"] floatValue],[target[@"feetY"] floatValue])) continue;
+        CGFloat x=slot->x*w,top=slot->headY*h,bottom=slot->feetY*h,height=bottom-top;
         if (!isfinite(height) || height < 4 || height > h) continue;
         CGRect box = CGRectMake(x - height * 0.24, top, height * 0.48, height);
         [color setStroke];

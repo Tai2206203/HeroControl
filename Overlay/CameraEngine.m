@@ -3,6 +3,7 @@
 #include "../BackendSDK/CameraMemory.h"
 #include "../BackendSDK/EspMemory.h"
 #include "../BackendSDK/LogicEsp.h"
+#include "../BackendSDK/EspPresentation.h"
 #include "../BackendSDK/LuaReports.h"
 #include "../Runtime/RuntimeShared.h"
 
@@ -59,6 +60,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     NSString *_profileRevision;
     NSString *_runtimeDirectory;
     NSTimeInterval _nextRuntimeSync;
+    HCEspSampleBuffer _espSamples;
 }
 - (instancetype)initWithProfile:(NSString *)profile report:(void (^)(NSDictionary *))report espReport:(void (^)(NSDictionary *))espReport reportsReport:(void (^)(NSDictionary *))reportsReport {
     if ((self = [super init])) {
@@ -84,6 +86,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     dispatch_async(dispatch_get_main_queue(), ^{ report(value); });
 }
 - (void)releaseTarget {
+    HCEspSampleReset(&_espSamples);
     if (_reportsActive && _pid) [self emitReports:@{@"code": @"reports_session_reset", @"message": @"Phiên đọc game đã thay đổi; đang chờ mẫu thư mới.", @"records": @[], @"querySupported": @NO}];
     if (_target.task != MACH_PORT_NULL) mach_port_deallocate(mach_task_self(), _target.task);
     _target = (HCCameraTask){0}; _base = 0; _pid = 0; _hasWritten = NO;
@@ -179,7 +182,8 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     HCLogicFrame logic = {0};
     BOOL logicAvailable = _logicLayoutVerified && (status == HC_ESP_OK || status == HC_ESP_MATRICES_PENDING) &&
         HCLogicRead(self.memory, _base, frame.hostCamp, &logic);
-    if (status == HC_ESP_OK || status == HC_ESP_MATRICES_PENDING) HCLogicMerge(&frame, &logic, logicAvailable, unseenOnly);
+    if (status == HC_ESP_OK || status == HC_ESP_MATRICES_PENDING) HCLogicMerge(&frame, &logic, logicAvailable, false);
+    HCEspPresentation presentation=HCEspPresent(&_espSamples,&frame,now,unseenOnly);
     if (!_readWindow) _readWindow = now;
     _readSamples++;
     if (now - _readWindow >= 1) { _measuredReadHz = _readSamples / (now - _readWindow); _readSamples = 0; _readWindow = now; }
@@ -200,8 +204,10 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             @"cooldownSource": knownSlots ? (t.logicCooldowns ? @"logic" : @"visual") : @"unavailable",
             @"cooldowns": @[@(t.cooldowns[0]), @(t.cooldowns[1]), @(t.cooldowns[2])]}];
     }
-    NSString *code = status == HC_ESP_OK ? @"esp_frame_read" : status == HC_ESP_MATRICES_PENDING ? @"esp_matrices_pending" : @"esp_waiting";
-    [self emitEsp:@{@"code": code, @"message": status == HC_ESP_OK ? @"Đã đọc khung ESP; cần đối chiếu hình vẽ trong trận." : @"Đang chờ đối tượng hoặc ma trận camera hợp lệ trong trận.",
+    NSString *code = presentation.retained ? @"esp_frame_retained" : status == HC_ESP_OK ? @"esp_frame_read" : status == HC_ESP_MATRICES_PENDING ? @"esp_matrices_pending" : @"esp_waiting";
+    NSString *message=presentation.retained ? @"Đang dùng mẫu đã xác minh trong cửa sổ tối đa 0,6 giây để tránh nháy." :
+        status == HC_ESP_OK ? @"Đã đọc khung ESP; cần đối chiếu hình vẽ trong trận." : @"Đang chờ đối tượng hoặc ma trận camera hợp lệ trong trận.";
+    [self emitEsp:@{@"code": code, @"message": message,
         @"memoryStatus": @(status), @"pid": @(_pid), @"targetCount": @(frame.count), @"projectedCount": @(frame.projected),
         @"requestedReadHz": @(_requestedHz), @"measuredReadHz": @(_measuredReadHz),
         @"hiddenClientCount": @(hiddenCount),
@@ -212,7 +218,9 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         @"matrixStage": @(frame.matrixStage), @"viewMode": @(frame.viewMode), @"projectionDirty": @(frame.projectionDirty),
         @"nativeCamera": [NSString stringWithFormat:@"0x%llx", (unsigned long long)frame.nativeCamera],
         @"hostX": @(frame.hostX), @"hostZ": @(frame.hostZ), @"hasHostPosition": frame.hasHostPosition ? @YES : @NO,
-        @"targets": targets, @"sampleUptime": @(now), @"timestamp": [_dateFormatter stringFromDate:NSDate.date]}];
+        @"targets": targets, @"sampleUptime": @(presentation.sourceTime), @"readSampleUptime": @(now),
+        @"sampleRetained": presentation.retained ? @YES : @NO, @"sampleAge": @(presentation.age), @"holdWindowSeconds": @(HC_ESP_HOLD_SECONDS),
+        @"timestamp": [_dateFormatter stringFromDate:NSDate.date]}];
 }
 - (BOOL)discover {
     NSDictionary *inspection = HCGameInspection();
@@ -294,7 +302,10 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             dispatch_source_set_timer(_timer, DISPATCH_TIME_NOW, NSEC_PER_SEC / (uint64_t)targetHz, NSEC_PER_MSEC);
             _readSamples = 0; _readWindow = now; _measuredReadHz = 0;
         }
-        if (!espEnabled && _espActive) [self emitEsp:@{@"code": @"esp_disabled", @"message": @"ESP đang tắt.", @"targets": @[]}];
+        if (!espEnabled && _espActive) {
+            HCEspSampleReset(&_espSamples);
+            [self emitEsp:@{@"code": @"esp_disabled", @"message": @"ESP đang tắt.", @"targets": @[]}];
+        }
         _espActive = espEnabled;
         if (!cameraEnabled) {
             BOOL wasActive = _hasWritten; [self restoreCamera];

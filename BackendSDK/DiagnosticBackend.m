@@ -44,7 +44,7 @@ static NSDictionary *HCEntitlements(void) {
     CFTypeRef task = create(kCFAllocatorDefault);
     if (!task) return values;
     NSArray *keys = @[@"com.apple.private.security.no-sandbox", @"com.apple.private.security.no-container",
-        @"platform-application", @"com.apple.private.security.storage.AppDataContainers", @"com.apple.private.persona-mgmt",
+        @"platform-application", @"com.apple.private.security.storage.AppDataContainers", @"com.apple.private.security.storage.AppBundles", @"com.apple.private.persona-mgmt",
         @"task_for_pid-allow", @"com.apple.system-task-ports"];
     for (NSString *key in keys) {
         CFTypeRef value = copy(task, (__bridge CFStringRef)key, NULL);
@@ -494,7 +494,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
         else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.10.0",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.10.1",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
@@ -504,7 +504,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         NSDictionary *runtime = HCRuntimeSessionReport[@"runtime"];
         BOOL runtimeConnected = [runtime[@"responding"] isEqual:@YES] && HCRuntimeFresh(runtime);
         if (HCRuntimeSessionReport) {
-            NSMutableDictionary *runtimeSummary=[runtime ?: @{@"phase": @"unavailable", @"message": HCRuntimeSessionReport[@"summary"] ?: @"Chưa có phản hồi runtime."} mutableCopy];
+            NSMutableDictionary *runtimeSummary=[runtime ?: @{@"phase": @"unavailable", @"code":HCRuntimeSessionReport[@"code"] ?: @"runtime_unavailable", @"message": HCRuntimeSessionReport[@"summary"] ?: @"Chưa có phản hồi runtime."} mutableCopy];
             [runtimeSummary removeObjectForKey:@"heroes"];
             runtimeSummary[@"responding"]=runtimeConnected ? @YES : @NO;
             snapshot[@"runtime"] = runtimeSummary;
@@ -526,7 +526,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
             snapshot[@"supportedKeys"]=supported;
             if ([runtime[@"appliedRevision"] isKindOfClass:NSString.class]) snapshot[@"appliedRevision"]=runtime[@"appliedRevision"];
         }
-        BOOL runtimeAction=installRuntime || removeRuntime || [action isEqual:@"runtimeStatus"] || (runtimeEnabled && (apply || [action isEqual:@"status"]));
+        BOOL runtimeAction=([action isEqual:@"status"] && HCRuntimeSessionReport && !runtime) || installRuntime || removeRuntime || [action isEqual:@"runtimeStatus"] || (runtimeEnabled && (apply || [action isEqual:@"status"]));
         if (runtimeAction) { message=HCRuntimeSessionReport[@"summary"] ?: @"Chưa có phản hồi runtime.";snapshot[@"message"]=message; }
         BOOL ok=!apply;
         if (apply) ok=(runtimeConnected && [runtime[@"appliedRevision"] isEqual:parsed[@"revision"]]) ||

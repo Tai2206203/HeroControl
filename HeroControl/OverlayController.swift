@@ -47,6 +47,10 @@ struct EspStatus: Codable {
     let logicFrameNumber: UInt32?
     let cooldownKnownCount: Int?
     let sampleUptime: Double?
+    let readSampleUptime: Double?
+    let sampleRetained: Bool?
+    let sampleAge: Double?
+    let holdWindowSeconds: Double?
 }
 
 struct EspTargetStatus: Codable {

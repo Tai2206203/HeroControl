@@ -1,4 +1,5 @@
 import copy
+import plistlib
 import importlib.util
 from pathlib import Path
 import unittest
@@ -10,6 +11,14 @@ SPEC.loader.exec_module(signing)
 
 
 class EntitlementTests(unittest.TestCase):
+    def test_installer_signature_requires_bundle_storage_access(self):
+        expected = plistlib.loads((SCRIPT.parent.parent / "Signing/Helper.entitlements").read_bytes())
+        key = "com.apple.private.security.storage.AppBundles"
+        self.assertIs(expected.get(key), True)
+        actual = copy.deepcopy(expected)
+        del actual[key]
+        self.assertIn(key, signing.missing_entitlements(actual, expected))
+
     def test_equal_array_from_separate_plist_decode_is_accepted(self):
         expected = {"platform-application": True,
                     "com.apple.security.exception.iokit-user-client-class": ["IOSurfaceRootUserClient"]}

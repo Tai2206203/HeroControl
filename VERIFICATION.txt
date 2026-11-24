@@ -1,3 +1,24 @@
+HERO CONTROL 0.10.1 — BUILD 21
+
+ĐỢT SỬA CÀI ADAPTER VÀ ỔN ĐỊNH ESP
+
+- 14 unittest Python qua, gồm kiểm tra chữ ký thiếu AppBundles bị phát hiện.
+- 6 fixture C camera/ESP/presentation/logic/Lua-cache/CString được biên dịch
+  và chạy với Zig/Clang, -std=c11 -Wall -Wextra -Werror, bộ nhớ mô phỏng.
+- Fixture mới kiểm tra hold 0,6 giây không tự gia hạn, chiếu lại dữ liệu thế
+  giới bằng ma trận mới, xóa mục tiêu theo mẫu rỗng hợp lệ, reset định danh/
+  camera, lọc viewport và làm mượt độc lập tốc độ khung hình.
+- Lua 5.3 smoke test, kiểm tra payload, project/plist, shell syntax qua.
+- Parser kiểm tra cú pháp 9 tệp Swift và 4 tệp Objective-C/header đã sửa.
+- Thêm XCTest giữ snapshot lỗi installRuntime khi native trả ok=false và
+  kiểm tra hợp đồng native giữ dữ liệu phản hồi bị từ chối. Các kiểm tra Swift
+  này chưa chạy tại Windows; workflow macOS/Xcode sẽ biên dịch và chạy.
+- Không có iPhone SDK/Xcode tại máy này. Chưa xác nhận entitlement mới giải
+  quyết hết lỗi ghi trên máy thật, ảnh tướng/minimap hiển thị, hoặc máy chủ
+  trả lịch sử đầy đủ. Không gửi yêu cầu mạng game trong các kiểm thử.
+
+LỊCH SỬ KIỂM TRA BUILD 20
+
 HERO CONTROL 0.10.0 — BUILD 20
 
 ĐỢT KIỂM TRA ADAPTER GAME

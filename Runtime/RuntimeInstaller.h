@@ -21,6 +21,37 @@ static NSString *HCRuntimeLoaderDirectory(NSMutableDictionary *report) {
     if (paths.count != 1) return nil;
     return paths.anyObject;
 }
+// Preserve the failing operation and its native error instead of reporting a
+// previous Foundation error when a later POSIX ownership operation fails.
+static BOOL HCRuntimeInstallFile(NSString *source, NSString *path, uid_t owner, mode_t mode,
+                                NSMutableDictionary *report, NSError **error) {
+    report[@"installPath"]=path;report[@"installStage"]=@"read_source";
+    *error=nil;
+    NSData *data=[NSData dataWithContentsOfFile:source options:0 error:error];
+    if (!data) return NO;
+    report[@"installStage"]=@"write_file";
+    if (![data writeToFile:path options:NSDataWritingAtomic error:error]) return NO;
+    report[@"installStage"]=@"set_owner";
+    if (chown(path.fileSystemRepresentation,owner,owner)) {
+        int code=errno;*error=[NSError errorWithDomain:NSPOSIXErrorDomain code:code userInfo:nil];return NO;
+    }
+    report[@"installStage"]=@"set_mode";
+    if (chmod(path.fileSystemRepresentation,mode)) {
+        int code=errno;*error=[NSError errorWithDomain:NSPOSIXErrorDomain code:code userInfo:nil];return NO;
+    }
+    return YES;
+}
+static void HCRuntimeInstallError(NSMutableDictionary *report, NSError *error) {
+    if (!error) { int code=errno;error=[NSError errorWithDomain:NSPOSIXErrorDomain code:code userInfo:nil]; }
+    report[@"installErrorDomain"]=error.domain;report[@"installErrorCode"]=@(error.code);
+    NSError *cause=error;
+    for (unsigned i=0;i<8 && cause;i++) {
+        if ([cause.domain isEqual:NSPOSIXErrorDomain]) { report[@"installPOSIXError"]=@(cause.code);break; }
+        cause=cause.userInfo[NSUnderlyingErrorKey];
+    }
+    report[@"summary"]=[NSString stringWithFormat:@"%@: %@ (%@). %@",
+        report[@"installStage"] ?: @"install",report[@"installPath"] ?: @"",error.domain,error.localizedDescription];
+}
 static BOOL HCRuntimeValidateConfig(NSDictionary *config) {
     return [config isKindOfClass:NSDictionary.class] &&
         [config[@"revision"] isKindOfClass:NSString.class] && [config[@"revision"] length]>0 &&
@@ -74,7 +105,9 @@ static NSDictionary *HCRuntimeReport(NSString *action, NSDictionary *config) {
         NSError *error=nil;
         if (remove) {
             // Remove the filter first. No recursive deletion or wildcard paths.
+            report[@"installStage"]=@"remove_filter";report[@"installPath"]=filter;
             if ([manager fileExistsAtPath:filter] && ![manager removeItemAtPath:filter error:&error]) goto failed;
+            report[@"installStage"]=@"remove_library";report[@"installPath"]=library;
             if ([manager fileExistsAtPath:library] && ![manager removeItemAtPath:library error:&error]) goto failed;
             if ([manager fileExistsAtPath:directory])
                 HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"enabled":@NO},[directory stringByAppendingPathComponent:@"config.json"],NULL);
@@ -100,26 +133,31 @@ static NSDictionary *HCRuntimeReport(NSString *action, NSDictionary *config) {
                     report[@"code"]=@"runtime_payload_missing";report[@"summary"]=[@"Thiếu payload: " stringByAppendingString:name];return report;
                 }
             }
+            report[@"installStage"]=@"create_payload_directory";report[@"installPath"]=directory;
             if (![manager createDirectoryAtPath:directory withIntermediateDirectories:NO attributes:@{NSFilePosixPermissions:@0700} error:&error] &&
                 ![manager fileExistsAtPath:directory]) goto failed;
-            if (chown(directory.fileSystemRepresentation,501,501) || chmod(directory.fileSystemRepresentation,0700)) goto failed;
+            error=nil;
+            report[@"installStage"]=@"set_directory_owner";
+            if (chown(directory.fileSystemRepresentation,501,501)) goto failed;
+            report[@"installStage"]=@"set_directory_mode";
+            if (chmod(directory.fileSystemRepresentation,0700)) goto failed;
             // Publish the injection filter only after all payload/config writes.
+            report[@"installStage"]=@"remove_filter";report[@"installPath"]=filter;
             if ([manager fileExistsAtPath:filter] && ![manager removeItemAtPath:filter error:&error]) goto failed;
             for (NSString *name in files) {
                 NSString *path=[directory stringByAppendingPathComponent:name];
+                report[@"installStage"]=@"validate_payload_path";report[@"installPath"]=path;
                 struct stat existing={0};
                 if (!lstat(path.fileSystemRepresentation,&existing) && !S_ISREG(existing.st_mode)) {
                     error=[NSError errorWithDomain:NSPOSIXErrorDomain code:EINVAL userInfo:@{NSLocalizedDescriptionKey:@"Đích payload không phải tệp thường; không ghi."}];goto failed;
                 }
-                NSData *data=[NSData dataWithContentsOfFile:[source stringByAppendingPathComponent:name]];
-                if (![data writeToFile:path options:NSDataWritingAtomic error:&error] ||
-                    chown(path.fileSystemRepresentation,501,501) || chmod(path.fileSystemRepresentation,0600)) goto failed;
+                if (!HCRuntimeInstallFile([source stringByAppendingPathComponent:name],path,501,0600,report,&error)) goto failed;
             }
+            report[@"installStage"]=@"write_config";report[@"installPath"]=[directory stringByAppendingPathComponent:@"config.json"];
             if (!HCRuntimeSyncConfig(directory,config,&error)) goto failed;
             for (NSString *name in @[@"HeroControlRuntime.dylib",@"HeroControlRuntime.plist"]) {
                 NSString *path=[loader stringByAppendingPathComponent:name];
-                NSData *data=[NSData dataWithContentsOfFile:[source stringByAppendingPathComponent:name]];
-                if (![data writeToFile:path options:NSDataWritingAtomic error:&error] || chown(path.fileSystemRepresentation,0,0) || chmod(path.fileSystemRepresentation,0644)) goto failed;
+                if (!HCRuntimeInstallFile([source stringByAppendingPathComponent:name],path,0,0644,report,&error)) goto failed;
             }
             report[@"code"]=@"runtime_installed_restart_required";
             report[@"summary"]=@"Đã cài payload và bộ lọc riêng cho game. Đóng hoàn toàn rồi mở lại game; chỉ phản hồi adapter mới xác nhận nạp thành công.";
@@ -133,10 +171,11 @@ static NSDictionary *HCRuntimeReport(NSString *action, NSDictionary *config) {
                 state[@"historicalReports"]=state[@"reports"];
                 [state removeObjectForKey:@"reports"];
             }
+            report[@"installStage"]=@"complete";[report removeObjectForKey:@"installPath"];
             report[@"runtime"]=state;return report;
         }
     failed:
-        report[@"code"]=@"runtime_install_io_failed";report[@"summary"]=error.localizedDescription ?: [NSString stringWithFormat:@"Không hoàn tất ghi/gỡ adapter: errno=%d (%s).",errno,strerror(errno)];
+        report[@"code"]=@"runtime_install_io_failed";HCRuntimeInstallError(report,error);
         return report;
     }
     if ([action isEqual:@"--runtime-apply"]) {

@@ -44,6 +44,7 @@ helper_entitlements = plistlib.loads((root / 'Signing/Helper.entitlements').read
 assert app_entitlements.get('com.apple.private.security.no-sandbox') is True
 assert app_entitlements.get('com.apple.private.persona-mgmt') is True
 assert helper_entitlements.get('com.apple.private.security.no-container') is True
+assert helper_entitlements.get('com.apple.private.security.storage.AppBundles') is True
 assert helper_entitlements.get('task_for_pid-allow') is True
 assert helper_entitlements.get('com.apple.system-task-ports') is True
 assert helper_entitlements.get('com.apple.security.exception.iokit-user-client-class') == ['IOSurfaceRootUserClient']
@@ -56,6 +57,7 @@ assert overlay_entitlements.get('task_for_pid-allow') is True
 assert overlay_entitlements.get('com.apple.system-task-ports') is True
 assert 'Overlay/CameraEngine.m' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'esp-memory-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
+assert 'esp-presentation-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'logic-esp-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'lua-reports-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 overlay_info = plistlib.loads((root / 'Overlay/Info.plist').read_bytes())
