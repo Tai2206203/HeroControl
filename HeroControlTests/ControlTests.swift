@@ -5,11 +5,16 @@ final class ControlTests: XCTestCase {
     @MainActor
     func testRejectedInstallPreservesRuntimeDiagnostics() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let backend = TestBackend()
         await backend.rejectNextInstall()
         let store = ControlStore(directory: folder, backend: backend)
+        XCTAssertNil(store.persistenceError)
         await store.installRuntime()
+        XCTAssertNil(store.persistenceError)
+        let installRequests = await backend.installRequestCount()
+        XCTAssertEqual(installRequests, 1)
         XCTAssertEqual(store.snapshot?.runtimeDiagnostics?.code, "runtime_install_io_failed")
         XCTAssertEqual(store.snapshot?.runtimeDiagnostics?.installPOSIXError, 13)
         XCTAssertEqual(store.snapshot?.runtimeDiagnostics?.installStage, "write_file")
@@ -340,6 +345,8 @@ final class ControlTests: XCTestCase {
 
 private actor TestBackend: BackendClient {
     func exchangeTrace() async -> BackendExchangeTrace? { nil }
+    private var installRequests = 0
+    func installRequestCount() -> Int { installRequests }
     private var rejectInstall = false
     func rejectNextInstall() { rejectInstall = true }
     private var acknowledge = false
@@ -354,6 +361,7 @@ private actor TestBackend: BackendClient {
     func restartGame() { session = "test-session-2"; applied = nil }
     func setRestartDuringApply() { restartDuringApply = true }
     func send(action: String, revision: String?, settings: ControlSettings?) async throws -> BackendReply {
+        if action == "installRuntime" { installRequests += 1 }
         if action == "installRuntime", rejectInstall {
             let json = #"{"protocolVersion":1,"ok":false,"message":"permission denied","snapshot":{"protocolVersion":1,"backendName":"test","connected":false,"gameRunning":false,"supportedKeys":[],"heroes":[],"reports":[],"message":"permission denied","runtimeDiagnostics":{"schemaVersion":1,"timestamp":"test","system":"Darwin","machine":"test","uid":0,"euid":0,"kernelProbeRequested":false,"kernelReadVerified":false,"code":"runtime_install_io_failed","summary":"permission denied","checkedPaths":[],"symbolsFound":[],"installStage":"write_file","installPOSIXError":13}}}"#
             throw BackendError.rejected("permission denied", Data(json.utf8))

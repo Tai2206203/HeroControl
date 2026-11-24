@@ -226,8 +226,8 @@
   },
   {
     "path": "HeroControlTests/ControlTests.swift",
-    "bytes": 22508,
-    "sha256": "8681c3655c9a263abaa0d9e1ce40a5a17c131ce70b5b25e26be206bbfda7d9b3"
+    "bytes": 22959,
+    "sha256": "8ec8855889c2f6183c8df2c1cc79ac6f88b4a28a7ec9214737d712f82fba7487"
   },
   {
     "path": "Overlay/CameraEngine.h",
@@ -341,8 +341,8 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 11071,
-    "sha256": "b7593f1075c354b44ff36ae383f661a68740fe5dd4dd1bd0e4f4893ef8818cdb"
+    "bytes": 11655,
+    "sha256": "4930c6175dddfbdc25b5e81d1c26ca3b215bd9542fec1c268285e1e88dbffc2e"
   },
   {
     "path": "scripts/build-diagnostics.sh",

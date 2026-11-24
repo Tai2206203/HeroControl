@@ -1,3 +1,13 @@
+BỔ SUNG SAU LOG CI BUILD 21
+
+- Log Xcode 16.4 đã biên dịch Swift và chạy 24 XCTest; 23 test qua,
+  testRejectedInstallPreservesRuntimeDiagnostics lỗi do fixture chưa tạo
+  thư mục cấu hình tạm nên backend không được gọi.
+- Đã tạo thư mục trước khi khởi tạo store và kiểm tra persistenceError rỗng,
+  backend nhận đúng một yêu cầu cài đặt. Không bỏ các assertion chẩn đoán.
+- 14 unittest Python và validate-project qua sau sửa. Chưa chạy lại XCTest
+  tại Windows; cần push để CI macOS xác nhận.
+
 HERO CONTROL 0.10.1 — BUILD 21
 
 ĐỢT SỬA CÀI ADAPTER VÀ ỔN ĐỊNH ESP
