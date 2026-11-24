@@ -12,7 +12,7 @@ def generate(destination):
     models = (ROOT / 'HeroControl/Models.swift').read_text(encoding='utf8')
     entries = re.findall(r'\.init\(key: "([^"]+)", title: "([^"]+)", group: \.(\w+)\)', models)
     groups = ['esp', 'camera', 'style', 'skins', 'reports']
-    if len(entries) != 13 or len({key for key, _, _ in entries}) != 13:
+    if len(entries) != 14 or len({key for key, _, _ in entries}) != 14:
         raise RuntimeError('Unexpected menu catalog; update the overlay generator explicitly')
     # UTF-8 source string literals are accepted by clang; json supplies escaping.
     rows = [f'@{{@"key": @{json.dumps(key, ensure_ascii=False)}, @"title": @{json.dumps(title, ensure_ascii=False)}, @"group": @{groups.index(group)}}}'

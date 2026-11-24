@@ -283,16 +283,21 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             [self emitEsp:@{@"code":@"profile_invalid",@"message":@"Cấu hình không hợp lệ.",@"targets":@[]}];
             return;
         }
-        if ([settings[@"gameRuntimeEnabled"] isEqual:@YES]) {
-            [self restoreCamera];[self releaseTarget];
-            if (_timerHz!=10) { _timerHz=10;dispatch_source_set_timer(_timer,DISPATCH_TIME_NOW,100*NSEC_PER_MSEC,10*NSEC_PER_MSEC); }
+        BOOL runtimeMode=[settings[@"gameRuntimeEnabled"] isEqual:@YES];
+        BOOL idEnabled=[flags[@"HeroControl.ESP.HeroID"] isEqual:@YES];
+        if (runtimeMode) {
+            [self restoreCamera];
             [self syncRuntime:settings now:now];
-            return;
+            if (!idEnabled || ![flags[@"__ifxEnemyEspEnabledV1"] isEqual:@YES]) {
+                [self releaseTarget];
+                if (_timerHz!=10) { _timerHz=10;dispatch_source_set_timer(_timer,DISPATCH_TIME_NOW,100*NSEC_PER_MSEC,10*NSEC_PER_MSEC); }
+                return;
+            }
         }
         id espFlag = [flags isKindOfClass:NSDictionary.class] ? flags[@"__ifxEnemyEspEnabledV1"] : nil;
         BOOL espEnabled = [espFlag isKindOfClass:NSNumber.class] && [espFlag doubleValue] == 1;
-        BOOL cameraEnabled = [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;
-        BOOL reportsEnabled = [flags[@"reports.enabled"] isEqual:@YES];
+        BOOL cameraEnabled = !runtimeMode && [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;
+        BOOL reportsEnabled = !runtimeMode && [flags[@"reports.enabled"] isEqual:@YES];
         if (!reportsEnabled && _reportsActive) [self emitReports:@{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO}];
         _reportsActive = reportsEnabled;
         _requestedHz = [settings[@"espReadHz"] isEqual:@120] ? 120 : 60;

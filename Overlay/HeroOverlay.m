@@ -93,7 +93,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.10.2", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.10.3", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -346,7 +346,8 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 }
 - (void)drawEsp {
     NSDictionary *flags = self.settings[@"flags"];
-    if ([self.settings[@"gameRuntimeEnabled"] isEqual:@YES]) return;
+    BOOL runtimeMode=[self.settings[@"gameRuntimeEnabled"] isEqual:@YES];
+    if (runtimeMode && ![flags[@"HeroControl.ESP.HeroID"] boolValue]) return;
     if (HCLocked || ![flags[@"__ifxEnemyEspEnabledV1"] boolValue]) return;
     double now=NSProcessInfo.processInfo.systemUptime;
     double age=now-[HCEspStatus[@"sampleUptime"] doubleValue];
@@ -373,6 +374,14 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if(!HCEspSmooth(slot,objectID,heroID,now,[target[@"x"] floatValue],[target[@"headY"] floatValue],[target[@"feetY"] floatValue])) continue;
         CGFloat x=slot->x*w,top=slot->headY*h,bottom=slot->feetY*h,height=bottom-top;
         if (!isfinite(height) || height < 4 || height > h) continue;
+        if ([flags[@"HeroControl.ESP.HeroID"] boolValue] && heroID>0) {
+            NSString *label=[NSString stringWithFormat:@"ID: %d",heroID];
+            CGRect badge=CGRectMake(x-45,MAX(0,top-24),90,20);
+            [[UIColor.blackColor colorWithAlphaComponent:0.8] setFill];
+            [[UIBezierPath bezierPathWithRoundedRect:badge cornerRadius:4] fill];
+            HCText(label,CGRectInset(badge,4,1),13,UIColor.whiteColor,YES);
+        }
+        if (runtimeMode) continue;
         CGRect box = CGRectMake(x - height * 0.24, top, height * 0.48, height);
         [color setStroke];
         if ([flags[@"DoroCheat.Reference.R1.Box"] boolValue]) {

@@ -1,0 +1,14 @@
+HERO CONTROL 0.10.3 — BUILD 23
+
+Trong menu ESP của nút nổi, bật Enable ESP và ESP ID tướng địch.
+ID dạng “ID: 599” hiển thị phía trên đầu địch nằm trong màn hình. Dùng ID này
+đặt tên ảnh 599.png. Không dùng objectID vì đó là định danh đối tượng trong trận.
+
+Công tắc riêng, mặc định tắt. Không phụ thuộc ảnh icon hay xuất danh sách.
+Hoạt động qua worker đọc ESP ngoài game; khi adapter bật, worker chỉ đọc/vẽ ID,
+không ghi camera hay vẽ lặp các chức năng khác của adapter. Giữ cơ chế đệm
+0,6 giây và làm mượt sẵn có. Không có tọa độ chiếu hợp lệ thì không vẽ ID.
+Tắt Unseen only nếu muốn ghi ID của cả địch đang nhìn thấy.
+
+Cần nút nổi chạy và quyền đọc/module game khớp. Cài bản mới, cài lại adapter
+và khởi động lại game để đồng bộ generation. Kiểm tra trên iPhone sau CI.

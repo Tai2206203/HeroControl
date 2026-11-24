@@ -1,4 +1,4 @@
-HERO CONTROL 0.10.2 — BUILD 22
+HERO CONTROL 0.10.3 — BUILD 23
 
 BUILD TỪ THƯ MỤC HIỆN TẠI
 
@@ -33,7 +33,7 @@ triển khai action runtime để dùng cài/gỡ adapter; dependency không đ�
 
 CÀI VÀ THỬ
 
-Đọc CAP_NHAT_0.10.2.txt. Tắt nút nổi cũ trước khi cài đè.
+Đọc CAP_NHAT_0.10.3.txt. Tắt nút nổi cũ trước khi cài đè.
 Mở game vào sảnh, quay lại Hero Control, bấm Cài / cập nhật adapter game.
 Đóng hoàn toàn game rồi mở lại; kiểm tra adapter và thử từng nhóm trong trận tập.
 Nút nổi chuyển cấu hình khi chạy; hoặc bấm Áp dụng. Nếu game bị tạm dừng ở nền,

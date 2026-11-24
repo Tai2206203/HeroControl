@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define HC_RUNTIME_BUILD "22"
+#define HC_RUNTIME_BUILD "23"
 #ifndef HC_RUNTIME_GENERATION
 #define HC_RUNTIME_GENERATION "development"
 #endif
@@ -19,7 +19,7 @@ static NSString *const HCRuntimeFolder = @"Documents/HeroControlRuntime";
 static inline BOOL HCRuntimeSettingsValid(id settings) {
     if (![settings isKindOfClass:NSDictionary.class]) return NO;
     id flags=settings[@"flags"], skins=settings[@"selectedSkins"], scale=settings[@"cameraScale"];
-    if (![flags isKindOfClass:NSDictionary.class] || [flags count]!=13 || ![skins isKindOfClass:NSDictionary.class] || [skins count]>512 ||
+    if (![flags isKindOfClass:NSDictionary.class] || [flags count]!=(flags[@"HeroControl.ESP.HeroID"] ? 14 : 13) || ![skins isKindOfClass:NSDictionary.class] || [skins count]>512 ||
         ![scale isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)scale)==CFBooleanGetTypeID() ||
         !isfinite([scale doubleValue]) || [scale doubleValue]<1 || [scale doubleValue]>2.3) return NO;
     NSArray *keys=@[@"__ifxEnemyEspEnabledV1", @"DoroCheat.Reference.R1.Box", @"DoroCheat.Reference.R1.Icon", @"DoroCheat.Reference.R1.HP",
@@ -29,6 +29,8 @@ static inline BOOL HCRuntimeSettingsValid(id settings) {
         id flag=flags[key];
         if (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID()) return NO;
     }
+    id heroIDFlag=flags[@"HeroControl.ESP.HeroID"];
+    if (heroIDFlag && (![heroIDFlag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)heroIDFlag)!=CFBooleanGetTypeID())) return NO;
     for (NSString *key in @[@"cameraEnabled",@"gameRuntimeEnabled"]) {
         id flag=settings[key];
         if (flag && (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID())) return NO;

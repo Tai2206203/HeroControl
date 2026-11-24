@@ -48,6 +48,7 @@ struct Feature: Identifiable {
     var id: String { key }
     static let all: [Feature] = [
         .init(key: "__ifxEnemyEspEnabledV1", title: "Enable ESP", group: .esp),
+        .init(key: "HeroControl.ESP.HeroID", title: "ESP ID tướng địch", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Box", title: "ESP Box", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Icon", title: "ESP Icon (ảnh tướng)", group: .esp),
         .init(key: "DoroCheat.Reference.R1.HP", title: "ESP HP", group: .esp),

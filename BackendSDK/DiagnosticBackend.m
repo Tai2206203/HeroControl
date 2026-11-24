@@ -494,7 +494,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
         else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.10.2",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.10.3",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
@@ -517,7 +517,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
             snapshot[@"connected"]=@YES;snapshot[@"gameRunning"]=@YES;snapshot[@"gameInspectionAvailable"]=@YES;
             snapshot[@"sessionID"]=runtime[@"sessionID"] ?: @"";
             snapshot[@"backendName"]=@"HeroControl in-process donor runtime";
-            snapshot[@"supportedKeys"]=@[@"__ifxEnemyEspEnabledV1",@"DoroCheat.Reference.R1.Box",@"DoroCheat.Reference.R1.Icon",@"DoroCheat.Reference.R1.HP",
+            snapshot[@"supportedKeys"]=@[@"HeroControl.ESP.HeroID",@"__ifxEnemyEspEnabledV1",@"DoroCheat.Reference.R1.Box",@"DoroCheat.Reference.R1.Icon",@"DoroCheat.Reference.R1.HP",
                 @"DoroCheat.Reference.R1.Map",@"DoroCheat.Reference.R1.Unseen",@"DoroCheat.Reference.R1.Check",@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Banner",
                 @"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange",@"reports.enabled",@"DoroCheat.Reference.R2.CameraScale"];
             NSMutableArray *supported=[snapshot[@"supportedKeys"] mutableCopy];

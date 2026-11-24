@@ -1,3 +1,11 @@
+BUILD 23 — ESP ID TRÊN ĐẦU ĐỊCH
+
+Thêm flag HeroControl.ESP.HeroID, menu app/nút nổi và nhãn ID tại tọa độ đầu.
+Khi adapter bật, chỉ cho worker đọc ESP và vẽ ID; camera/report do adapter xử lý.
+Cấu hình cũ 13 flag vẫn hợp lệ; flag mới phải là JSON boolean khi có.
+Kiểm tra cục bộ: project, Python, cú pháp Swift/Objective-C. Chưa chạy Xcode
+hoặc xác nhận vị trí nhãn trên iPhone; cần CI và thử trận thực tế.
+
 HERO CONTROL 0.10.2 — BUILD 22: DANH SÁCH ID/TÊN TƯỚNG
 
 - 14 unittest Python, validate-project và payload verification qua.
