@@ -25,6 +25,7 @@ static HCKernelRead HCReadFunction;
 static NSString *HCLoadedPath;
 static NSDictionary *HCSessionReport;
 static NSDictionary *HCGameSessionReport;
+static NSDictionary *HCRuntimeSessionReport;
 static BOOL HCTraceStagesEnabled;
 
 static void HCStage(const char *stage) {
@@ -288,11 +289,13 @@ static NSDictionary *HCGameReport(BOOL unused) {
     return report;
 }
 
-static NSDictionary *HCDiagnose(BOOL inspectGame) {
+#include "../Runtime/RuntimeInstaller.h"
+
+static NSDictionary *HCDiagnoseMode(BOOL inspectGame, NSString *runtimeCommand, NSDictionary *config) {
 #if TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR
-    if (geteuid() == 0) return inspectGame ? HCGameReport(NO) : HCReport(YES);
+    if (geteuid() == 0) return runtimeCommand ? HCRuntimeReport(runtimeCommand, config) : (inspectGame ? HCGameReport(NO) : HCReport(YES));
     NSMutableDictionary *fallback = [HCReport(NO) mutableCopy];
-    fallback[@"kernelProbeRequested"] = inspectGame ? @NO : @YES;
+    fallback[@"kernelProbeRequested"] = inspectGame || runtimeCommand ? @NO : @YES;
     fallback[@"appUID"] = @(getuid()); fallback[@"appEUID"] = @(geteuid());
     fallback[@"callerEntitlements"] = HCEntitlements();
     fallback[@"helperStage"] = @"preflight";
@@ -345,7 +348,10 @@ static NSDictionary *HCDiagnose(BOOL inspectGame) {
     if (!result) result = posix_spawn_file_actions_addclose(&actions, output);
     if (!result) result = posix_spawn_file_actions_addclose(&actions, errors);
     pid_t child = -1;
-    char *arguments[] = {(char *)helper.fileSystemRepresentation, inspectGame ? "--inspect-game" : "--kernel-read", NULL};
+    NSString *configText = config ? [[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:config options:0 error:NULL] encoding:NSUTF8StringEncoding] : nil;
+    char *arguments[] = {(char *)helper.fileSystemRepresentation,
+        runtimeCommand ? (char *)runtimeCommand.UTF8String : (inspectGame ? "--inspect-game" : "--kernel-read"),
+        configText ? (char *)configText.UTF8String : NULL, NULL};
     char *environment[] = {"PATH=/usr/bin:/bin:/usr/sbin:/sbin", NULL};
     if (!result) result = posix_spawn(&child, helper.fileSystemRepresentation, &actions, &attributes, arguments, environment);
     if (actionsReady) posix_spawn_file_actions_destroy(&actions);
@@ -375,7 +381,7 @@ static NSDictionary *HCDiagnose(BOOL inspectGame) {
         kill(child, SIGKILL);
         while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
     }
-    NSData *stdoutData = HCReadOutput(output, 256 * 1024);
+    NSData *stdoutData = HCReadOutput(output, runtimeCommand ? 4 * 1024 * 1024 : 256 * 1024);
     NSData *stderrData = HCReadOutput(errors, 16 * 1024);
     close(output); close(errors);
     NSString *errorText = stderrData ? [[NSString alloc] initWithData:stderrData encoding:NSUTF8StringEncoding] : nil;
@@ -432,9 +438,11 @@ static NSDictionary *HCDiagnose(BOOL inspectGame) {
     if (errorText.length) report[@"helperError"] = errorText;
     return report;
 #else
-    return inspectGame ? HCGameReport(NO) : HCReport(YES);
+    return runtimeCommand ? HCRuntimeReport(runtimeCommand, config) : (inspectGame ? HCGameReport(NO) : HCReport(YES));
 #endif
 }
+
+static NSDictionary *HCDiagnose(BOOL inspectGame) { return HCDiagnoseMode(inspectGame, nil, nil); }
 
 static const char *HCEncode(NSDictionary *value) {
     NSData *data = [NSJSONSerialization dataWithJSONObject:value options:0 error:NULL];
@@ -457,10 +465,22 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
             return HCEncode(@{@"protocolVersion": @1, @"ok": @NO, @"message": @"Invalid v1 request"});
         }
         NSString *action = parsed[@"action"];
-        if (![@[@"status", @"diagnose", @"inspectGame", @"apply"] containsObject:action]) {
+        if (![@[@"status", @"diagnose", @"inspectGame", @"apply", @"installRuntime", @"removeRuntime", @"runtimeStatus"] containsObject:action]) {
             return HCEncode(@{@"protocolVersion": @1, @"ok": @NO, @"message": @"Unsupported action"});
         }
         BOOL apply = [action isEqual:@"apply"];
+        BOOL installRuntime = [action isEqual:@"installRuntime"], removeRuntime = [action isEqual:@"removeRuntime"];
+        BOOL runtimeEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"HeroControl.runtimeInstalled"];
+        if (installRuntime || removeRuntime || [action isEqual:@"runtimeStatus"] || (runtimeEnabled && ([action isEqual:@"status"] || apply))) {
+            NSDictionary *config = @{@"settings": parsed[@"settings"] ?: @{}, @"revision": parsed[@"revision"] ?: @""};
+            NSString *command = installRuntime ? @"--runtime-install" : removeRuntime ? @"--runtime-remove" : apply ? @"--runtime-apply" : @"--runtime-status";
+            HCRuntimeSessionReport = HCDiagnoseMode(NO, command, (installRuntime || apply) ? config : nil);
+            if ([HCRuntimeSessionReport[@"code"] isEqual:@"runtime_installed_restart_required"]) {
+                [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"HeroControl.runtimeInstalled"];
+            } else if ([HCRuntimeSessionReport[@"code"] isEqual:@"runtime_removed_restart_required"]) {
+                [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"HeroControl.runtimeInstalled"];
+            }
+        }
         // Status polling never invokes kernel primitives. Explicit diagnose is
         // still subject to the root precondition inside HCReport.
         if (!HCSessionReport || [action isEqual:@"diagnose"]) {
@@ -474,16 +494,48 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
         else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.9.0",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.10.0",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
         } mutableCopy];
         if (game) snapshot[@"gameInspection"] = game;
         if (HCGameSessionReport) snapshot[@"gameProbeDiagnostics"] = HCGameSessionReport;
+        NSDictionary *runtime = HCRuntimeSessionReport[@"runtime"];
+        BOOL runtimeConnected = [runtime[@"responding"] isEqual:@YES] && HCRuntimeFresh(runtime);
+        if (HCRuntimeSessionReport) {
+            NSMutableDictionary *runtimeSummary=[runtime ?: @{@"phase": @"unavailable", @"message": HCRuntimeSessionReport[@"summary"] ?: @"Chưa có phản hồi runtime."} mutableCopy];
+            [runtimeSummary removeObjectForKey:@"heroes"];
+            runtimeSummary[@"responding"]=runtimeConnected ? @YES : @NO;
+            snapshot[@"runtime"] = runtimeSummary;
+            NSMutableDictionary *diagnostics=[HCRuntimeSessionReport mutableCopy];
+            [diagnostics removeObjectForKey:@"runtime"];
+            snapshot[@"runtimeDiagnostics"] = diagnostics;
+            if ([runtime[@"heroes"] isKindOfClass:NSArray.class]) snapshot[@"heroes"]=runtime[@"heroes"];
+        }
+        if (runtimeConnected) {
+            snapshot[@"connected"]=@YES;snapshot[@"gameRunning"]=@YES;snapshot[@"gameInspectionAvailable"]=@YES;
+            snapshot[@"sessionID"]=runtime[@"sessionID"] ?: @"";
+            snapshot[@"backendName"]=@"HeroControl in-process donor runtime";
+            snapshot[@"supportedKeys"]=@[@"__ifxEnemyEspEnabledV1",@"DoroCheat.Reference.R1.Box",@"DoroCheat.Reference.R1.Icon",@"DoroCheat.Reference.R1.HP",
+                @"DoroCheat.Reference.R1.Map",@"DoroCheat.Reference.R1.Unseen",@"DoroCheat.Reference.R1.Check",@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Banner",
+                @"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange",@"reports.enabled",@"DoroCheat.Reference.R2.CameraScale"];
+            NSMutableArray *supported=[snapshot[@"supportedKeys"] mutableCopy];
+            NSDictionary *skins=[parsed[@"settings"] isKindOfClass:NSDictionary.class] ? parsed[@"settings"][@"selectedSkins"] : nil;
+            if ([skins isKindOfClass:NSDictionary.class]) for (NSString *hero in skins) [supported addObject:[@"DoroCheat.Style.SelectedSkin." stringByAppendingString:hero]];
+            snapshot[@"supportedKeys"]=supported;
+            if ([runtime[@"appliedRevision"] isKindOfClass:NSString.class]) snapshot[@"appliedRevision"]=runtime[@"appliedRevision"];
+        }
+        BOOL runtimeAction=installRuntime || removeRuntime || [action isEqual:@"runtimeStatus"] || (runtimeEnabled && (apply || [action isEqual:@"status"]));
+        if (runtimeAction) { message=HCRuntimeSessionReport[@"summary"] ?: @"Chưa có phản hồi runtime.";snapshot[@"message"]=message; }
+        BOOL ok=!apply;
+        if (apply) ok=(runtimeConnected && [runtime[@"appliedRevision"] isEqual:parsed[@"revision"]]) ||
+            [HCRuntimeSessionReport[@"runtimeRequestAccepted"] isEqual:@YES];
+        if (installRuntime) ok=[HCRuntimeSessionReport[@"code"] isEqual:@"runtime_installed_restart_required"];
+        if (removeRuntime) ok=[HCRuntimeSessionReport[@"code"] isEqual:@"runtime_removed_restart_required"];
         // C's ! operator has type int, so @(!apply) serializes as 0/1, not
         // JSON false/true. Swift's Bool decoder correctly rejects those numbers.
-        return HCEncode(@{@"protocolVersion": @1, @"ok": apply ? @NO : @YES, @"message": message, @"snapshot": snapshot});
+        return HCEncode(@{@"protocolVersion": @1, @"ok": ok ? @YES : @NO, @"message": message, @"snapshot": snapshot});
     }
 }
 __attribute__((visibility("default"))) void hc_backend_release(const char *response_json) { free((void *)response_json); }
@@ -501,6 +553,12 @@ static BOOL HCWriteAll(int descriptor, const void *buffer, size_t size) {
 }
 
 typedef NSDictionary *(*HCReportProducer)(BOOL);
+static NSString *HCCLIRuntimeAction;
+static NSDictionary *HCCLIRuntimeConfig;
+static NSDictionary *HCProduceRuntime(BOOL unused) {
+    (void)unused;
+    return HCRuntimeReport(HCCLIRuntimeAction, HCCLIRuntimeConfig);
+}
 static int HCWriteIsolatedReport(BOOL requestRead, HCReportProducer producer) {
     // Preserve the result channel before provider initialization. Some providers
     // print warnings to stdout; redirect all such logging to captured stderr.
@@ -597,7 +655,14 @@ static int HCSelfTest(void) {
         hc_backend_release(reply);
         if (invalid || !correctTypes) return 4;
     }
-    puts("Diagnostic ABI tests passed: malformed input, status, apply refusal; no kernel primitive invoked.");
+    NSDictionary *fresh=@{@"phase":@"active",@"runtimeBuild":@HC_RUNTIME_BUILD,@"generation":@HC_RUNTIME_GENERATION,@"pid":@(getpid()),
+        @"heartbeat":@(NSProcessInfo.processInfo.systemUptime)};
+    if (!HCRuntimeFresh(fresh) || HCRuntimeValidateConfig(nil) || HCRuntimeSettingsValid(@{@"flags":@[]})) return 5;
+    NSMutableDictionary *stale=[fresh mutableCopy];stale[@"heartbeat"]=@(NSProcessInfo.processInfo.systemUptime-10);
+    if (HCRuntimeFresh(stale)) return 6;
+    stale=[fresh mutableCopy];stale[@"phase"]=@"failed";
+    if (HCRuntimeFresh(stale)) return 7;
+    puts("Diagnostic ABI tests passed: malformed input, status, apply refusal, runtime freshness/config guards; no kernel primitive invoked.");
     return 0;
 }
 int main(int argc, char **argv) {
@@ -607,6 +672,17 @@ int main(int argc, char **argv) {
         }
         if (argc == 2 && strcmp(argv[1], "--fd-self-test") == 0) return HCFDRegression(argv[0]);
         if (argc == 2 && strcmp(argv[1], "--self-test") == 0) return HCSelfTest();
+        if ((argc==2 || argc==3) && [@[@"--runtime-install",@"--runtime-remove",@"--runtime-status",@"--runtime-apply"] containsObject:[NSString stringWithUTF8String:argv[1]]]) {
+            HCCLIRuntimeAction=[NSString stringWithUTF8String:argv[1]];
+            if (argc==3 && strnlen(argv[2],131073)<=131072) {
+                NSData *data=[[NSString stringWithUTF8String:argv[2]] dataUsingEncoding:NSUTF8StringEncoding];
+                id value=data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+                if ([value isKindOfClass:NSDictionary.class]) HCCLIRuntimeConfig=value;
+            }
+            signal(SIGALRM,HCTimeout);alarm(15);
+            int result=HCWriteIsolatedReport(NO,HCProduceRuntime);
+            alarm(0);return result;
+        }
         if (argc != 2 || (strcmp(argv[1], "--inspect") != 0 && strcmp(argv[1], "--kernel-read") != 0 && strcmp(argv[1], "--inspect-game") != 0)) {
             fprintf(stderr, "Usage: hero-kernel-check --inspect | --kernel-read | --inspect-game\n");
             return 64;

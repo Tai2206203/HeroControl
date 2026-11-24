@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "unityUUID": "298E718A-DA06-33B8-8253-910447B649E3",
+  "patches": [
+    {
+      "file": "HeroSkin_1.patch",
+      "sourceSHA256": "924153bccf12cd14f57c4d2f23e15aef841fc2f4680806a87bec966ee157e3ee",
+      "sha256": "9411db4c2032d6e4a2051f0bd859a652cc8c8f5c8bbee77f235aa19d90388097",
+      "bytes": 252836,
+      "assembly": ", Project_d, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"
+    },
+    {
+      "file": "HeroSkin_2.patch",
+      "sourceSHA256": "636355e6e184da6db72dbe3644fc8c84d41691a4e858554b9a852f91f1b2d63a",
+      "sha256": "636355e6e184da6db72dbe3644fc8c84d41691a4e858554b9a852f91f1b2d63a",
+      "bytes": 107922,
+      "assembly": ", Project.Plugins_d, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+    }
+  ],
+  "historyScope": "server_available_per_known_player",
+  "allServerHistoryGuaranteed": false
+}

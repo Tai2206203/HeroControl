@@ -5,6 +5,7 @@ import Darwin
 struct OverlayState: Codable {
     let schemaVersion: Int?
     let phase: String?
+    let generation: String?
     let pid: Int?
     let euid: Int?
     let menuOpen: Bool?
@@ -17,20 +18,6 @@ struct OverlayState: Codable {
     let reports: FeatureCheckStatus?
     let displayLimitHz: Int?
     let overlayDrawFPS: Double?
-}
-
-struct FeatureCheckStatus: Codable {
-    let code: String
-    let message: String
-    let available: Bool?
-    let stage: Int?
-    let tablesRead: Int?
-    let accountID: String?
-    let source: String?
-    let querySupported: Bool?
-    let readBudgetExceeded: Bool?
-    let records: [ReportRecord]?
-    let timestamp: String?
 }
 
 struct EspStatus: Codable {
@@ -132,8 +119,8 @@ private actor OverlayClient {
             throw BackendError.unavailable("Bộ điều khiển nút nổi không trả kết quả.")
         }
         defer { release(result) }
-        let length = strnlen(result, 65537)
-        guard length <= 65536 else { throw BackendError.unavailable("Báo cáo nút nổi vượt giới hạn.") }
+        let length = strnlen(result, 4 * 1024 * 1024 + 1)
+        guard length <= 4 * 1024 * 1024 else { throw BackendError.unavailable("Báo cáo nút nổi vượt giới hạn 4 MiB.") }
         let response = Data(bytes: result, count: length)
         let reply = try JSONDecoder().decode(OverlayReply.self, from: response)
         return (reply.state, reply.message, String(decoding: response, as: UTF8.self), reply.ok)

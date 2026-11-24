@@ -2,6 +2,68 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    @MainActor
+    func testCorruptProfileCannotBeOverwrittenBySetters() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = ControlStore(directory: folder)
+        let url = try XCTUnwrap(store.prepareOverlayProfile())
+        let corrupt = Data("{broken".utf8)
+        try corrupt.write(to: url, options: .atomic)
+        store.setCamera(2)
+        store.setCameraEnabled(true)
+        store.setFlag("DoroCheat.Reference.R1.Icon", true)
+        XCTAssertNotNil(store.persistenceError)
+        XCTAssertEqual(try Data(contentsOf: url), corrupt)
+    }
+    @MainActor
+    func testProfileRevisionIsSharedWithNativeRuntime() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = ControlStore(directory: folder)
+        store.setCamera(1.8)
+        let url = try XCTUnwrap(store.prepareOverlayProfile())
+        var saved = try JSONDecoder().decode(SavedProfile.self, from: Data(contentsOf: url))
+        XCTAssertEqual(saved.revision, store.revision)
+        saved.revision = "native-edit-revision"
+        try JSONEncoder().encode(saved).write(to: url, options: .atomic)
+        store.reloadProfileIfChanged()
+        XCTAssertEqual(store.revision, "native-edit-revision")
+        XCTAssertEqual(ControlStore(directory: folder).revision, store.revision)
+    }
+    func testRuntimeHistoryMetadataDecodesWithoutClaimingCompleteness() throws {
+        let data = Data(#"{"phase":"active","responding":true,"runtimeBuild":"20","effectsVerified":false,"reports":{"code":"server_history_monitoring","message":"waiting","querySupported":true,"completeHistoryGuaranteed":false,"sentRequestCount":5,"receivedResponseCount":4,"candidateCount":10,"records":[]}}"#.utf8)
+        let state = try JSONDecoder().decode(GameRuntimeStatus.self, from: data)
+        XCTAssertEqual(state.reports?.querySupported, true)
+        XCTAssertEqual(state.reports?.completeHistoryGuaranteed, false)
+        XCTAssertEqual(state.reports?.receivedResponseCount, 4)
+        XCTAssertEqual(state.effectsVerified, false)
+    }
+    @MainActor
+    func testQueuedApplyWaitsForSameSessionGameAcknowledgement() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let backend = TestBackend()
+        let store = ControlStore(directory: folder, backend: backend)
+        await store.refresh()
+        await backend.deferNextAcknowledgement()
+        await store.apply()
+        XCTAssertFalse(store.isApplied)
+        await backend.completeQueuedAcknowledgement()
+        await store.refresh()
+        XCTAssertTrue(store.isApplied)
+    }
+    func testBackgroundRuntimeRetainsHistoricalReportsSeparately() throws {
+        let data = Data(#"{"phase":"stale","responding":false,"timestamp":"sample-time","historicalReports":{"code":"server_history_monitoring","message":"previous response","records":[{"id":"1","time":"sample","information":"notice","reason":"reason"}]}}"#.utf8)
+        let state = try JSONDecoder().decode(GameRuntimeStatus.self, from: data)
+        XCTAssertNil(state.reports)
+        XCTAssertEqual(state.historicalReports?.records?.count, 1)
+        XCTAssertEqual(state.responding, false)
+        XCTAssertNoThrow(try JSONDecoder().decode(GameRuntimeStatus.self, from: Data(#"{"phase":"not_loaded","responding":false}"#.utf8)))
+    }
     func testLogicEspSourceAndRateArePreservedInDiagnosticExport() throws {
         let data = Data(#"{"code":"esp_frame_read","message":"sample","logicAvailable":true,"logicStage":8,"logicTargetCount":1,"requestedReadHz":120,"measuredReadHz":115.5,"targets":[{"objectID":99,"heroID":123,"hp":800,"maxHP":0,"worldX":2,"worldZ":-10,"x":0.6,"feetY":0.5,"headY":0.36,"visible":false,"onScreen":true,"cooldowns":[-1,-1,-1],"hpKnown":false,"hpCurrentKnown":true,"positionSource":"logic","positionFrame":10}]}"#.utf8)
         let sample = try JSONDecoder().decode(EspStatus.self, from: data)
@@ -267,15 +329,20 @@ private actor TestBackend: BackendClient {
     private var session = "test-session-1"
     private var applied: String?
     private var restartDuringApply = false
+    private var deferred = false
+    private var queuedRevision: String?
+    func deferNextAcknowledgement() { deferred = true }
+    func completeQueuedAcknowledgement() { applied = queuedRevision; deferred = false }
     func setAcknowledgement(_ value: Bool) { acknowledge = value }
     func restartGame() { session = "test-session-2"; applied = nil }
     func setRestartDuringApply() { restartDuringApply = true }
     func send(action: String, revision: String?, settings: ControlSettings?) async throws -> BackendReply {
         if action == "apply" {
             if restartDuringApply { session = "new-session-during-apply" }
-            applied = acknowledge ? revision : "wrong-revision"
+            if deferred { queuedRevision = revision }
+            else { applied = acknowledge ? revision : "wrong-revision" }
         }
-        let snapshot = BackendSnapshot(protocolVersion: 1, backendName: "Unit test only", connected: true,
+        let snapshot = BackendSnapshot(protocolVersion: 1, backendName: "Unit test only", connected: !deferred,
             gameRunning: true, sessionID: session, gameVersion: "test", supportedKeys: Array(ControlSettings().preferenceValues.keys),
             appliedRevision: applied, heroes: [], reports: [], message: "test")
         return BackendReply(protocolVersion: 1, ok: true, message: "test", snapshot: snapshot)

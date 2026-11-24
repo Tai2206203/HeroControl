@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import "../Runtime/RuntimeShared.h"
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -31,7 +32,7 @@ static BOOL HCOverlayPathsValid(NSString *directory, NSString *profile) {
 
 static inline NSDictionary *HCOverlayReadState(NSString *directory) {
     NSData *data = [NSData dataWithContentsOfFile:[directory stringByAppendingPathComponent:@"state.json"]];
-    if (!data || data.length > 32768) return nil;
+    if (!data || data.length > 4 * 1024 * 1024) return nil;
     id value = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
     return [value isKindOfClass:NSDictionary.class] && [value[@"schemaVersion"] isEqual:@1] ? value : nil;
 }

@@ -19,9 +19,13 @@ if [[ -n "$BACKEND" ]]; then
     [[ -f "$BACKEND" ]] || { echo "Backend does not exist: $BACKEND" >&2; exit 1; }
     BACKEND="$(cd "$(dirname "$BACKEND")" && pwd)/$(basename "$BACKEND")"
     xcrun lipo -verify_arch arm64 "$BACKEND"
-    if xcrun vtool -show-build "$BACKEND" | grep 'platform IOSSIMULATOR' >/dev/null; then
-        echo "Simulator dylibs cannot run on an iPhone." >&2; exit 1
-    fi
+    PLATFORM_INFO="$(xcrun vtool -show-build "$BACKEND")"
+    grep -Eq 'platform[[:space:]]+IOS([[:space:]]|$)' <<< "$PLATFORM_INFO" || {
+        echo "Backend must declare the iPhoneOS platform." >&2; exit 1;
+    }
+    grep -Eq 'platform[[:space:]]+(IOSSIMULATOR|MACOS|MACCATALYST)' <<< "$PLATFORM_INFO" && {
+        echo "Backend contains an incompatible platform slice." >&2; exit 1;
+    }
     for SYMBOL in hc_backend_api_version hc_backend_request hc_backend_release; do
         xcrun nm -gU "$BACKEND" | awk '{print $NF}' | grep -x "_$SYMBOL" >/dev/null || {
             echo "Missing exported symbol: $SYMBOL" >&2; exit 1;
@@ -30,11 +34,12 @@ if [[ -n "$BACKEND" ]]; then
 fi
 
 mkdir -p "$ROOT/dist"
+bash "$ROOT/scripts/build-diagnostics.sh"
 if [[ -z "$BACKEND" ]]; then
-    bash "$ROOT/scripts/build-diagnostics.sh"
     BACKEND="$ROOT/.build/Diagnostics/HeroBackend.dylib"
 fi
 bash "$ROOT/scripts/build-overlay.sh"
+bash "$ROOT/scripts/build-runtime.sh"
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/herocontrol.XXXXXX")"
 trap 'rm -rf -- "$STAGE"' EXIT
 xcodebuild -project "$ROOT/HeroControl.xcodeproj" -scheme HeroControl \
@@ -51,6 +56,10 @@ mkdir -p "$STAGE/Payload/HeroControl.app/Tools" "$STAGE/Payload/HeroControl.app/
 ditto "$ROOT/.build/Overlay/HeroOverlay.app" "$STAGE/Payload/HeroControl.app/Tools/HeroOverlay.app"
 cp "$ROOT/.build/Overlay/HeroOverlayBridge.dylib" "$STAGE/Payload/HeroControl.app/Frameworks/"
 cp "$ROOT/ThirdParty/TrollSpeed-LICENSE.txt" "$ROOT/ThirdParty/NOTICE.txt" "$STAGE/Payload/HeroControl.app/ThirdParty/"
+mkdir -p "$STAGE/Payload/HeroControl.app/Runtime"
+cp "$ROOT/Runtime/Payload/"* "$STAGE/Payload/HeroControl.app/Runtime/"
+cp "$ROOT/Runtime/Runtime.lua" "$ROOT/Runtime/HeroControlRuntime.plist" \
+    "$ROOT/.build/Runtime/HeroControlRuntime.dylib" "$STAGE/Payload/HeroControl.app/Runtime/"
 codesign --force --sign - --entitlements "$ROOT/Signing/Overlay.entitlements" \
     "$STAGE/Payload/HeroControl.app/Tools/HeroOverlay.app"
 if [[ -n "$BACKEND" ]]; then

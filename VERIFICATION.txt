@@ -1,3 +1,29 @@
+HERO CONTROL 0.10.0 — BUILD 20
+
+ĐỢT KIỂM TRA ADAPTER GAME
+
+- 13 unittest Python qua; không gửi mạng thật.
+- 5 fixture C camera/ESP/logic/Lua cache/CString biên dịch và chạy qua bằng
+  Zig/Clang 0.15.2: -std=c11 -Wall -Wextra -Werror, bộ nhớ mô phỏng.
+- Lua 5.3 smoke test qua với API Unity/mạng giả lập: nạp patch một lần,
+  đọc lại cấu hình, xóa lựa chọn skin, tắt camera, metadata truy vấn,
+  bản ghi mới nhất có giới hạn, mảng rỗng và báo lỗi.
+- Parser tham khảo đọc hết 252836 + 107922 byte hai patch đã nhập.
+  Giữ nguyên 88 + 51 thân VM, 35 + 6 hook và toàn bộ ánh xạ native/field.
+  Chỉ thay Lua nhúng: giữ baseline lịch sử, dùng version 23.
+- Project/plist và cú pháp Swift/Objective-C/Python được kiểm tra.
+- Thêm XCTest cho profile hỏng khi gọi setter, revision dùng chung,
+  metadata lịch sử, xác nhận bất đồng bộ và báo cáo khi game vào nền.
+- Native contract trên macOS bổ sung runtimeStatus phải từ chối thao tác
+  thiết bị; self-test kiểm tra heartbeat và cấu hình không hợp lệ.
+
+CHƯA THỰC HIỆN TẠI WINDOWS: Xcode type-check/link/sign, Objective-C++ với SDK
+Apple, XCTest Simulator, cài/nạp adapter trên iPhone và đối chiếu hình ảnh,
+phản hồi máy chủ/skin. GitHub Actions được cấu hình chạy các kiểm tra Apple.
+Không dùng kết quả mô phỏng để khẳng định mọi chức năng game đã hoạt động.
+
+LỊCH SỬ KIỂM TRA TRƯỚC ĐỢT NÀY
+
 HERO CONTROL 0.9.0 — BUILD 19
 
 Thêm fixture Lua receipt: hash/layout bảng, upvalues, UID 64-bit trên 2^53,

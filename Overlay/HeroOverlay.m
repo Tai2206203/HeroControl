@@ -92,8 +92,8 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.9.0", @"stage": HCStartupStage};
-    NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.10.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+    NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
     if (![data writeToFile:path options:NSDataWritingAtomic error:&writeError])
@@ -118,6 +118,7 @@ static void HCStop(NSString *message, BOOL failed) {
 @property(nonatomic) CGPoint bubble;
 @property(nonatomic) NSInteger group;
 @property(nonatomic, strong) NSMutableDictionary *settings;
+@property(nonatomic, strong) NSDictionary *baseSettings;
 @property(nonatomic, strong) NSMutableArray<NSDictionary *> *targets;
 @property(nonatomic, copy) NSString *activeTarget;
 @property(nonatomic) NSInteger pointer;
@@ -136,6 +137,23 @@ static void HCText(NSString *text, CGRect rect, CGFloat size, UIColor *color, BO
         NSForegroundColorAttributeName: color}];
 }
 static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX(lower, MIN(value, MAX(lower, upper))); }
+
+static NSDictionary *HCOverlayReadProfileForMerge(void) {
+    NSData *data=[NSData dataWithContentsOfFile:HCProfile];
+    if (!data || data.length>131072) return nil;
+    id root=[NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+    if (![root isKindOfClass:NSDictionary.class] || ![root[@"schemaVersion"] isEqual:@1]) return nil;
+    id settings=root[@"settings"];
+    if (![settings isKindOfClass:NSDictionary.class] || ![settings[@"flags"] isKindOfClass:NSDictionary.class] ||
+        ![settings[@"cameraScale"] isKindOfClass:NSNumber.class] || ![settings[@"selectedSkins"] isKindOfClass:NSDictionary.class]) return nil;
+    double scale=[settings[@"cameraScale"] doubleValue];
+    if (!isfinite(scale) || scale<1 || scale>2.3) return nil;
+    for (NSDictionary *feature in HCFeatures()) {
+        id value=settings[@"flags"][feature[@"key"]];
+        if (![value isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)value)!=CFBooleanGetTypeID()) return nil;
+    }
+    return settings;
+}
 
 @implementation HCOverlayCanvas
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -169,6 +187,7 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         }
         self.settings = [settings mutableCopy];
         self.settings[@"flags"] = [settings[@"flags"] mutableCopy];
+        self.baseSettings = [settings copy];
         HCSettingsError = nil;
     } else {
         HCSettingsError = @"Không đọc được cấu hình. Mở lại Hero Control để kiểm tra.";
@@ -181,8 +200,34 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
     if (!self.settings || !HCOverlayPathsValid(HCDirectory, HCProfile)) {
         HCSettingsError = @"Không lưu được: đường dẫn/cấu hình không hợp lệ."; return;
     }
+    NSString *lockPath=[HCProfile stringByAppendingString:@".edit-lock"];
+    int editLock=open(lockPath.fileSystemRepresentation,O_RDWR|O_NOFOLLOW|O_CLOEXEC);
+    struct stat lockInfo={0};
+    if (editLock<0 || fstat(editLock,&lockInfo) || !S_ISREG(lockInfo.st_mode) || lockInfo.st_uid!=501 || flock(editLock,LOCK_EX|LOCK_NB)) {
+        if (editLock>=0) close(editLock);
+        HCSettingsError=@"Chưa lấy được khóa chỉnh cấu hình. Thử lại trong Hero Control.";return;
+    }
+    // Merge only the fields changed by this gesture. An app edit completed
+    // during a slider drag must survive the HUD's eventual atomic replacement.
+    NSDictionary *latest=HCOverlayReadProfileForMerge();
+    if (!latest) {
+        flock(editLock,LOCK_UN);close(editLock);
+        HCSettingsError=@"Cấu hình hiện tại không hợp lệ; không ghi đè.";return;
+    }
+    NSMutableDictionary *merged=[latest mutableCopy];
+    NSMutableDictionary *mergedFlags=[latest[@"flags"] mutableCopy];
+    for (NSString *key in self.settings[@"flags"]) {
+        id value=self.settings[@"flags"][key];
+        if (![value isEqual:self.baseSettings[@"flags"][key]]) mergedFlags[key]=value;
+    }
+    merged[@"flags"]=mergedFlags;
+    for (NSString *key in self.settings) {
+        if ([key isEqual:@"flags"]) continue;
+        if (![self.settings[key] isEqual:self.baseSettings[key]]) merged[key]=self.settings[key];
+    }
+    self.settings=merged;
     NSError *error = nil;
-    NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"schemaVersion": @1, @"settings": self.settings}
+    NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"schemaVersion": @1, @"settings": self.settings, @"revision": NSUUID.UUID.UUIDString}
         options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:&error];
     if (!data || ![data writeToFile:HCProfile options:NSDataWritingAtomic error:&error]) {
         HCSettingsError = error.localizedDescription ?: @"Không ghi được cấu hình.";
@@ -191,6 +236,7 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         chown(HCProfile.fileSystemRepresentation, 501, 501);
         HCSettingsError = nil;
     }
+    flock(editLock,LOCK_UN);close(editLock);
     HCState(); [self setNeedsDisplay];
 }
 - (CGRect)bubbleRect { return CGRectMake(self.bubble.x - 26, self.bubble.y - 26, 52, 52); }
@@ -218,7 +264,7 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
 }
 - (void)drawRect:(CGRect)rect {
     [self.targets removeAllObjects];
-    if ([self.settings[@"flags"][@"__ifxEnemyEspEnabledV1"] boolValue]) {
+    if ([self.settings[@"flags"][@"__ifxEnemyEspEnabledV1"] boolValue] && ![self.settings[@"gameRuntimeEnabled"] isEqual:@YES]) {
         double now = NSProcessInfo.processInfo.systemUptime;
         if (!HCEspDrawWindow) HCEspDrawWindow = now;
         HCEspDraws++;
@@ -234,10 +280,10 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         HCText(@"×", CGRectInset(close, 8, 0), 28, UIColor.whiteColor, NO); [self target:@"close" rect:close];
         HCText(HCSettingsError ?: @"Camera + ESP: xem kết quả kiểm chứng\nReports: đọc thư game đã tải.", CGRectMake(p.origin.x + 14, p.origin.y + 43, p.size.width - 28, 34), 11,
             HCSettingsError ? UIColor.systemOrangeColor : UIColor.lightGrayColor, NO);
-        NSArray *tabs = @[@"ESP", @"Camera", @"Reports"];
-        NSArray *groups = @[@0, @1, @4];
-        CGFloat tabWidth = (p.size.width - 20) / 3;
-        for (NSInteger i = 0; i < 3; i++) {
+        NSArray *tabs = @[@"ESP", @"Camera", @"Style", @"Skins", @"Reports"];
+        NSArray *groups = @[@0, @1, @2, @3, @4];
+        CGFloat tabWidth = (p.size.width - 20) / 5;
+        for (NSInteger i = 0; i < 5; i++) {
             NSInteger group = [groups[i] integerValue];
             CGRect r = CGRectMake(p.origin.x + 10 + i * tabWidth, p.origin.y + 80, tabWidth, 32);
             if (group == self.group) { [HCAccent() setFill]; [[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:6] fill]; }
@@ -265,8 +311,8 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
             CGRect row = CGRectMake(p.origin.x + 14, y, p.size.width - 28, 32);
             HCText([self.settings[@"flags"][@"reports.enabled"] boolValue] ? @"Đọc thư tố cáo: ON" : @"Đọc thư tố cáo: OFF", row, 14, HCAccent(), YES);
             [self target:@"flag:reports.enabled" rect:row];
-            HCText(HCReportsStatus[@"message"] ?: @"Mở hộp thư trong game để game tải thông báo.", CGRectMake(p.origin.x + 14, y + 38, p.size.width - 28, 90), 12, UIColor.lightGrayColor, NO);
-            HCText(@"Chỉ thư đã tải. Chưa truy vấn toàn bộ lịch sử máy chủ.", CGRectMake(p.origin.x + 14, y + 132, p.size.width - 28, 45), 12, UIColor.systemOrangeColor, NO);
+            HCText(HCReportsStatus[@"message"] ?: @"Cài adapter để truy vấn lịch sử máy chủ.", CGRectMake(p.origin.x + 14, y + 38, p.size.width - 28, 90), 12, UIColor.lightGrayColor, NO);
+            HCText(@"Lịch sử máy chủ trả về + nhật ký đã lưu. Phạm vi phụ thuộc giao thức game.", CGRectMake(p.origin.x + 14, y + 132, p.size.width - 28, 45), 12, UIColor.systemOrangeColor, NO);
         } else {
             NSArray *features = [HCFeatures() filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"group == %ld", (long)self.group]];
             CGFloat rowHeight = MIN(28, (p.size.height - 160) / MAX((NSUInteger)1, features.count));
@@ -294,6 +340,7 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
 }
 - (void)drawEsp {
     NSDictionary *flags = self.settings[@"flags"];
+    if ([self.settings[@"gameRuntimeEnabled"] isEqual:@YES]) return;
     if (HCLocked || ![flags[@"__ifxEnemyEspEnabledV1"] boolValue]) return;
     if (!HCEspStatus[@"sampleUptime"] || NSProcessInfo.processInfo.systemUptime - [HCEspStatus[@"sampleUptime"] doubleValue] > 0.5) return;
     CGFloat w = self.bounds.size.width, h = self.bounds.size.height;
@@ -313,8 +360,6 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
             [UIColor.blackColor setFill]; UIRectFill(CGRectMake(box.origin.x, top - 7, box.size.width, 4));
             [color setFill]; UIRectFill(CGRectMake(box.origin.x, top - 7, box.size.width * ratio, 4));
         }
-        if ([flags[@"DoroCheat.Reference.R1.Icon"] boolValue])
-            HCText([NSString stringWithFormat:@"#%@", target[@"heroID"]], CGRectMake(x - 34, top - 24, 68, 18), 11, color, YES);
         if ([flags[@"DoroCheat.Reference.R1.HP"] boolValue] && ![target[@"hpKnown"] boolValue])
             HCText([target[@"hpCurrentKnown"] boolValue] ? [NSString stringWithFormat:@"HP %@", target[@"hp"]] : @"HP ?", CGRectMake(x - 35, top - 40, 70, 18), 10, color, NO);
         if ([flags[@"DoroCheat.Reference.R1.Check"] boolValue]) {
@@ -322,19 +367,6 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
             for (NSNumber *cd in target[@"cooldowns"]) [texts addObject:cd.intValue < 0 ? @"?" : cd.stringValue];
             NSString *text = texts.count == 3 ? [NSString stringWithFormat:@"S1:%@  S2:%@  S3:%@", texts[0], texts[1], texts[2]] : @"Chưa đọc CD";
             HCText(text, CGRectMake(x - 75, bottom + 3, 150, 18), 10, color, YES);
-        }
-    }
-    if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && [HCEspStatus[@"hasHostPosition"] boolValue]) {
-        CGRect radar = CGRectMake(w - 114, 44, 100, 100);
-        [[UIColor colorWithWhite:0 alpha:0.5] setFill]; UIRectFill(radar);
-        HCText(@"RADAR ±60m", CGRectMake(radar.origin.x, 27, 105, 16), 10, color, YES);
-        [UIColor.whiteColor setFill]; UIRectFill(CGRectMake(CGRectGetMidX(radar)-2, CGRectGetMidY(radar)-2, 4, 4));
-        for (NSDictionary *target in HCEspStatus[@"targets"]) {
-            double dx = [target[@"worldX"] doubleValue] - [HCEspStatus[@"hostX"] doubleValue];
-            double dz = [target[@"worldZ"] doubleValue] - [HCEspStatus[@"hostZ"] doubleValue];
-            if (fabs(dx) > 60 || fabs(dz) > 60) continue;
-            [color setFill];
-            [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(CGRectGetMidX(radar)+dx/1.2-3, CGRectGetMidY(radar)-dz/1.2-3, 6, 6)] fill];
         }
     }
 }
@@ -466,7 +498,7 @@ static void HCUpdateLock(void) {
     NSInteger desired = MIN(UIScreen.mainScreen.maximumFramesPerSecond, MAX(60, [HCEspStatus[@"requestedReadHz"] integerValue]));
     if (link.preferredFrameRateRange.preferred != desired)
         link.preferredFrameRateRange = CAFrameRateRangeMake(MIN(60, desired), desired, desired);
-    if (!HCLocked && [HCCanvas.settings[@"flags"][@"__ifxEnemyEspEnabledV1"] boolValue]) [HCCanvas setNeedsDisplay];
+    if (!HCLocked && ![HCCanvas.settings[@"gameRuntimeEnabled"] isEqual:@YES] && [HCCanvas.settings[@"flags"][@"__ifxEnemyEspEnabledV1"] boolValue]) [HCCanvas setNeedsDisplay];
 }
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
     HCStage(@"delegate_launch");

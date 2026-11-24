@@ -11,19 +11,23 @@ struct ContentView: View {
     @State private var shareItem: ShareItem?
     @State private var exportError: String?
     private let accent = Color(red: 0.39, green: 0.88, blue: 0.78)
+    private var reportStatus: FeatureCheckStatus? {
+        store.snapshot?.runtime?.reports ?? store.snapshot?.runtime?.historicalReports ?? overlay.state?.reports
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     overlayCard
+                    runtimeCard
                     combinedCheck
                     statusCard
                     groupPicker
                     controls
                     if let error = store.persistenceError { Text(error).foregroundStyle(.orange).font(.footnote) }
                     if let error = exportError { Text(error).foregroundStyle(.orange).font(.footnote) }
-                    if store.selectedGroup == .style || store.selectedGroup == .skins {
+                    if store.settings.gameRuntimeEnabled == true || store.selectedGroup == .style || store.selectedGroup == .skins {
                       Button { Task { await store.apply() } } label: {
                         HStack {
                             if store.busy { ProgressView().tint(.black) }
@@ -71,16 +75,38 @@ struct ContentView: View {
         }.tint(accent)
     }
 
+    private var runtimeCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("CHỨC NĂNG GAME GỐC", systemImage: "puzzlepiece.extension").font(.headline)
+            Text("Ảnh tướng, minimap game, kỹ năng, skin và truy vấn tố cáo dùng bộ xử lý trong game đi kèm TIPA.")
+            Text(store.snapshot?.runtime?.message ?? "Cài adapter khi game đang mở và khớp phiên bản. Sau đó đóng hoàn toàn, mở lại game rồi quay về đây kiểm tra.")
+                .foregroundStyle(.secondary)
+            if let phase = store.snapshot?.runtime?.phase { Text("Trạng thái: \(phase)").font(.caption.monospaced()) }
+            if let result = store.runtimeOperationMessage { Text("Lần cài/gỡ gần nhất: \(result)").font(.caption) }
+            if let error = store.snapshot?.runtime?.catalogError { Text("Danh mục skin: \(error)").foregroundStyle(.orange) }
+            Button("Cài / cập nhật adapter game") { Task { await store.installRuntime() } }
+                .disabled(store.busy || store.persistenceError != nil)
+            Button("Kiểm tra adapter") { Task { await store.refresh() } }.disabled(store.busy)
+            Button("Gỡ adapter — cần mở lại game", role: .destructive) { Task { await store.removeRuntime() } }.disabled(store.busy)
+            Text("Cần môi trường jailbreak có bộ nạp tweak tương thích. Nạp patch và đọc lại cấu hình chưa xác minh hiệu ứng hình ảnh hoặc độ đầy đủ lịch sử máy chủ.")
+                .font(.caption).foregroundStyle(.orange)
+        }.font(.footnote).padding(16).background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
+    }
+
     private var combinedCheck: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("KIỂM CHỨNG ĐỒNG THỜI", systemImage: "checklist").font(.headline)
-            Group {
+            if store.settings.gameRuntimeEnabled == true {
+                Text("Adapter: \(store.snapshot?.runtime?.phase ?? "chưa có phản hồi")")
+                Text("ESP do game vẽ bằng sprite và minimap gốc; bộ đếm đọc/vẽ ngoài không áp dụng.")
+                Text("Xác nhận cấu hình: \(store.snapshot?.runtime?.acknowledgement ?? "chưa xác nhận")")
+            } else { Group {
                 Text("Camera: \(overlay.state?.camera?.code ?? "chưa chạy") • lần ghi: \(overlay.state?.camera?.writeCount ?? 0)")
                 Text("ESP: \(overlay.state?.esp?.code ?? "chưa chạy") • chiếu được: \(overlay.state?.esp?.projectedCount ?? 0)/\(overlay.state?.esp?.targetCount ?? 0)")
                 Text(String(format: "Đọc ESP: %.1f Hz • lượt vẽ: %.1f/s • màn hình tối đa %ld Hz", overlay.state?.esp?.measuredReadHz ?? 0, overlay.state?.overlayDrawFPS ?? 0, overlay.state?.displayLimitHz ?? 60))
                 Text("Nguồn logic: \(overlay.state?.esp?.logicAvailable == true ? "đã đọc" : "chưa đọc") • mục tiêu logic: \(overlay.state?.esp?.logicTargetCount ?? 0) • bước: \(overlay.state?.esp?.logicStage ?? 0)")
                 Text("Cooldown đã đọc: \(overlay.state?.esp?.cooldownKnownCount ?? 0) slot")
-            }
+            } }
             if let esp = overlay.state?.esp, let stage = esp.matrixStage {
                 Text("Ma trận: bước \(stage)/7 • chế độ view: \(esp.viewMode ?? -1) • projection dirty: \(esp.projectionDirty ?? -1)")
             }
@@ -88,9 +114,9 @@ struct ContentView: View {
                 Text("Mẫu trong trận gần nhất: \(sample.projectedCount ?? 0)/\(sample.targetCount ?? 0) • \(sample.timestamp ?? "")")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Text("Thư tố cáo: \(overlay.state?.reports?.code ?? "chưa đọc") • \(overlay.state?.reports?.records?.count ?? 0) bản ghi")
+            Text("Tố cáo: \(reportStatus?.code ?? "chưa nhận dữ liệu") • \(reportStatus?.records?.count ?? 0) bản ghi")
             if let error = overlay.state?.settingsError, !error.isEmpty { Text(error).foregroundStyle(.orange) }
-            Button("Bật ESP + đọc thư tố cáo (giữ camera)") {
+            Button("Bật ESP + truy vấn tố cáo (giữ camera)") {
                 store.prepareCombinedCheck()
                 Task {
                     if !overlay.running, let profile = store.prepareOverlayProfile() { await overlay.start(profile: profile) }
@@ -121,7 +147,7 @@ struct ContentView: View {
             if let camera = overlay.state?.camera, camera.code != "camera_disabled" {
                 Label("Camera xa: \(camera.message)", systemImage: "camera").font(.footnote)
             }
-            Text("Chạm HC để mở/thu menu; kéo để di chuyển. Camera và ESP đọc cấu hình khi nút nổi đang chạy.")
+            Text("Chạm HC để mở/thu menu; kéo để di chuyển. Khi dùng adapter, nút nổi chuyển cấu hình đến game.")
                 .font(.footnote).foregroundStyle(.secondary)
             Text("Chế độ tránh chặn màn hình: chạm menu nổi có thể đồng thời chạm ứng dụng phía dưới. Nên mở menu khi đang ở Hero Control và thu menu trước khi vào game.")
                 .font(.footnote).foregroundStyle(.orange)
@@ -187,7 +213,7 @@ struct ContentView: View {
     private var groupPicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 9) {
-                ForEach([FeatureGroup.esp, .camera, .reports]) { group in
+                ForEach(FeatureGroup.allCases) { group in
                     Button { store.selectedGroup = group } label: {
                         Label(group.rawValue, systemImage: group.symbol)
                             .font(.subheadline.bold()).padding(.horizontal, 14).padding(.vertical, 12)
@@ -207,7 +233,7 @@ struct ContentView: View {
                     Toggle(feature.title, isOn: Binding(
                         get: { store.settings.flags[feature.key] ?? false },
                         set: { store.setFlag(feature.key, $0) }))
-                        .disabled(!overlay.running)
+                        .disabled(!overlay.running && store.settings.gameRuntimeEnabled != true)
                     if store.connected && !store.supports(feature.key) {
                         Text("Backend chưa hỗ trợ").font(.caption).foregroundStyle(.orange)
                     }
@@ -219,13 +245,18 @@ struct ContentView: View {
             case .skins: skinControls
             case .reports: reportControls
             case .esp:
-                Picker("Nhịp đọc ESP", selection: Binding(get: { store.settings.espReadHz ?? 60 }, set: { store.setEspReadHz($0) })) {
-                    Text("60 Hz").tag(60)
-                    Text("120 Hz").tag(120)
-                }.pickerStyle(.segmented)
-                Text("iPhone XR vẽ tối đa 60 Hz. 120 Hz là nhịp đọc yêu cầu, không bảo đảm FPS. Mỗi khung dùng tọa độ client mới đọc được; không giữ dấu vị trí cũ.")
-                    .font(.footnote).foregroundStyle(.orange)
-                Text("Bộ đọc ESP chạy cùng camera trong nút nổi. Icon hiện là mã tướng; Map là radar tương đối ±60m. Vị trí khuất tầm nhìn có thể cũ. Kiểm tra số mục tiêu chiếu được rồi đối chiếu trong trận.")
+                if store.settings.gameRuntimeEnabled != true {
+                    Picker("Nhịp đọc ESP ngoài", selection: Binding(get: { store.settings.espReadHz ?? 60 }, set: { store.setEspReadHz($0) })) {
+                        Text("60 Hz").tag(60)
+                        Text("120 Hz").tag(120)
+                    }.pickerStyle(.segmented)
+                    Text("Nhịp đọc này chỉ dùng cho bộ đọc ngoài. iPhone XR hiển thị tối đa 60 Hz.")
+                        .font(.footnote).foregroundStyle(.orange)
+                } else {
+                    Text("ESP cập nhật theo callback render gốc của game. Cấu hình đọc ngoài 60/120 Hz không điều khiển adapter.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                Text("ESP Icon dùng ảnh sprite tướng; ESP Minimap cập nhật minimap của game qua adapter. Radar riêng đã bỏ. Cài adapter để sử dụng các chức năng này.")
                     .font(.footnote).foregroundStyle(.secondary)
             case .style:
                 Text("Lựa chọn này cần backend áp dụng vào tài nguyên và hành vi game lúc chạy.")
@@ -237,7 +268,7 @@ struct ContentView: View {
     private var cameraControls: some View {
         VStack(alignment: .leading, spacing: 18) {
             Toggle("Bật camera xa", isOn: Binding(get: { store.settings.cameraEnabled == true }, set: { store.setCameraEnabled($0) }))
-                .disabled(!overlay.running)
+                .disabled(!overlay.running && store.settings.gameRuntimeEnabled != true)
             HStack {
                 Text("CAMERA SCALE").font(.headline)
                 Spacer()
@@ -255,7 +286,7 @@ struct ContentView: View {
                     Text(String(format: "Giá trị game: %.3f → ghi: %.3f", source, written)).font(.caption)
                 }
             }
-            Text("Camera và ESP tự cập nhật khi bật. Tắt camera để yêu cầu hoàn tác. Thẻ Reports chỉ đọc thư tố cáo game đã tải.")
+            Text("Nút nổi đồng bộ cấu hình khi đang chạy; hoặc bấm Áp dụng. Reports truy vấn lịch sử máy chủ qua adapter và giữ nhật ký theo tài khoản.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
     }
@@ -289,11 +320,21 @@ struct ContentView: View {
 
     private var reportControls: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(overlay.state?.reports?.message ?? "Bật đọc thư tố cáo và mở hộp thư trong game.")
+            Text(reportStatus?.message ?? "Cài adapter và bật truy vấn lịch sử tố cáo.")
+            if store.snapshot?.runtime?.historicalReports != nil {
+                Text("Dữ liệu lần cuối: \(store.snapshot?.runtime?.timestamp ?? "chưa rõ"). Adapter hiện không phản hồi trực tiếp; đây là lịch sử đã lưu.")
+                    .font(.caption).foregroundStyle(.orange)
+            }
             if let stage = overlay.state?.reports?.stage { Text("Bước đọc: \(stage)/9").font(.caption.monospaced()) }
-            Text("Nguồn: thư game đã tải cho tài khoản hiện tại. Chưa tự truy vấn toàn bộ lịch sử máy chủ; không có bản ghi không có nghĩa là không bị tố cáo.")
+            Text("Nguồn: lịch sử máy chủ trả về cho người chơi đã thu thập và nhật ký đã lưu. Có giữ các bản ghi lịch sử ban đầu. Giao thức hiện chưa chứng minh bao phủ mọi tố cáo trên máy chủ; danh sách rỗng không có nghĩa là không bị tố cáo.")
                 .font(.footnote).foregroundStyle(.orange)
-            if let reports = overlay.state?.reports?.records, !reports.isEmpty {
+            if let report = reportStatus {
+                Text("Yêu cầu: \(report.sentRequestCount ?? 0) • phản hồi: \(report.receivedResponseCount ?? 0) • người chơi: \(report.candidateCount ?? 0)")
+                    .font(.caption.monospaced())
+                if report.transportFault == true { Text("Luồng phản hồi hết hạn. Đăng nhập lại trước khi tiếp tục truy vấn.").foregroundStyle(.orange) }
+                if report.recordsTruncated == true { Text("Báo cáo giới hạn 2048 bản ghi; nhật ký đầy đủ được giữ trong dữ liệu game.").foregroundStyle(.orange) }
+            }
+            if let reports = reportStatus?.records, !reports.isEmpty {
                 ForEach(reports) { report in
                     VStack(alignment: .leading, spacing: 5) {
                         Text(report.time).font(.caption.monospaced()).foregroundStyle(accent)
@@ -304,7 +345,7 @@ struct ContentView: View {
                 }
             } else {
                 ContentUnavailableView("Chưa có bản ghi", systemImage: "list.bullet.rectangle",
-                    description: Text("Chưa quan sát được thư tố cáo trong cache đã đọc. Mở hộp thư trong game rồi kiểm tra lại."))
+                    description: Text("Chưa nhận được bản ghi từ máy chủ/nhật ký. Kiểm tra trạng thái adapter và số phản hồi."))
             }
         }
     }
@@ -328,7 +369,7 @@ struct ContentView: View {
                     }
                 }
                 Section("Bản ứng dụng này") {
-                    Text("Menu độc lập; không chứa trình khai thác kernel, bộ vẽ overlay trên game hoặc mã sửa HeroSkin. Backend tương thích phải được tích hợp riêng.")
+                    Text("TIPA đi kèm adapter nạp bản vá tham khảo trong bộ nhớ game, dùng sprite/minimap và mạng của game. Không thay các tệp HeroSkin gốc. Chức năng chỉ được xác minh sau kiểm thử trên thiết bị.")
                 }
             }.navigationTitle("Thông tin kết nối")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Đóng") { showConnection = false } } }

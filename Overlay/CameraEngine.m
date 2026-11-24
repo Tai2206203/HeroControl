@@ -4,6 +4,7 @@
 #include "../BackendSDK/EspMemory.h"
 #include "../BackendSDK/LogicEsp.h"
 #include "../BackendSDK/LuaReports.h"
+#include "../Runtime/RuntimeShared.h"
 
 typedef kern_return_t (*HCMachWrite)(mach_port_t, mach_vm_address_t, vm_offset_t, mach_msg_type_number_t);
 typedef struct { mach_port_t task; HCRemoteRead read; HCMachWrite write; } HCCameraTask;
@@ -55,6 +56,9 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     NSDictionary *_lastReport;
     NSTimeInterval _lastEmission;
     NSString *_lastCode;
+    NSString *_profileRevision;
+    NSString *_runtimeDirectory;
+    NSTimeInterval _nextRuntimeSync;
 }
 - (instancetype)initWithProfile:(NSString *)profile report:(void (^)(NSDictionary *))report espReport:(void (^)(NSDictionary *))espReport reportsReport:(void (^)(NSDictionary *))reportsReport {
     if ((self = [super init])) {
@@ -91,8 +95,37 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         [self emit:result == HC_CAMERA_OK ? @"camera_restored" : @"camera_restore_skipped"
             message:result == HC_CAMERA_OK ? @"Đã trả hệ số camera về giá trị hiện tại của game." : @"Không ghi hoàn tác vì đối tượng/giá trị đã thay đổi."
             extra:@{@"memoryStatus": @(result)}];
+        if (result != HC_CAMERA_OK && result != HC_CAMERA_CHANGED && result != HC_CAMERA_NOT_READY && result != HC_CAMERA_BAD_LAYOUT) return;
     }
     _hasWritten = NO;
+}
+- (void)syncRuntime:(NSDictionary *)settings now:(NSTimeInterval)now {
+    if (now<_nextRuntimeSync) return;
+    _nextRuntimeSync=now+1;
+    _runtimeDirectory=HCRuntimeFindDirectory();
+    NSDictionary *manifest=_runtimeDirectory ? HCRuntimeReadJSON([_runtimeDirectory stringByAppendingPathComponent:@"manifest.json"],131072) : nil;
+    NSDictionary *state=nil;
+    if ([manifest[@"unityUUID"] isEqual:HCRuntimeUUID] && _profileRevision) {
+        NSString *path=[_runtimeDirectory stringByAppendingPathComponent:@"config.json"];
+        NSDictionary *previous=HCRuntimeReadJSON(path,131072);
+        // A remove operation writes enabled=false. Do not silently reinstall or
+        // re-enable it simply because the root HUD still has an old profile.
+        if ([previous[@"enabled"] isEqual:@YES] && ![previous[@"revision"] isEqual:_profileRevision]) {
+            NSError *error=nil;
+            if (!HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"enabled":@YES,@"revision":_profileRevision,@"settings":settings},path,&error)) {
+                [self emit:@"runtime_sync_failed" message:error.localizedDescription ?: @"Không đồng bộ được cấu hình vào container game." extra:nil];
+                return;
+            }
+        }
+        state=HCRuntimeReadJSON([_runtimeDirectory stringByAppendingPathComponent:@"state.json"],4*1024*1024);
+    }
+    BOOL responding=HCRuntimeFresh(state);
+    NSString *message=state[@"message"] ?: @"Chưa có adapter game phản hồi. Cài adapter trong Hero Control rồi khởi động lại game.";
+    if (!responding && [state[@"phase"] isEqual:@"active"]) message=@"Phản hồi adapter đã cũ. Không sử dụng mẫu này làm trạng thái hiện tại.";
+    [self emit:responding ? @"camera_game_runtime" : @"runtime_unavailable" message:message extra:nil];
+    [self emitEsp:@{@"code":responding ? @"esp_game_runtime" : @"runtime_unavailable",@"message":message,@"targets":@[]}];
+    NSDictionary *reports=responding && [state[@"reports"] isKindOfClass:NSDictionary.class] ? state[@"reports"] : nil;
+    [self emitReports:reports ?: @{@"code":@"runtime_unavailable",@"message":message,@"records":@[],@"querySupported":@NO}];
 }
 - (void)restore {
     [self restoreCamera]; [self releaseTarget];
@@ -231,10 +264,23 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             id root = data && data.length < 131072 ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
             id settings = [root isKindOfClass:NSDictionary.class] && [root[@"schemaVersion"] isEqual:@1] ? root[@"settings"] : nil;
             _settings = [settings isKindOfClass:NSDictionary.class] ? settings : nil;
+            _profileRevision=[root isKindOfClass:NSDictionary.class] && [root[@"revision"] isKindOfClass:NSString.class] ? root[@"revision"] : nil;
         }
         NSDictionary *settings = _settings;
         id enabled = [settings isKindOfClass:NSDictionary.class] ? settings[@"cameraEnabled"] : nil;
         id flags = [settings isKindOfClass:NSDictionary.class] ? settings[@"flags"] : nil;
+        if (!HCRuntimeSettingsValid(settings)) {
+            [self restore];
+            [self emit:@"profile_invalid" message:@"Cấu hình không hợp lệ; đã dừng worker." extra:nil];
+            [self emitEsp:@{@"code":@"profile_invalid",@"message":@"Cấu hình không hợp lệ.",@"targets":@[]}];
+            return;
+        }
+        if ([settings[@"gameRuntimeEnabled"] isEqual:@YES]) {
+            [self restoreCamera];[self releaseTarget];
+            if (_timerHz!=10) { _timerHz=10;dispatch_source_set_timer(_timer,DISPATCH_TIME_NOW,100*NSEC_PER_MSEC,10*NSEC_PER_MSEC); }
+            [self syncRuntime:settings now:now];
+            return;
+        }
         id espFlag = [flags isKindOfClass:NSDictionary.class] ? flags[@"__ifxEnemyEspEnabledV1"] : nil;
         BOOL espEnabled = [espFlag isKindOfClass:NSNumber.class] && [espFlag doubleValue] == 1;
         BOOL cameraEnabled = [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;

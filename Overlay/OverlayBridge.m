@@ -61,7 +61,7 @@ static NSDictionary *HCOverlayHandle(NSDictionary *request) {
         return HCOverlayReply(result == NOTIFY_STATUS_OK, @"Đã gửi yêu cầu đến nút nổi.", state, nil);
     }
     NSString *currentVersion = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-    if (running && currentVersion && ![state[@"appVersion"] isEqual:currentVersion]) {
+    if (running && ((currentVersion && ![state[@"appVersion"] isEqual:currentVersion]) || ![state[@"generation"] isEqual:@HC_RUNTIME_GENERATION])) {
         // An app upgrade can leave the old root HUD alive even though the app
         // files have changed. Do not silently reuse its old input implementation.
         notify_post(HCOverlayNotification(directory, @"stop").UTF8String);

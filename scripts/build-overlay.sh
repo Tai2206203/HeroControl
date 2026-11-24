@@ -3,16 +3,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUTPUT="$ROOT/.build/Overlay"
 SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+GENERATION="$(python3 "$ROOT/scripts/runtime-generation.py")"
 mkdir -p "$OUTPUT/HeroOverlay.app"
 python3 "$ROOT/scripts/generate-overlay-features.py" "$OUTPUT/HCFeatures.h"
 xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
     -miphoneos-version-min=17.0 -fobjc-arc -Wall -Wextra \
     -Werror=implicit-function-declaration -I"$OUTPUT" \
-    -framework Foundation -framework UIKit -framework QuartzCore -framework CoreGraphics \
+    "-DHC_RUNTIME_GENERATION=\"$GENERATION\"" \
+    -framework Foundation -framework CoreFoundation -framework UIKit -framework QuartzCore -framework CoreGraphics \
     "$ROOT/Overlay/HeroOverlay.m" "$ROOT/Overlay/CameraEngine.m" -o "$OUTPUT/HeroOverlay.app/hero-overlay"
 cp "$ROOT/Overlay/Info.plist" "$OUTPUT/HeroOverlay.app/Info.plist"
 xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
     -miphoneos-version-min=17.0 -fobjc-arc -Wall -Wextra -dynamiclib -fvisibility=hidden \
+    "-DHC_RUNTIME_GENERATION=\"$GENERATION\"" \
     -framework Foundation -install_name @rpath/HeroOverlayBridge.dylib \
     "$ROOT/Overlay/OverlayBridge.m" -o "$OUTPUT/HeroOverlayBridge.dylib"
 # Also exercise invalid input/unsupported-host responses of the actual ABI.

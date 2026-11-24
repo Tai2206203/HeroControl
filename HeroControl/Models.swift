@@ -49,9 +49,9 @@ struct Feature: Identifiable {
     static let all: [Feature] = [
         .init(key: "__ifxEnemyEspEnabledV1", title: "Enable ESP", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Box", title: "ESP Box", group: .esp),
-        .init(key: "DoroCheat.Reference.R1.Icon", title: "ESP Icon (mã tướng)", group: .esp),
+        .init(key: "DoroCheat.Reference.R1.Icon", title: "ESP Icon (ảnh tướng)", group: .esp),
         .init(key: "DoroCheat.Reference.R1.HP", title: "ESP HP", group: .esp),
-        .init(key: "DoroCheat.Reference.R1.Map", title: "ESP Map (radar ±60m)", group: .esp),
+        .init(key: "DoroCheat.Reference.R1.Map", title: "ESP Minimap", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Unseen", title: "Unseen only", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Check", title: "ESP Check / kỹ năng", group: .esp),
         .init(key: "DoroCheat.Style.Buttons", title: "Skin Buttons", group: .style),
@@ -59,7 +59,7 @@ struct Feature: Identifiable {
         .init(key: "DoroCheat.Style.Skin", title: "Mod Skin", group: .skins),
         .init(key: "DoroCheat.Style.BeforeMatch", title: "Before Match", group: .skins),
         .init(key: "DoroCheat.Style.LiveChange", title: "Live Change", group: .skins),
-        .init(key: "reports.enabled", title: "Đọc thư thông báo tố cáo", group: .reports)
+        .init(key: "reports.enabled", title: "Truy vấn lịch sử tố cáo", group: .reports)
     ]
     static let cameraKey = "DoroCheat.Reference.R2.CameraScale"
 }
@@ -70,6 +70,7 @@ struct ControlSettings: Codable, Equatable {
     var selectedSkins: [String: Int] = [:]
     var cameraEnabled: Bool? = nil
     var espReadHz: Int? = nil
+    var gameRuntimeEnabled: Bool? = nil
     mutating func normalize() {
         flags = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, flags[$0.key] ?? false) })
         cameraScale = cameraScale.isFinite ? min(2.3, max(1, cameraScale)) : 1
@@ -118,6 +119,49 @@ struct BackendSnapshot: Codable {
     var gameInspectionAvailable: Bool? = nil
     var gameInspection: GameInspection? = nil
     var gameProbeDiagnostics: KernelDiagnostics? = nil
+    var runtime: GameRuntimeStatus? = nil
+    var runtimeDiagnostics: KernelDiagnostics? = nil
+}
+
+struct FeatureCheckStatus: Codable {
+    let code: String
+    let message: String
+    let available: Bool?
+    let stage: Int?
+    let tablesRead: Int?
+    let accountID: String?
+    let source: String?
+    let querySupported: Bool?
+    var completeHistoryGuaranteed: Bool? = nil
+    var sentRequestCount: Int? = nil
+    var receivedResponseCount: Int? = nil
+    var candidateCount: Int? = nil
+    var transportFault: Bool? = nil
+    var recordsTruncated: Bool? = nil
+    var retainedRecordCount: Int? = nil
+    var serverResultCode: Int? = nil
+    let readBudgetExceeded: Bool?
+    let records: [ReportRecord]?
+    let timestamp: String?
+}
+
+struct GameRuntimeStatus: Codable {
+    let phase: String?
+    let code: String?
+    let message: String?
+    let responding: Bool?
+    let runtimeBuild: String?
+    let generation: String?
+    let pid: Int?
+    let sessionID: String?
+    let appliedRevision: String?
+    let acknowledgement: String?
+    let effectsVerified: Bool?
+    let reports: FeatureCheckStatus?
+    let historicalReports: FeatureCheckStatus?
+    let timestamp: String?
+    let catalogError: String?
+    let directory: String?
 }
 
 struct GameInspection: Codable {
@@ -203,6 +247,7 @@ struct BackendReply: Decodable {
 struct SavedProfile: Codable {
     let schemaVersion: Int
     let settings: ControlSettings
+    var revision: String? = nil
 }
 
 struct BackendExchangeTrace: Codable {

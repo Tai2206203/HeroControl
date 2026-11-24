@@ -11,3 +11,11 @@ HUDRootViewController.mm and the corresponding private API headers.
 The canvas, controls, profile synchronization and command bridge are
 Hero Control implementations; no KIF event injection code is included.
 The MIT notice is bundled in the TIPA under ThirdParty.
+
+Runtime payload provenance (0.10.0)
+The two IFix patch payloads and complaint monitor originate from the project
+owner's supplied data menu new/analysis_heroskin/modified reference material.
+Runtime/Payload/manifest.json records source and shipped SHA-256 digests.
+The complaint Lua was adapted to retain baseline server history and versioned
+23. VM bodies, field/native mappings and hook entries are preserved.
+No new license grant is asserted for the owner-supplied payloads.

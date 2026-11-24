@@ -1,3 +1,44 @@
+HERO CONTROL BACKEND v1 — BỔ SUNG 0.10.0
+
+C ABI và protocolVersion vẫn là 1. Mô tả 0.2 bên dưới là lịch sử, được thay
+bởi phần này khi adapter game đã được cài và phản hồi.
+
+Action mới: installRuntime, removeRuntime, runtimeStatus.
+installRuntime/apply nhận revision và ControlSettings đầy đủ.
+status cũng nhận settings để quảng bá đủ khóa SelectedSkin đang được lưu.
+
+Backend vẫn là chẩn đoán khi chưa có adapter. Khi runtime có phase active,
+đúng build/generation, PID còn sống và heartbeat dưới 6 giây, connected=true,
+sessionID là UUID của lần nạp thư viện, supportedKeys gồm 13 cờ + camera +
+SelectedSkin theo cấu hình. heroes đọc từ databin; không tạo danh mục giả.
+
+Snapshot thêm runtime và runtimeDiagnostics (tùy chọn).
+runtime có phase/code/message, responding, sessionID, appliedRevision,
+acknowledgement=preferences_readback, effectsVerified=false, reports,
+historicalReports, timestamp và catalogError. Danh mục heroes ở snapshot
+để không nhân đôi dữ liệu JSON lớn.
+
+installRuntime chỉ xác nhận cài payload/filter, không xác nhận được nạp.
+Cần mở lại game và xem phản hồi. removeRuntime cần mở lại game để loại bỏ
+hook trong bộ nhớ. Không sửa các file HeroSkin gốc.
+
+apply có thể trả ok=true sau khi lưu yêu cầu mà appliedRevision chưa khớp.
+Đây là yêu cầu đang chờ khi game bị tạm dừng; UI không đánh dấu thành công.
+UI theo dõi xác nhận cùng revision/session sau khi game hoạt động trở lại.
+Acknowledgement chỉ là đọc lại cấu hình trong game, không xác nhận hình ảnh.
+
+Reports: querySupported=true khi luồng NetworkModule được cài; các bộ đếm
+sentRequestCount/receivedResponseCount thể hiện hoạt động thực tế.
+completeHistoryGuaranteed=false. Có giữ baseline, FIFO, timeout và phân
+biệt tài khoản. Báo cáo tối đa 2048 bản ghi mới nhất/1 MiB; nhật ký giữ trên đĩa.
+Khi heartbeat cũ, không connected và chỉ xuất historicalReports có timestamp.
+
+ControlSettings thêm gameRuntimeEnabled (Bool tùy chọn). Profile schema 1
+thêm revision tùy chọn; ghi bằng khóa đọc-sửa-ghi và thay tệp nguyên tử.
+Worker ngoài dừng khi mode này bật; HUD chỉ đồng bộ cấu hình/trạng thái game.
+
+THAM KHẢO GIAO THỨC CŨ
+
 HERO CONTROL BACKEND PROTOCOL v1
 
 Update 0.2: build mặc định đóng gói DiagnosticBackend.m, chỉ hỗ trợ

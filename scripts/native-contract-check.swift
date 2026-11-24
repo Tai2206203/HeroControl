@@ -35,6 +35,11 @@ struct NativeContractCheck {
         } catch is BackendError { /* Expected refusal. */ }
 
         let numeric = Data(#"{"protocolVersion":1,"ok":1,"message":"old broken response"}"#.utf8)
+        let runtimeStatus = try await backend.send(action: "runtimeStatus")
+        guard runtimeStatus.snapshot?.connected == false,
+              runtimeStatus.snapshot?.runtimeDiagnostics?.code == "runtime_requires_device" else {
+            fatalError("Host must refuse runtime operations without installing anything")
+        }
         do {
             _ = try BackendReplyDecoder.decode(numeric)
             fatalError("Numeric JSON ok was accepted as a boolean")

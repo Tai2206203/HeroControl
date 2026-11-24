@@ -1,0 +1,68 @@
+HERO CONTROL 0.10.0 — BUILD 20
+
+ĐÃ TÍCH HỢP MÃ, CHƯA KIỂM CHỨNG ADAPTER MỚI TRÊN IPHONE
+
+TIPA đóng gói adapter HeroControlRuntime.dylib và hai payload IFix đã giải mã
+từ tài liệu chủ dự án cung cấp. Không cần chép data menu new lên GitHub.
+Không ghi đè các tệp HeroSkin gốc. Bộ nạp tweak của jailbreak nạp adapter
+vào đúng com.garena.game.kgvn khi mở lại game; adapter kiểm tra UUID và mẫu
+lệnh native trước khi gọi LuaInteraction trên main thread.
+
+Giữ nguyên 88 + 51 thân VM và 35 + 6 điểm hook của donor. Chuyển theo mã gốc:
+Box, ảnh sprite tướng, HP, minimap game, Unseen only, kỹ năng/cooldown,
+camera, Skin Buttons, Kill Banner, Mod Skin, Before Match và Live Change.
+Các UI/callback gốc của donor được giữ lại. Đã bỏ chữ #heroID và radar ±60m
+khỏi bộ vẽ ngoài. Không tự tạo ảnh hoặc đặt VerifiedSkin giả.
+
+TỐ CÁO
+
+Dùng lại CSID_CMD_COMPLAINT_RECORD_REQ/RSP và NetworkModule trong game;
+giữ một yêu cầu đang chờ, FIFO, backoff, kiểm tra tài khoản và xử lý timeout.
+Giữ cả lịch sử baseline máy chủ trả về thay vì chỉ ghi các sự kiện mới.
+Script nhúng trong patch và ComplaintHistory.lua cùng cập nhật lên version 23.
+
+Nhật ký theo tài khoản được giữ trên đĩa. Báo cáo lấy tối đa 2048 bản ghi mới
+nhất và giới hạn 1 MiB phần bản ghi; có recordsTruncated/retainedRecordCount.
+Khi game vào nền, dữ liệu lịch sử được hiển thị riêng cùng timestamp.
+
+Giới hạn: donor truy vấn theo UID/world của người chơi thu thập được.
+Chưa có bằng chứng giao thức cung cấp mọi tố cáo trên toàn máy chủ.
+completeHistoryGuaranteed=false; danh sách rỗng không có nghĩa không bị tố cáo.
+sentRequestCount/receivedResponseCount cho biết có gửi/nhận thật hay chưa.
+
+CÁCH DÙNG
+
+1. Tắt nút nổi cũ, cài TIPA 0.10.0 build 20 từ lượt Actions mới đã qua kiểm tra.
+2. Mở game đúng phiên bản vào sảnh, quay lại Hero Control.
+3. Bấm Cài / cập nhật adapter game. Helper chỉ dùng container game xác định
+   duy nhất và thư mục bộ nạp MobileSubstrate/DynamicLibraries sẵn có.
+4. Đóng hoàn toàn game rồi mở lại. Việc chép tệp chưa chứng minh được nạp;
+   môi trường jailbreak phải cho phép bộ nạp/chữ ký của thư viện hoạt động.
+5. Kiểm tra adapter. Nút nổi đồng bộ cấu hình; cũng có thể bấm Áp dụng.
+   Nếu game bị tạm dừng khi vào nền, vào game rồi quay lại để nhận xác nhận.
+6. Style/Skins đã mở lại. Danh mục lấy từ heroSkinDatabin thật; lỗi đọc được
+   ghi thành catalogError. Thử từng nhóm trong trận tập và xuất chẩn đoán.
+7. Gỡ adapter từ app rồi đóng hoàn toàn/mở lại game. Gỡ dylib/filter không
+   tự xóa hook đã nạp trong bộ nhớ; nhật ký được giữ lại.
+
+Khi dùng adapter, bộ đọc/ghi ESP/camera ngoài dừng để tránh hai bên cùng ghi.
+Nhịp 60/120 Hz của bộ đọc ngoài không điều khiển callback render gốc của donor.
+Không cài jailbreak, bộ nạp tweak, trust cache hoặc đổi entitlement game.
+
+SỬA LỖI NỀN
+
+Profile có revision dùng chung, khóa đọc-sửa-ghi và gộp trường đã đổi khi kéo
+thanh camera. Setter không ghi đè profile hỏng. Các giới hạn trạng thái
+overlay/bridge/client thống nhất 4 MiB và JSON gọn. Build sạch luôn tạo
+helper kể cả dùng --backend; backend tùy chọn phải có nền tảng iPhoneOS.
+
+KIỂM TRA
+
+Đã chạy: 13 unittest Python; năm fixture C với -std=c11 -Wall -Wextra -Werror;
+Lua 5.3 smoke test với Unity/mạng mô phỏng. Đọc lại hết hai payload và kiểm
+tra ánh xạ VM/native giữ nguyên. Không truy cập iPhone hoặc máy chủ trong test.
+
+GitHub Actions kiểm tra manifest/payload, Lua, ABI, biên dịch arm64 và XCTest.
+Chưa chạy Xcode hoặc xác minh adapter/sprite/minimap/mạng/skin trên iPhone
+từ máy Windows này. effectsVerified=false. Xác nhận revision là đọc lại cấu
+hình, không phải cam kết mọi hiệu ứng đã được quan sát thành công.
