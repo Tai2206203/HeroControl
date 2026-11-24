@@ -2,6 +2,7 @@
 #import "../BackendSDK/GameInspection.h"
 #include "../BackendSDK/CameraMemory.h"
 #include "../BackendSDK/EspMemory.h"
+#include "../BackendSDK/LogicEsp.h"
 
 typedef kern_return_t (*HCMachWrite)(mach_port_t, mach_vm_address_t, vm_offset_t, mach_msg_type_number_t);
 typedef struct { mach_port_t task; HCRemoteRead read; HCMachWrite write; } HCCameraTask;
@@ -20,6 +21,17 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
     void (^_report)(NSDictionary *);
     void (^_espReport)(NSDictionary *);
     BOOL _espActive;
+    BOOL _logicLayoutVerified;
+    NSDictionary *_settings;
+    NSTimeInterval _nextProfileRead, _nextCameraTick;
+    NSInteger _timerHz, _requestedHz;
+    NSISO8601DateFormatter *_dateFormatter;
+    NSLock *_frameLock;
+    NSDictionary *_pendingEsp;
+    BOOL _deliveryQueued;
+    NSTimeInterval _readWindow;
+    NSUInteger _readSamples;
+    double _measuredReadHz;
     dispatch_queue_t _queue;
     dispatch_source_t _timer;
     HCCameraTask _target;
@@ -38,6 +50,8 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
     if ((self = [super init])) {
         _profile = [profile copy]; _report = [report copy];
         _espReport = [espReport copy];
+        _dateFormatter = [NSISO8601DateFormatter new];
+        _frameLock = [NSLock new]; _requestedHz = 60;
         _queue = dispatch_queue_create("local.herocontrol.camera", DISPATCH_QUEUE_SERIAL);
     }
     return self;
@@ -45,7 +59,7 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
 - (HCCameraMemory)memory { return (HCCameraMemory){&_target, HCEngineRead, HCEngineWrite}; }
 - (void)emit:(NSString *)code message:(NSString *)message extra:(NSDictionary *)extra {
     NSMutableDictionary *value = [@{@"code": code, @"message": message, @"pid": @(_pid),
-        @"writeCount": @(_writes), @"timestamp": [[[NSISO8601DateFormatter alloc] init] stringFromDate:NSDate.date]} mutableCopy];
+        @"writeCount": @(_writes), @"timestamp": [_dateFormatter stringFromDate:NSDate.date]} mutableCopy];
     if (extra) [value addEntriesFromDictionary:extra];
     _lastReport = value;
     NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;
@@ -57,6 +71,7 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
 - (void)releaseTarget {
     if (_target.task != MACH_PORT_NULL) mach_port_deallocate(mach_task_self(), _target.task);
     _target = (HCCameraTask){0}; _base = 0; _pid = 0; _hasWritten = NO;
+    _logicLayoutVerified = NO;
 }
 - (void)restoreCamera {
     if (_hasWritten) {
@@ -71,28 +86,54 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
     [self restoreCamera]; [self releaseTarget];
 }
 - (void)emitEsp:(NSDictionary *)value {
+    // Keep only the latest frame if the main thread cannot consume at 120 Hz.
+    [_frameLock lock]; _pendingEsp = value;
+    if (_deliveryQueued) { [_frameLock unlock]; return; }
+    _deliveryQueued = YES; [_frameLock unlock];
     void (^callback)(NSDictionary *) = _espReport;
-    dispatch_async(dispatch_get_main_queue(), ^{ callback(value); });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self->_frameLock lock];
+        NSDictionary *latest = self->_pendingEsp; self->_pendingEsp = nil; self->_deliveryQueued = NO;
+        [self->_frameLock unlock];
+        if (latest) callback(latest);
+    });
 }
 - (void)readEsp:(BOOL)unseenOnly {
     HCEspFrame frame;
-    int status = HCEspRead(self.memory, _base, unseenOnly, &frame);
+    NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;
+    int status = HCEspRead(self.memory, _base, false, &frame);
+    HCLogicFrame logic = {0};
+    BOOL logicAvailable = _logicLayoutVerified && (status == HC_ESP_OK || status == HC_ESP_MATRICES_PENDING) &&
+        HCLogicRead(self.memory, _base, frame.hostCamp, &logic);
+    if (status == HC_ESP_OK || status == HC_ESP_MATRICES_PENDING) HCLogicMerge(&frame, &logic, logicAvailable, unseenOnly);
+    if (!_readWindow) _readWindow = now;
+    _readSamples++;
+    if (now - _readWindow >= 1) { _measuredReadHz = _readSamples / (now - _readWindow); _readSamples = 0; _readWindow = now; }
     NSMutableArray *targets = [NSMutableArray array];
+    NSUInteger hiddenCount = 0, logicCount = 0;
     for (int i = 0; i < frame.count; i++) {
         HCEspTarget t = frame.targets[i];
+        if (!t.visible) hiddenCount++;
+        if (t.logicPosition) logicCount++;
         [targets addObject:@{@"objectID": @(t.objectID), @"heroID": @(t.heroID), @"hp": @(t.hp), @"maxHP": @(t.maxHP),
             @"worldX": @(t.worldX), @"worldZ": @(t.worldZ), @"x": @(t.x), @"feetY": @(t.feetY), @"headY": @(t.headY),
             @"visible": t.visible ? @YES : @NO, @"onScreen": t.onScreen ? @YES : @NO,
+            @"hpKnown": t.hpKnown ? @YES : @NO, @"hpCurrentKnown": t.hpCurrentKnown ? @YES : @NO,
+            @"positionSource": t.logicPosition ? @"logic" : @"visual", @"positionFrame": @(t.positionFrame),
             @"cooldowns": @[@(t.cooldowns[0]), @(t.cooldowns[1]), @(t.cooldowns[2])]}];
     }
     NSString *code = status == HC_ESP_OK ? @"esp_frame_read" : status == HC_ESP_MATRICES_PENDING ? @"esp_matrices_pending" : @"esp_waiting";
     [self emitEsp:@{@"code": code, @"message": status == HC_ESP_OK ? @"Đã đọc khung ESP; cần đối chiếu hình vẽ trong trận." : @"Đang chờ đối tượng hoặc ma trận camera hợp lệ trong trận.",
         @"memoryStatus": @(status), @"pid": @(_pid), @"targetCount": @(frame.count), @"projectedCount": @(frame.projected),
+        @"requestedReadHz": @(_requestedHz), @"measuredReadHz": @(_measuredReadHz),
+        @"hiddenClientCount": @(hiddenCount),
+        @"logicAvailable": logicAvailable ? @YES : @NO, @"logicStage": @(logic.stage), @"logicTargetCount": @(logicCount),
+        @"logicFrameNumber": @(logic.frameNumber),
         @"listCount": @(frame.listCount), @"matricesValid": frame.matricesValid ? @YES : @NO,
         @"matrixStage": @(frame.matrixStage), @"viewMode": @(frame.viewMode), @"projectionDirty": @(frame.projectionDirty),
         @"nativeCamera": [NSString stringWithFormat:@"0x%llx", (unsigned long long)frame.nativeCamera],
         @"hostX": @(frame.hostX), @"hostZ": @(frame.hostZ), @"hasHostPosition": frame.hasHostPosition ? @YES : @NO,
-        @"targets": targets, @"timestamp": [[[NSISO8601DateFormatter alloc] init] stringFromDate:NSDate.date]}];
+        @"targets": targets, @"sampleUptime": @(now), @"timestamp": [_dateFormatter stringFromDate:NSDate.date]}];
 }
 - (BOOL)discover {
     NSDictionary *inspection = HCGameInspection();
@@ -128,23 +169,41 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
         [self releaseTarget];
         [self emit:@"camera_signature_mismatch" message:@"Mã setter camera không khớp bản đã đối chiếu; không ghi." extra:nil]; return NO;
     }
+    const unsigned char locationSignature[] = {0x60,0x72,0x40,0xf9,0x61,0xea,0x40,0xb9};
+    const unsigned char crypticSignature[] = {0x08,0xfc,0x60,0xd3,0x00,0x01,0x00,0x4a,0xc0,0x03,0x5f,0xd6};
+    unsigned char locationActual[8] = {0}, crypticActual[12] = {0};
+    _logicLayoutVerified = HCEngineRead(&_target, base + 0x49FB604, locationActual, 8) && !memcmp(locationActual, locationSignature, 8) &&
+        HCEngineRead(&_target, base + 0x4F54874, crypticActual, 12) && !memcmp(crypticActual, crypticSignature, 12);
     return YES;
 }
 - (void)tick {
     @autoreleasepool {
-        NSData *data = [NSData dataWithContentsOfFile:_profile];
-        id root = data && data.length < 131072 ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
-        id settings = [root isKindOfClass:NSDictionary.class] && [root[@"schemaVersion"] isEqual:@1] ? root[@"settings"] : nil;
+        NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;
+        if (now >= _nextProfileRead) {
+            _nextProfileRead = now + 0.25;
+            NSData *data = [NSData dataWithContentsOfFile:_profile];
+            id root = data && data.length < 131072 ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+            id settings = [root isKindOfClass:NSDictionary.class] && [root[@"schemaVersion"] isEqual:@1] ? root[@"settings"] : nil;
+            _settings = [settings isKindOfClass:NSDictionary.class] ? settings : nil;
+        }
+        NSDictionary *settings = _settings;
         id enabled = [settings isKindOfClass:NSDictionary.class] ? settings[@"cameraEnabled"] : nil;
         id flags = [settings isKindOfClass:NSDictionary.class] ? settings[@"flags"] : nil;
         id espFlag = [flags isKindOfClass:NSDictionary.class] ? flags[@"__ifxEnemyEspEnabledV1"] : nil;
         BOOL espEnabled = [espFlag isKindOfClass:NSNumber.class] && [espFlag doubleValue] == 1;
         BOOL cameraEnabled = [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;
+        _requestedHz = [settings[@"espReadHz"] isEqual:@120] ? 120 : 60;
+        NSInteger targetHz = espEnabled ? _requestedHz : 10;
+        if (_timerHz != targetHz) {
+            _timerHz = targetHz;
+            dispatch_source_set_timer(_timer, DISPATCH_TIME_NOW, NSEC_PER_SEC / (uint64_t)targetHz, NSEC_PER_MSEC);
+            _readSamples = 0; _readWindow = now; _measuredReadHz = 0;
+        }
         if (!espEnabled && _espActive) [self emitEsp:@{@"code": @"esp_disabled", @"message": @"ESP đang tắt.", @"targets": @[]}];
         _espActive = espEnabled;
         if (!cameraEnabled) {
             BOOL wasActive = _hasWritten; [self restoreCamera];
-            if (!wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"])
+            if (!wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"] && ![_lastReport[@"code"] isEqual:@"camera_disabled"])
                 [self emit:@"camera_disabled" message:@"Camera xa đang tắt." extra:nil];
             if (!espEnabled) { [self releaseTarget]; _nextDiscovery = 0; return; }
         }
@@ -153,7 +212,6 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
         if (cameraEnabled && (!isfinite(scale) || scale < 1 || scale > 2.3)) {
             [self restore]; [self emit:@"camera_invalid_scale" message:@"Hệ số camera không hợp lệ; không ghi." extra:nil]; return;
         }
-        NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;
         if (now >= _nextDiscovery) {
             _nextDiscovery = now + 2;
             if (![self discover]) {
@@ -164,6 +222,9 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
         if (!_target.task) return;
         if (espEnabled) [self readEsp:[flags[@"DoroCheat.Reference.R1.Unseen"] boolValue]];
         if (!cameraEnabled) return;
+        // Preserve the already verified camera write cadence independently of ESP.
+        if (now < _nextCameraTick) return;
+        _nextCameraTick = now + 0.1;
         HCCameraSnapshot object = {0};
         float written = 0;
         int result = HCCameraApply(self.memory, _base, (float)scale, &object, &written);

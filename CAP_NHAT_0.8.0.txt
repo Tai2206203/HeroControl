@@ -1,0 +1,75 @@
+HERO CONTROL 0.8.0 — BUILD 18
+
+ESP BÁM TỌA ĐỘ LOGIC VÀ NHỊP ĐỌC 60/120 Hz
+
+Theo yêu cầu, không giữ dấu vị trí cũ 5 giây. Mỗi mẫu ESP đọc lại dữ liệu
+client và chiếu bằng ma trận camera của mẫu đó. Mẫu chẩn đoán espLastSample
+chỉ dùng xuất báo cáo, không được dùng để vẽ sau khi mất quyền truy cập.
+
+NGUỒN TỌA ĐỘ KHI KHUẤT TẦM NHÌN
+Bộ đọc cũ chỉ dùng ActorLinker (lớp hiển thị). Bản này thêm đường logic:
+Singleton<LLogicCore> → instances → LFramework đang eGaming →
+LMainBattleLogic.gameActorMgr → LGameActorMgr.HeroActors → LActorRoot.
+Vị trí đọc tại LActorRoot+0xE0, ObjID tại +0x28, cấu hình/phe tại ActorMeta
++0x58. Đối chiếu ObjID và heroID để dùng vị trí logic cho tướng khuất.
+Tướng đang thấy vẫn dùng vị trí hiển thị nội suy để bám hình ảnh mượt hơn.
+Tướng chỉ còn ở danh sách logic cũng được thêm vào khung ESP.
+HP cơ bản đọc từ ValuePropertyComponent+0x50 bằng XOR hai nửa CrypticInt32,
+đúng phép chuyển đổi native. HP tối đa/cooldown chỉ hiển thị khi đọc được;
+thiếu HP tối đa thì hiển thị số HP, thiếu cả HP thì hiện HP ?.
+Đọc được vị trí hiển thị không còn phụ thuộc vào việc có HP hiển thị hay không.
+
+Đã đối chiếu trực tiếp với dump.cs, script.json, il2cpp.h và mã ARM64:
+- MethodInfo Singleton<LLogicCore>.get_instance tại RVA 0xD1129D0.
+- Getter generic dùng MethodInfo+0x20, rgctx+0xC0, class static_fields+0xB8.
+- Getter LActorRoot.location đọc +0xE0/+0xE8 tại RVA 0x49FB604.
+- CrypticInt32 → int dùng XOR tại RVA 0x4F54874.
+Bộ đọc kiểm tra tên lớp, phe, ID, actor tái chế, state trận và số frame trước/sau;
+không gọi hàm Unity/logic trong tiến trình game. UUID và chữ ký mã vẫn phải khớp.
+
+GIỚI HẠN CẦN KIỂM CHỨNG
+Đường logic có thể không tồn tại hoặc không cập nhật tọa độ địch trong một
+số chế độ đồng bộ. Đọc 120 Hz không tạo dữ liệu mà máy chủ không gửi.
+Bản này không cam kết theo dõi mọi địch khuất tầm nhìn trên thiết bị trước
+khi kiểm chứng. Khi logic chưa sẵn sàng, vẫn dùng mẫu ActorLinker vừa đọc;
+không giả lập chuyển động hoặc lấy lại mẫu lịch sử để báo thành công.
+
+NHỊP ĐỌC VÀ NHỊP VẼ
+Trong thẻ ESP chọn 60 hoặc 120 Hz, mặc định 60. CADisplayLink vẽ theo
+nhịp màn hình, tối đa tốc độ đã chọn và maximumFramesPerSecond của máy.
+iPhone XR tối đa 60 Hz; đọc 120 lần/giây không tạo 120 FPS hiển thị.
+Worker tải cấu hình 4 lần/giây, quét nhận diện game mỗi 2 giây, gộp khung
+chờ lên main thread để chỉ giữ mẫu mới nhất. Camera giữ nhịp ghi riêng
+khoảng 10 Hz như bản đang hoạt động. Không tăng nhịp ghi camera lên 120.
+
+BÁO CÁO KIỂM CHỨNG
+- requestedReadHz / measuredReadHz: nhịp chọn và nhịp đọc đo được.
+- displayLimitHz / overlayDrawFPS: giới hạn màn hình và lượt drawRect/s,
+  không phải cam kết số khung hình GPU đã trình chiếu.
+- logicAvailable / logicStage / logicTargetCount / logicFrameNumber:
+  nguồn logic có đọc được hay không, bước và số tướng/frame logic.
+  Bước 1 metadata; 2 singleton; 3 instances; 4 battle; 5 danh sách hero;
+  6 đọc actor; 7 kiểm tra ổn định; 8 hoàn tất.
+- targets[].positionSource là logic hoặc visual; positionFrame là bộ đếm
+  frame nguồn; hpKnown/hpCurrentKnown phân biệt thanh HP với số HP đọc được.
+
+CẬP NHẬT VÀ THỬ
+1. Trong C:\Users\Admin\Downloads\HeroControl chạy git push.
+2. Chờ Actions xanh, cài .tipa mới, kiểm tra 0.8.0 build 18.
+3. Tắt/bật lại nút nổi nếu overlay cũ còn chạy. Chọn 60 Hz trước.
+4. Bật ESP và vào trận tập có địch. Cho địch di chuyển vào/rời tầm nhìn,
+   đồng thời di chuyển camera. Kiểm tra box bám theo và camera xa vẫn hoạt động.
+5. Thử 120 Hz rồi so measuredReadHz. Trên XR lượt vẽ vẫn tối đa khoảng 60/s.
+6. Xuất kết quả chung có overlay.esp và overlay.espLastSample. Gửi JSON cùng
+   mô tả box có bám địch khi khuất hay không. logicAvailable=true và
+   positionSource=logic mới chứng minh đã dùng được đường logic, chưa tự
+   chứng minh tọa độ khớp thực tế — cần đối chiếu trong trận.
+
+KIỂM THỬ TẠI WINDOWS
+Fixture C kiểm tra tướng logic di chuyển khi không có ActorLinker, đổi vị
+trí vẽ qua từng mẫu, XOR HP, bỏ actor chết/tái chế, từ chối trận kết thúc
+hoặc frame thay đổi giữa lúc đọc. Fixture hiển thị kiểm tra tướng khuất
+di chuyển khi mất component HP. Camera, ma trận và CString cũng qua.
+Thêm XCTest tương thích cấu hình nhịp đọc với profile cũ.
+Xcode/SDK iPhone/XCTest chờ Actions. Chưa đo 60/120 Hz hoặc kiểm chứng
+nguồn logic bản mới trên iPhone. Theo dõi tố cáo vẫn chưa hỗ trợ.

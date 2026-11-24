@@ -74,8 +74,12 @@ struct ContentView: View {
     private var combinedCheck: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("KIỂM CHỨNG ĐỒNG THỜI", systemImage: "checklist").font(.headline)
-            Text("Camera: \(overlay.state?.camera?.code ?? "chưa chạy") • lần ghi: \(overlay.state?.camera?.writeCount ?? 0)")
-            Text("ESP: \(overlay.state?.esp?.code ?? "chưa chạy") • chiếu được: \(overlay.state?.esp?.projectedCount ?? 0)/\(overlay.state?.esp?.targetCount ?? 0)")
+            Group {
+                Text("Camera: \(overlay.state?.camera?.code ?? "chưa chạy") • lần ghi: \(overlay.state?.camera?.writeCount ?? 0)")
+                Text("ESP: \(overlay.state?.esp?.code ?? "chưa chạy") • chiếu được: \(overlay.state?.esp?.projectedCount ?? 0)/\(overlay.state?.esp?.targetCount ?? 0)")
+                Text(String(format: "Đọc ESP: %.1f Hz • lượt vẽ: %.1f/s • màn hình tối đa %ld Hz", overlay.state?.esp?.measuredReadHz ?? 0, overlay.state?.overlayDrawFPS ?? 0, overlay.state?.displayLimitHz ?? 60))
+                Text("Nguồn logic: \(overlay.state?.esp?.logicAvailable == true ? "đã đọc" : "chưa đọc") • mục tiêu logic: \(overlay.state?.esp?.logicTargetCount ?? 0) • bước: \(overlay.state?.esp?.logicStage ?? 0)")
+            }
             if let esp = overlay.state?.esp, let stage = esp.matrixStage {
                 Text("Ma trận: bước \(stage)/7 • chế độ view: \(esp.viewMode ?? -1) • projection dirty: \(esp.projectionDirty ?? -1)")
             }
@@ -209,6 +213,12 @@ struct ContentView: View {
             case .skins: skinControls
             case .reports: reportControls
             case .esp:
+                Picker("Nhịp đọc ESP", selection: Binding(get: { store.settings.espReadHz ?? 60 }, set: { store.setEspReadHz($0) })) {
+                    Text("60 Hz").tag(60)
+                    Text("120 Hz").tag(120)
+                }.pickerStyle(.segmented)
+                Text("iPhone XR vẽ tối đa 60 Hz. 120 Hz là nhịp đọc yêu cầu, không bảo đảm FPS. Mỗi khung dùng tọa độ client mới đọc được; không giữ dấu vị trí cũ.")
+                    .font(.footnote).foregroundStyle(.orange)
                 Text("Bộ đọc ESP chạy cùng camera trong nút nổi. Icon hiện là mã tướng; Map là radar tương đối ±60m. Vị trí khuất tầm nhìn có thể cũ. Kiểm tra số mục tiêu chiếu được rồi đối chiếu trong trận.")
                     .font(.footnote).foregroundStyle(.secondary)
             case .style:

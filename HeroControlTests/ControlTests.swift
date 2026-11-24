@@ -2,6 +2,26 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    func testLogicEspSourceAndRateArePreservedInDiagnosticExport() throws {
+        let data = Data(#"{"code":"esp_frame_read","message":"sample","logicAvailable":true,"logicStage":8,"logicTargetCount":1,"requestedReadHz":120,"measuredReadHz":115.5,"targets":[{"objectID":99,"heroID":123,"hp":800,"maxHP":0,"worldX":2,"worldZ":-10,"x":0.6,"feetY":0.5,"headY":0.36,"visible":false,"onScreen":true,"cooldowns":[-1,-1,-1],"hpKnown":false,"hpCurrentKnown":true,"positionSource":"logic","positionFrame":10}]}"#.utf8)
+        let sample = try JSONDecoder().decode(EspStatus.self, from: data)
+        let exported = try JSONDecoder().decode(EspStatus.self, from: JSONEncoder().encode(sample))
+        XCTAssertEqual(exported.logicAvailable, true)
+        XCTAssertEqual(exported.requestedReadHz, 120)
+        XCTAssertEqual(exported.measuredReadHz, 115.5)
+        XCTAssertEqual(exported.targets?.first?.positionSource, "logic")
+        XCTAssertEqual(exported.targets?.first?.visible, false)
+        XCTAssertEqual(exported.targets?.first?.hpCurrentKnown, true)
+    }
+    func testEspRateRemainsCompatibleWithOldProfiles() throws {
+        var settings = try JSONDecoder().decode(ControlSettings.self, from: Data(#"{"flags":{},"cameraScale":1.5,"selectedSkins":{}}"#.utf8))
+        XCTAssertNil(settings.espReadHz)
+        settings.espReadHz = 120
+        let decoded = try JSONDecoder().decode(ControlSettings.self, from: JSONEncoder().encode(settings))
+        XCTAssertEqual(decoded.espReadHz, 120)
+        settings.espReadHz = 1000; settings.normalize()
+        XCTAssertEqual(settings.espReadHz, 60)
+    }
     func testHistoricalEspSampleIsExportedSeparatelyFromLiveFailure() throws {
         let payload = Data(#"{"phase":"visible","esp":{"code":"esp_access_unavailable","message":"no live game","targets":[]},"espLastSample":{"code":"esp_matrices_pending","message":"waiting","pid":7832,"timestamp":"2026-11-24T02:58:00Z","listCount":10,"targetCount":3,"projectedCount":0,"matrixStage":4,"viewMode":1,"projectionDirty":0,"targets":[]}}"#.utf8)
         let state = try JSONDecoder().decode(OverlayState.self, from: payload)

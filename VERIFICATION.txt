@@ -1,4 +1,14 @@
-HERO CONTROL 0.7.1 — BUILD 17
+HERO CONTROL 0.8.0 — BUILD 18
+
+Thêm kiểm thử C cho nguồn LActorRoot: tướng logic di chuyển khi không
+có đối tượng hiển thị; chiếu lại từng mẫu; XOR HP; bỏ actor chết/tái chế;
+từ chối trận kết thúc hoặc frame không ổn định. Không giữ vị trí cũ 5 giây.
+Nhịp đọc yêu cầu 60/120 và CADisplayLink đã thêm nhưng chưa đo trên iPhone.
+Chạy fixture camera/ESP/logic/CString với -Wall -Wextra -Werror trên Windows.
+11 kiểm thử Python và kiểm tra tĩnh qua. Xcode/XCTest chờ Actions.
+Xem CAP_NHAT_0.8.0.txt. Không cam kết tọa độ ngoài tầm nhìn là dữ liệu mới.
+
+LỊCH SỬ 0.7.1 — BUILD 17:
 
 Regression auto-view +0x512, projection dirty +0x510 và ma trận thay đổi
 giữa hai lần đọc qua trên fixture C biên dịch -Wall -Wextra -Werror.

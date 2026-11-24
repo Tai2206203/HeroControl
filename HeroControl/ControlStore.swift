@@ -51,6 +51,7 @@ final class ControlStore: ObservableObject {
     }
     func setCamera(_ value: Double) { reloadProfileIfChanged(); settings.cameraScale = value; changed() }
     func setCameraEnabled(_ value: Bool) { reloadProfileIfChanged(); settings.cameraEnabled = value; changed() }
+    func setEspReadHz(_ value: Int) { reloadProfileIfChanged(); settings.espReadHz = value; changed() }
     func prepareCombinedCheck() {
         reloadProfileIfChanged()
         guard persistenceError == nil else { return }

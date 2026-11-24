@@ -75,6 +75,8 @@ static HCCameraEngine *HCCamera;
 static NSDictionary *HCCameraStatus;
 static NSDictionary *HCEspStatus;
 static NSDictionary *HCEspLastSample;
+static NSUInteger HCEspDraws;
+static double HCEspDrawWindow, HCEspDrawFPS;
 static NSString *HCStartupStage = @"entry";
 
 static void HCState(void) {
@@ -87,8 +89,9 @@ static void HCState(void) {
         @"settingsOnly": @NO, @"camera": HCCameraStatus ?: @{@"code": @"camera_disabled", @"message": @"Camera xa đang tắt."},
         @"esp": HCEspStatus ?: @{@"code": @"esp_disabled", @"message": @"ESP đang tắt."},
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
+        @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": @{@"code": @"unsupported", @"message": @"Chưa có nguồn dữ liệu tố cáo."},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.7.1", @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.8.0", @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -214,6 +217,12 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
 }
 - (void)drawRect:(CGRect)rect {
     [self.targets removeAllObjects];
+    if ([self.settings[@"flags"][@"__ifxEnemyEspEnabledV1"] boolValue]) {
+        double now = NSProcessInfo.processInfo.systemUptime;
+        if (!HCEspDrawWindow) HCEspDrawWindow = now;
+        HCEspDraws++;
+        if (now - HCEspDrawWindow >= 1) { HCEspDrawFPS = HCEspDraws / (now - HCEspDrawWindow); HCEspDraws = 0; HCEspDrawWindow = now; }
+    } else { HCEspDrawFPS = 0; HCEspDraws = 0; HCEspDrawWindow = 0; }
     [self drawEsp];
     if (HCMenuOpen) {
         CGRect p = [self panelRect];
@@ -281,6 +290,7 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
 - (void)drawEsp {
     NSDictionary *flags = self.settings[@"flags"];
     if (HCLocked || ![flags[@"__ifxEnemyEspEnabledV1"] boolValue]) return;
+    if (!HCEspStatus[@"sampleUptime"] || NSProcessInfo.processInfo.systemUptime - [HCEspStatus[@"sampleUptime"] doubleValue] > 0.5) return;
     CGFloat w = self.bounds.size.width, h = self.bounds.size.height;
     UIColor *color = HCAccent();
     for (NSDictionary *target in HCEspStatus[@"targets"]) {
@@ -293,13 +303,15 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         if ([flags[@"DoroCheat.Reference.R1.Box"] boolValue]) {
             UIBezierPath *path = [UIBezierPath bezierPathWithRect:box]; path.lineWidth = 1.5; [path stroke];
         }
-        if ([flags[@"DoroCheat.Reference.R1.HP"] boolValue]) {
+        if ([flags[@"DoroCheat.Reference.R1.HP"] boolValue] && [target[@"hpKnown"] boolValue]) {
             CGFloat ratio = HCClamp([target[@"hp"] doubleValue] / MAX(1, [target[@"maxHP"] doubleValue]), 0, 1);
             [UIColor.blackColor setFill]; UIRectFill(CGRectMake(box.origin.x, top - 7, box.size.width, 4));
             [color setFill]; UIRectFill(CGRectMake(box.origin.x, top - 7, box.size.width * ratio, 4));
         }
         if ([flags[@"DoroCheat.Reference.R1.Icon"] boolValue])
             HCText([NSString stringWithFormat:@"#%@", target[@"heroID"]], CGRectMake(x - 34, top - 24, 68, 18), 11, color, YES);
+        if ([flags[@"DoroCheat.Reference.R1.HP"] boolValue] && ![target[@"hpKnown"] boolValue])
+            HCText([target[@"hpCurrentKnown"] boolValue] ? [NSString stringWithFormat:@"HP %@", target[@"hp"]] : @"HP ?", CGRectMake(x - 35, top - 20, 70, 18), 10, color, NO);
         if ([flags[@"DoroCheat.Reference.R1.Check"] boolValue]) {
             NSMutableArray *texts = [NSMutableArray array];
             for (NSNumber *cd in target[@"cooldowns"]) [texts addObject:cd.intValue < 0 ? @"?" : cd.stringValue];
@@ -315,7 +327,8 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
             double dx = [target[@"worldX"] doubleValue] - [HCEspStatus[@"hostX"] doubleValue];
             double dz = [target[@"worldZ"] doubleValue] - [HCEspStatus[@"hostZ"] doubleValue];
             if (fabs(dx) > 60 || fabs(dz) > 60) continue;
-            [color setFill]; [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(CGRectGetMidX(radar)+dx/1.2-3, CGRectGetMidY(radar)-dz/1.2-3, 6, 6)] fill];
+            [color setFill];
+            [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(CGRectGetMidX(radar)+dx/1.2-3, CGRectGetMidY(radar)-dz/1.2-3, 6, 6)] fill];
         }
     }
 }
@@ -433,14 +446,22 @@ static void HCUpdateLock(void) {
     HCLocked = locked; HCCanvas.hidden = locked;
     HCCanvas.activeTarget = nil; HCCanvas.pointer = -1;
     if (locked) HCMenuOpen = NO;
+    if (locked) { HCEspDrawFPS = 0; HCEspDraws = 0; HCEspDrawWindow = 0; }
     [HCCanvas setNeedsDisplay]; HCState();
 }
 
 @interface HCOverlayDelegate : UIResponder <UIApplicationDelegate>
 @property(nonatomic, strong) UIWindow *window;
 @property(nonatomic, strong) NSTimer *timer;
+@property(nonatomic, strong) CADisplayLink *displayLink;
 @end
 @implementation HCOverlayDelegate
+- (void)displayTick:(CADisplayLink *)link {
+    NSInteger desired = MIN(UIScreen.mainScreen.maximumFramesPerSecond, MAX(60, [HCEspStatus[@"requestedReadHz"] integerValue]));
+    if (link.preferredFrameRateRange.preferred != desired)
+        link.preferredFrameRateRange = CAFrameRateRangeMake(MIN(60, desired), desired, desired);
+    if (!HCLocked && [HCCanvas.settings[@"flags"][@"__ifxEnemyEspEnabledV1"] boolValue]) [HCCanvas setNeedsDisplay];
+}
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
     HCStage(@"delegate_launch");
     HCOverlayController *controller = [HCOverlayController new];
@@ -484,9 +505,12 @@ static void HCUpdateLock(void) {
         // Preserve the last actor sample for export after switching away from
         // the game. It is historical evidence, never a frame to draw now.
         if ([report[@"listCount"] integerValue] > 0) HCEspLastSample = report;
-        [HCCanvas setNeedsDisplay];
     }];
     [HCCamera start];
+    self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayTick:)];
+    NSInteger maximum = UIScreen.mainScreen.maximumFramesPerSecond;
+    self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(MIN(60, maximum), maximum, maximum);
+    [self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
     self.timer = [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer) {
         (void)timer;
         if (access(HCExecutable.fileSystemRepresentation, X_OK) || !HCOverlayPathsValid(HCDirectory, HCProfile))

@@ -69,9 +69,11 @@ struct ControlSettings: Codable, Equatable {
     var cameraScale: Double = 1
     var selectedSkins: [String: Int] = [:]
     var cameraEnabled: Bool? = nil
+    var espReadHz: Int? = nil
     mutating func normalize() {
         flags = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, flags[$0.key] ?? false) })
         cameraScale = cameraScale.isFinite ? min(2.3, max(1, cameraScale)) : 1
+        if let hz = espReadHz, hz != 60 && hz != 120 { espReadHz = 60 }
         selectedSkins = selectedSkins.filter { UInt32($0.key) != nil && $0.value >= 0 && $0.value <= Int(UInt32.max) }
     }
     var preferenceValues: [String: Double] {

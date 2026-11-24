@@ -30,6 +30,7 @@ static EspFixture fixture(void) {
     p(&f,0,0,0x11000);name(&f,1,"KyriosFramework");p(&f,1,0x58,0x12000);
     name(&f,2,"MonoSingleton`1");p(&f,2,0xB8,0x13000);p(&f,3,0,0x14000);
     p(&f,4,0,0x11000);p(&f,4,0x28,0x16000);p(&f,4,0x50,0x17000);
+    f.regions[4].bytes[0x18]=1;
     name(&f,6,"ActorManager");p(&f,6,0,0x16000);p(&f,6,0x20,0x15000);p(&f,7,8,0x18000);n(&f,8,0x30,1);
     p(&f,5,8,0x19000);n(&f,5,0x10,2);p(&f,9,0x10,2);
     p(&f,9,0x20,0x1A000);p(&f,9,0x30,0x1B000);
@@ -77,11 +78,16 @@ int main(void) {
     f.viewReads=0;f.mutateView=true;
     assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_MATRICES_PENDING && frame.projected==0 && frame.matrixStage==5);
     f.mutateView=false;n(&f,14,0x40,1001);
-    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK && frame.count==0);
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK && frame.count==1 && !frame.targets[0].hpKnown);
+    p(&f,10,0x28,0);n(&f,10,0x18C,2000);
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK && frame.projected==1 && !frame.targets[0].hpCurrentKnown);
+    assert(fabsf(frame.targets[0].x-0.6f)<0.001f); // Hidden actor movement does not depend on visual HP.
     n(&f,5,0x10,65);
     assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_READ_FAILED);
     f=fixture();f.mutate=true;
     assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_READ_FAILED && frame.count==0);
+    f=fixture();f.regions[4].bytes[0x18]=0;
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_NOT_READY && frame.count==0);
     puts("ESP fixture passed: auto/custom view, dirty projection, torn matrix rejection, projection, native header, filters, HP/cooldowns, bounded lists; no device memory accessed.");
     return 0;
 }

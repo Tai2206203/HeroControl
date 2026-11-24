@@ -7,6 +7,9 @@ typedef struct {
     uint32_t objectID; int32_t heroID, hp, maxHP, camp;
     float worldX, worldY, worldZ, x, feetY, headY;
     bool visible, onScreen;
+    bool hpKnown;
+    bool hpCurrentKnown, logicPosition;
+    uint32_t positionFrame;
     int cooldowns[3];
 } HCEspTarget;
 typedef struct {
@@ -16,6 +19,7 @@ typedef struct {
     bool hasHostPosition, matricesValid;
     int matrixStage;
     uint8_t viewMode, projectionDirty;
+    float view[16], projection[16];
     HCEspTarget targets[HC_ESP_MAX_TARGETS];
 } HCEspFrame;
 enum { HC_ESP_OK, HC_ESP_NOT_READY, HC_ESP_BAD_LAYOUT, HC_ESP_READ_FAILED, HC_ESP_MATRICES_PENDING };
@@ -93,6 +97,8 @@ static inline int HCEspRead(HCCameraMemory m,uint64_t base,bool unseenOnly,HCEsp
     if(!m.read(m.context,fields,&root,8) || !HCCameraPointer(root)) return frame->status=HC_ESP_NOT_READY;
     uint64_t rootClass=0;
     if(!m.read(m.context,root,&rootClass,8) || rootClass!=klass) return frame->status=HC_ESP_BAD_LAYOUT;
+    uint8_t running=0;
+    if(!m.read(m.context,root+0x18,&running,1) || running!=1) return frame->status=HC_ESP_NOT_READY;
     frame->framework=root;
     if(!m.read(m.context,root+0x28,&manager,8) || !HCCameraPointer(manager)) return frame->status=HC_ESP_NOT_READY;
     frame->manager=manager;
@@ -110,24 +116,30 @@ static inline int HCEspRead(HCCameraMemory m,uint64_t base,bool unseenOnly,HCEsp
        !m.read(m.context,list+0x10,&size,4) || size<0 || size>64 || !HCCameraPointer(array) ||
        !m.read(m.context,array+0x10,&length,8) || length<(uint64_t)size || length>256) return frame->status=HC_ESP_READ_FAILED;
     frame->listCount=size;
-    float view[16]={0},projection[16]={0};
-    frame->matricesValid=HCEspMatrices(m,base,frame,view,projection);
+    frame->matricesValid=HCEspMatrices(m,base,frame,frame->view,frame->projection);
     for(int i=0;i<size && frame->count<HC_ESP_MAX_TARGETS;i++) {
         uint64_t actor=0,value=0;uint8_t visible=0;HCEspTarget t={0};int32_t position[3]={0};
         if(!m.read(m.context,array+0x18+i*16+8,&actor,8) || !HCCameraPointer(actor) || !m.read(m.context,actor,&klass,8) ||
            !HCCameraName(m,klass,"ActorLinker") || !m.read(m.context,actor+0x22C,&t.camp,4) ||
            (t.camp!=1 && t.camp!=2) || t.camp==frame->hostCamp || !m.read(m.context,actor+0x218,&t.heroID,4) || t.heroID<=0 || t.heroID>1000000 ||
            !m.read(m.context,actor+0x148,&t.objectID,4) || !t.objectID || !m.read(m.context,actor+0x1DD,&visible,1) || visible>1 ||
-           (unseenOnly && visible) || !m.read(m.context,actor+0x28,&value,8) || !HCCameraPointer(value) ||
-           !m.read(m.context,value,&klass,8) || !HCCameraName(m,klass,"ValueLinkerComponent") ||
-           !m.read(m.context,value+0x40,&t.hp,4) || !m.read(m.context,value+0x44,&t.maxHP,4) ||
-           t.hp<=0 || t.maxHP<=0 || t.hp>t.maxHP || t.maxHP>100000000 || !m.read(m.context,actor+0x18C,position,12)) continue;
+           (unseenOnly && visible) || !m.read(m.context,actor+0x18C,position,12)) continue;
+        // Hidden actors can keep receiving positions while their visual HP
+        // component is unavailable. Do not discard a valid position for that.
+        bool hpRead=m.read(m.context,actor+0x28,&value,8) && HCCameraPointer(value) &&
+           m.read(m.context,value,&klass,8) && HCCameraName(m,klass,"ValueLinkerComponent") &&
+           m.read(m.context,value+0x40,&t.hp,4) && m.read(m.context,value+0x44,&t.maxHP,4);
+        if(hpRead && visible && t.hp==0 && t.maxHP>0 && t.maxHP<=100000000) continue;
+        t.hpKnown=hpRead && t.hp>0 && t.maxHP>0 && t.hp<=t.maxHP && t.maxHP<=100000000;
+        t.hpCurrentKnown=hpRead && t.hp>=0 && t.hp<=100000000;
+        if(!t.hpKnown) { if(!t.hpCurrentKnown) t.hp=0; t.maxHP=0; }
+        m.read(m.context,actor+0x144,&t.positionFrame,4);
         t.worldX=position[0]*0.001f;t.worldY=position[1]*0.001f;t.worldZ=position[2]*0.001f;
         if(fabsf(t.worldX)>10000 || fabsf(t.worldY)>10000 || fabsf(t.worldZ)>10000) continue;
         t.visible=visible!=0;
         float headX=0;
-        if(frame->matricesValid && HCEspProject(view,projection,t.worldX,t.worldY,t.worldZ,&t.x,&t.feetY) &&
-            HCEspProject(view,projection,t.worldX,t.worldY+2.73f,t.worldZ,&headX,&t.headY) && t.feetY>t.headY) {
+        if(frame->matricesValid && HCEspProject(frame->view,frame->projection,t.worldX,t.worldY,t.worldZ,&t.x,&t.feetY) &&
+            HCEspProject(frame->view,frame->projection,t.worldX,t.worldY+2.73f,t.worldZ,&headX,&t.headY) && t.feetY>t.headY) {
             t.onScreen=true;frame->projected++;
         }
         HCEspCooldowns(m,actor,t.cooldowns);

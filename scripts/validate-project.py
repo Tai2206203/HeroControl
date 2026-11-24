@@ -56,6 +56,7 @@ assert overlay_entitlements.get('task_for_pid-allow') is True
 assert overlay_entitlements.get('com.apple.system-task-ports') is True
 assert 'Overlay/CameraEngine.m' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 assert 'esp-memory-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
+assert 'logic-esp-check.c' in (root / 'scripts/build-overlay.sh').read_text('utf8')
 overlay_info = plistlib.loads((root / 'Overlay/Info.plist').read_bytes())
 assert overlay_info['CFBundleVersion'] == info['CFBundleVersion']
 assert overlay_info['CFBundleShortVersionString'] == info['CFBundleShortVersionString']

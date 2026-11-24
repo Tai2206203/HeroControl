@@ -15,6 +15,8 @@ struct OverlayState: Codable {
     let esp: EspStatus?
     let espLastSample: EspStatus?
     let reports: FeatureCheckStatus?
+    let displayLimitHz: Int?
+    let overlayDrawFPS: Double?
 }
 
 struct FeatureCheckStatus: Codable {
@@ -40,6 +42,14 @@ struct EspStatus: Codable {
     let hostX: Double?
     let hostZ: Double?
     let targets: [EspTargetStatus]?
+    let requestedReadHz: Int?
+    let measuredReadHz: Double?
+    let hiddenClientCount: Int?
+    let logicAvailable: Bool?
+    let logicStage: Int?
+    let logicTargetCount: Int?
+    let logicFrameNumber: UInt32?
+    let sampleUptime: Double?
 }
 
 struct EspTargetStatus: Codable {
@@ -55,6 +65,10 @@ struct EspTargetStatus: Codable {
     let visible: Bool
     let onScreen: Bool
     let cooldowns: [Int]
+    let hpKnown: Bool?
+    let hpCurrentKnown: Bool?
+    let positionSource: String?
+    let positionFrame: UInt32?
 }
 
 struct CameraStatus: Codable {
