@@ -1,0 +1,7 @@
+Hero Control 0.12.1 — build 28
+
+Minimap dùng lại căn chỉnh thủ công, không chờ phép chiếu game. Giữ X/Y, kích thước, cỡ icon, tâm và góc đã lưu. Vào CĂN CHỈNH hoặc KÉO KHUNG MAP để sửa.
+Menu nút nổi nền trắng, chữ tối, điểm nhấn xanh đậm. Ảnh nút nổi giữ nguyên.
+Tố cáo: phân biệt lỗi đọc danh sách người chơi và chưa có người chơi để truy vấn; xuất candidateCaptureError và captureSequence. Không coi danh sách rỗng là không bị tố cáo.
+Log build 27 có 0 ứng viên, 0 yêu cầu, 0 phản hồi. Chưa xác định nguyên nhân bằng log này. Cần kiểm tra trong trận có người chơi thật với check tố cáo bật và game đang mở. Đây chưa phải xác nhận truy vấn máy chủ đã hoạt động.
+Sau cập nhật cần cài lại adapter và đóng/mở game để nạp build 28.

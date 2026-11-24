@@ -34,16 +34,9 @@ local config={revision='revision-1',settings={flags={['reports.enabled']=true,['
  ['DoroCheat.Reference.R1.Map']=true},cameraEnabled=true,cameraScale=1.75,selectedSkins={['123']=7}}}
 local reply=HeroControlRuntimePulse(config,'/fixture')
 assert(reply:find('"phase":"active"',1,true),reply)
-assert(reply:find('"source":"game_screen_projection"',1,true),reply)
-assert(reply:find('"ox":0.1',1,true),reply)
-assert(reply:find('"oy":0.6',1,true),reply)
+assert(reply:find('"source":"manual_overlay"',1,true),reply)
+assert(reply:find('"required":false',1,true),reply)
 assert(reply:find('"skins":false',1,true),reply)
-local oldProjection=CS.Assets.Scripts.GameSystem.MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint
-CS.Assets.Scripts.GameSystem.MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint=function() return {} end
-local unavailable=HeroControlRuntimePulse(config,'/fixture')
-assert(unavailable:find('"phase":"active"',1,true),unavailable)
-assert(unavailable:find('"available":false',1,true),unavailable)
-CS.Assets.Scripts.GameSystem.MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint=oldProjection
 assert(reply:find('"querySupported":true',1,true),reply)
 assert(reply:find('"completeHistoryGuaranteed":false',1,true),reply)
 assert(reply:find('"recordsTruncated":true',1,true),reply)
@@ -88,3 +81,13 @@ config.settings=nil
 reply=HeroControlRuntimePulse(config,'/fixture')
 assert(reply:find('"phase":"failed"',1,true),reply)
 print('Runtime Lua contract passed: patch loading once, preference readback, skin removal, camera opt-out, server metadata, bounded newest records and failure propagation; no game/network accessed.')
+
+config.settings={flags={['reports.enabled']=true},selectedSkins={}}
+ComplaintMonitorPolling.candidates={}
+ComplaintMonitorPolling.captureError='player_center'
+reply=HeroControlRuntimePulse(config,'/fixture')
+assert(reply:find('"code":"reports_roster_error"',1,true),reply)
+assert(reply:find('"candidateCaptureError":"player_center"',1,true),reply)
+ComplaintMonitorPolling.captureError=''
+reply=HeroControlRuntimePulse(config,'/fixture')
+assert(reply:find('"code":"reports_waiting_roster"',1,true),reply)

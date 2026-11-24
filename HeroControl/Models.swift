@@ -84,13 +84,14 @@ struct ControlSettings: Codable, Equatable {
     var espIconSize: Double? = nil
     var minimapWorldExtent: Double? = nil
     var minimapRotated: Bool? = nil
-    var minimapAutoAlign: Bool? = nil
+    var minimapAutoAlign: Bool? = false
     var minimapCenterX: Double? = nil
     var minimapCenterZ: Double? = nil
     var minimapAngle: Double? = nil
     var reportsRefreshID: String? = nil
     var reportsPeriod: String? = nil
     mutating func normalize() {
+        minimapAutoAlign = false // Retire automatic projection; preserve manual calibration.
         flags = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, flags[$0.key] ?? false) })
         cameraScale = cameraScale.isFinite ? min(2.3, max(1, cameraScale)) : 1
         if let hz = espReadHz, hz != 60 && hz != 120 { espReadHz = 60 }

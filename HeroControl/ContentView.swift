@@ -339,7 +339,7 @@ struct ContentView: View {
                     .font(.footnote).foregroundStyle(.secondary)
                 Text("Các công tắc và vị trí được tự lưu; mở lại sẽ khôi phục cấu hình gần nhất.")
                     .font(.caption).foregroundStyle(.secondary)
-                Text("Toàn bộ căn chỉnh nằm trong menu nổi → CĂN CHỈNH. Auto minimap dùng phép chiếu từ game; chế độ thủ công có tâm, góc và phạm vi riêng.").font(.footnote)
+                Text("Toàn bộ căn chỉnh nằm trong menu nổi → CĂN CHỈNH. Minimap thủ công dùng khung đã lưu; bạn có thể sửa vị trí, kích thước, tâm, góc và phạm vi ngay, không chờ phép chiếu game.").font(.footnote)
             case .style:
                 Text("Lựa chọn này cần backend áp dụng vào tài nguyên và hành vi game lúc chạy.")
                     .font(.footnote).foregroundStyle(.secondary)

@@ -34,31 +34,6 @@ local function listJson(values)
   return json(values)
 end
 
-local function readMinimapProjection()
-  local ok,value=pcall(function()
-    local battle=CS.Assets.Scripts.GameSystem.CBattleSystem.instance
-    assert(battle and battle.m_isInBattle,'battle_not_ready')
-    local width,height=tonumber(CS.UnityEngine.Screen.width),tonumber(CS.UnityEngine.Screen.height)
-    assert(width and height and width>0 and height>0,'screen_not_ready')
-    local function project(x,z)
-      local _,sx,sy=CS.Assets.Scripts.GameSystem.MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint(CS.UnityEngine.Vector3(x,0,z),true,0,0)
-      sx,sy=tonumber(sx),tonumber(sy)
-      assert(sx and sy and sx==sx and sy==sy and math.abs(sx)<1e8 and math.abs(sy)<1e8,'screen_projection_binding_unavailable')
-      return sx/width,1-sy/height
-    end
-    local ox,oy=project(0,0)
-    local xx,yx=project(16,0)
-    local xz,yz=project(0,16)
-    local checkX,checkY=project(16,16)
-    assert(math.abs(checkX-(xx+xz-ox))<0.001 and math.abs(checkY-(yx+yz-oy))<0.001,'projection_not_affine')
-    local a,b,c,d=(xx-ox)/16,(xz-ox)/16,(yx-oy)/16,(yz-oy)/16
-    assert(math.abs(a*d-b*c)>1e-10,'projection_singular')
-    return {available=true,source='game_screen_projection',ox=ox,oy=oy,xx=a,xz=b,yx=c,yz=d}
-  end)
-  if ok then return value end
-  return {available=false,source='game_screen_projection',error=tostring(value)}
-end
-
 function HeroControlRuntimePulse(config, directory)
   local ok,result=pcall(function()
     if CS==nil or N==nil then
@@ -141,6 +116,15 @@ function HeroControlRuntimePulse(config, directory)
     if settings.flags['reports.enabled'] then
       reportCode=#records>0 and 'reports_records_observed' or 'reports_unknown'
       reportMessage=(#records>0 and 'Đã có bản ghi được quan sát. ' or 'CHƯA XÁC ĐỊNH: chưa có bản ghi quan sát được; không kết luận không bị tố cáo. ')..tostring(monitor.queryStatus or monitor.status())
+      if #(polling.candidates or {})==0 and #records==0 then
+        if polling.captureError and polling.captureError~='' then
+          reportCode='reports_roster_error'
+          reportMessage='Không đọc được danh sách người chơi: '..tostring(polling.captureError)..'. Chưa gửi truy vấn tố cáo.'
+        else
+          reportCode='reports_waiting_roster'
+          reportMessage='Chưa có người chơi để truy vấn. Bật check tố cáo trước khi vào trận có người chơi thật và giữ game mở để thu thập danh sách. Chưa thể kết luận có hoặc không bị tố cáo.'
+        end
+      end
       if transport.transportFault then reportCode='reports_transport_fault' end
     end
     local reports={code=reportCode,
@@ -151,6 +135,7 @@ function HeroControlRuntimePulse(config, directory)
       querySupported=true,completeHistoryGuaranteed=false,
       accountID=monitor.account,sentRequestCount=transport.sentRequestCount or 0,
       receivedResponseCount=transport.receivedResponseCount or 0,
+      candidateCaptureError=tostring(polling.captureError or ''),captureSequence=polling.captureSequence or 0,
       candidateCount=#(polling.candidates or {}),transportFault=transport.transportFault or false,
       recordsTruncated=#retained>#records,
       retainedRecordCount=#(monitor.records or {}),
@@ -220,11 +205,11 @@ function HeroControlRuntimePulse(config, directory)
       end
       prefs.Save();runtime.skinPrefsCleared=true
     end
-    local state={minimapProjection=readMinimapProjection(),phase='active',code='runtime_configuration_readback',
+    local state={minimapProjection={available=false,source="manual_overlay",required=false},phase='active',code='runtime_configuration_readback',
       message='Runtime đã nạp hai patch và đọc lại cấu hình. Cần đối chiếu hình ảnh và phản hồi máy chủ.',
       appliedRevision=config.revision,acknowledgement='preferences_readback',
       effectsVerified=false,catalogError=runtime.catalogError,
-      features={icon='bundled_hud_portrait',minimap='calibrated_hud_minimap',radar=false,
+      features={icon='bundled_hud_portrait',minimap='manual_hud_minimap',radar=false,
         skins=false,reports='server_available_per_known_player'}}
     local encoded=json(state)
     return encoded:sub(1,-2)..',"reports":'..reportJson..',"heroes":'..listJson(runtime.catalog)..'}'

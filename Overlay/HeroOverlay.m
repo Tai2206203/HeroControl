@@ -126,7 +126,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.12.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.12.1", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -169,6 +169,7 @@ static void HCStop(NSString *message, BOOL failed) {
 @end
 
 static UIColor *HCAccent(void) { return [UIColor colorWithRed:0.39 green:0.88 blue:0.78 alpha:1]; }
+static UIColor *HCMenuAccent(void) { return [UIColor colorWithRed:0.02 green:0.43 blue:0.36 alpha:1]; }
 static NSArray *HCCalibrationFields(void) {
     static NSArray *fields;static dispatch_once_t once;dispatch_once(&once,^{ fields=@[
         @{@"key":@"minimapX",@"title":@"Khung ngang",@"min":@0,@"max":@1,@"step":@0.005,@"default":@0.015},
@@ -358,15 +359,15 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     CGRect p=[self panelRect];return CGRectMake(p.origin.x+66,p.origin.y+62,p.size.width-82,p.size.height-104);
 }
 - (void)tile:(CGRect)rect title:(NSString *)title subtitle:(NSString *)subtitle image:(int32_t)hero action:(NSString *)action {
-    HCFillGradient(rect,[UIColor colorWithRed:0.16 green:0.20 blue:0.25 alpha:0.98],[UIColor colorWithRed:0.08 green:0.11 blue:0.15 alpha:0.98]);
+    HCFillGradient(rect,[UIColor colorWithWhite:0.98 alpha:1],[UIColor colorWithWhite:0.93 alpha:1]);
     NSString *glyph=hero==130 || hero==156 ? @"viewfinder" : hero==118 ? @"slider.horizontal.3" : hero==537 ? @"camera.fill" : @"envelope.fill";
-    UIImage *symbol=[[UIImage systemImageNamed:glyph] imageWithTintColor:[HCAccent() colorWithAlphaComponent:0.22] renderingMode:UIImageRenderingModeAlwaysOriginal];
+    UIImage *symbol=[[UIImage systemImageNamed:glyph] imageWithTintColor:[HCMenuAccent() colorWithAlphaComponent:0.22] renderingMode:UIImageRenderingModeAlwaysOriginal];
     [symbol drawInRect:CGRectMake(CGRectGetMaxX(rect)-43,rect.origin.y+10,28,28)];
-    [[HCAccent() colorWithAlphaComponent:0.18] setStroke];
+    [[HCMenuAccent() colorWithAlphaComponent:0.18] setStroke];
     UIBezierPath *path=[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:14];path.lineWidth=0.8;[path stroke];
     CGFloat font=rect.size.width<130 ? 13 : 17;
-    HCText(title,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-47,rect.size.width-18,22),font,UIColor.whiteColor,YES);
-    HCText(subtitle,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-23,rect.size.width-18,18),8,UIColor.lightGrayColor,NO);
+    HCText(title,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-47,rect.size.width-18,22),font,UIColor.blackColor,YES);
+    HCText(subtitle,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-23,rect.size.width-18,18),8,UIColor.darkGrayColor,NO);
     [self target:action rect:rect];
 }
 - (CGRect)calibrationTrack:(NSUInteger)index {
@@ -453,46 +454,29 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         CGContextSaveGState(ctx);
         double fade=_menuOpenedAt>0 ? HCClamp((NSProcessInfo.processInfo.systemUptime-_menuOpenedAt)/0.18,0,1) : 1;
         CGContextSetAlpha(ctx,fade);
-        HCFillGradient(p,[UIColor colorWithRed:0.10 green:0.13 blue:0.18 alpha:0.98],[UIColor colorWithRed:0.035 green:0.05 blue:0.075 alpha:0.98]);
-        CGContextSaveGState(ctx);[outline addClip];
-        NSArray *covers=@[@"violet-sss.png",@"violet-nobara.jpg",@"tulen-gojo.jpg"];
-        double cycle=NSProcessInfo.processInfo.systemUptime/14.0;
-        NSUInteger cover=(NSUInteger)floor(cycle)%covers.count;
-        CGFloat blend=HCClamp((cycle-floor(cycle)-0.88)/0.12,0,1);
-        CGFloat zoom=1.025+0.015*sin(NSProcessInfo.processInfo.systemUptime*0.12);
-        HCDrawImageFill(HCThemeImage(covers[cover]),p,0.38*(1-blend),zoom);
-        if(blend>0) HCDrawImageFill(HCThemeImage(covers[(cover+1)%covers.count]),p,0.38*blend,zoom);
-        double animationTime=NSProcessInfo.processInfo.systemUptime;
-        for(int particle=0;particle<9;particle++) {
-            double u=fmod(particle*0.173+animationTime*0.009,1.0);
-            double v=fmod(particle*0.267+animationTime*0.018,1.0);
-            CGFloat radius=1.1+0.7*sin(animationTime+particle);
-            [[HCAccent() colorWithAlphaComponent:0.12+0.09*sin(animationTime*0.7+particle)] setFill];
-            [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(p.origin.x+u*p.size.width,p.origin.y+(1-v)*p.size.height,radius*2,radius*2)] fill];
-        }
-        CGContextRestoreGState(ctx);
+        [UIColor.whiteColor setFill];[outline fill];
         CGFloat pulse=0.18+0.08*sin(NSProcessInfo.processInfo.systemUptime*1.7);
-        [[HCAccent() colorWithAlphaComponent:pulse] setStroke];
+        [[HCMenuAccent() colorWithAlphaComponent:pulse] setStroke];
         UIBezierPath *accent=[UIBezierPath bezierPath];[accent moveToPoint:CGPointMake(p.origin.x+66,p.origin.y+50)];
         [accent addLineToPoint:CGPointMake(CGRectGetMaxX(p)-22,p.origin.y+50)];accent.lineWidth=1;[accent stroke];
         [[UIColor colorWithWhite:0.65 alpha:0.25] setStroke];outline.lineWidth=1;[outline stroke];
         CGRect side=CGRectMake(p.origin.x+10,p.origin.y+10,44,p.size.height-20);
-        [[UIColor colorWithWhite:0.18 alpha:0.98] setFill];[[UIBezierPath bezierPathWithRoundedRect:side cornerRadius:25] fill];
+        [[UIColor colorWithWhite:0.95 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:side cornerRadius:25] fill];
         NSArray *symbols=@[@"house.fill",@"viewfinder",@"camera.fill",@"paintbrush.fill",@"slider.horizontal.3",@"envelope.fill"];
         NSArray *groups=@[@5,@0,@1,@2,@3,@4];
         CGFloat step=MIN(46,(side.size.height-12)/6);
         for(NSInteger i=0;i<6;i++) {
             CGRect r=CGRectMake(side.origin.x+3,side.origin.y+6+i*step,38,step-3);
             BOOL selected=self.group==[groups[i] integerValue];
-            if(selected) { [[UIColor colorWithWhite:0.9 alpha:0.12] setFill];[[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:12] fill]; }
-            UIImage *symbol=[[UIImage systemImageNamed:symbols[i]] imageWithTintColor:selected ? UIColor.whiteColor : UIColor.grayColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+            if(selected) { [[UIColor colorWithWhite:0.82 alpha:0.6] setFill];[[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:12] fill]; }
+            UIImage *symbol=[[UIImage systemImageNamed:symbols[i]] imageWithTintColor:selected ? UIColor.blackColor : UIColor.grayColor renderingMode:UIImageRenderingModeAlwaysOriginal];
             [symbol drawInRect:CGRectMake(CGRectGetMidX(r)-11,CGRectGetMidY(r)-11,22,22)];
             [self target:[NSString stringWithFormat:@"tab:%@",groups[i]] rect:r];
         }
-        HCText(@"HERO CONTROL",CGRectMake(p.origin.x+66,p.origin.y+14,p.size.width-130,20),15,UIColor.whiteColor,YES);
-        HCText(@"BẢNG ĐIỀU KHIỂN",CGRectMake(p.origin.x+66,p.origin.y+34,p.size.width-130,14),10,UIColor.lightGrayColor,YES);
+        HCText(@"HERO CONTROL",CGRectMake(p.origin.x+66,p.origin.y+14,p.size.width-130,20),15,UIColor.blackColor,YES);
+        HCText(@"BẢNG ĐIỀU KHIỂN",CGRectMake(p.origin.x+66,p.origin.y+34,p.size.width-130,14),10,UIColor.darkGrayColor,YES);
         CGRect close=CGRectMake(CGRectGetMaxX(p)-47,p.origin.y+9,34,32);
-        HCText(@"×",CGRectInset(close,10,0),30,UIColor.whiteColor,NO);[self target:@"close" rect:close];
+        HCText(@"×",CGRectInset(close,10,0),30,UIColor.blackColor,NO);[self target:@"close" rect:close];
         CGRect c=[self contentRect];
         if(self.group==5) {
             BOOL wide=c.size.width>460;
@@ -503,10 +487,10 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             NSArray *quick=@[@{@"title":@"HIỂN THỊ KẺ ĐỊCH",@"key":@"__ifxEnemyEspEnabledV1"},@{@"title":@"ESP ICON",@"key":@"DoroCheat.Reference.R1.Icon"},@{@"title":@"ESP MINIMAP",@"key":@"DoroCheat.Reference.R1.Map"}];
             for(NSInteger i=0;i<3;i++) {
                 NSDictionary *q=quick[i];CGRect r=CGRectMake(c.origin.x,rowY+i*34,leftWidth,29);
-                [[UIColor colorWithWhite:0.23 alpha:0.97] setFill];[[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:12] fill];
+                [[UIColor colorWithWhite:0.95 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:12] fill];
                 BOOL on=[self.settings[@"flags"][q[@"key"]] boolValue];
-                HCText(q[@"title"],CGRectMake(r.origin.x+12,r.origin.y+8,r.size.width-65,18),11,UIColor.whiteColor,YES);
-                HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(r)-44,r.origin.y+8,40,18),11,on ? HCAccent() : UIColor.grayColor,YES);
+                HCText(q[@"title"],CGRectMake(r.origin.x+12,r.origin.y+8,r.size.width-65,18),11,UIColor.blackColor,YES);
+                HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(r)-44,r.origin.y+8,40,18),11,on ? HCMenuAccent() : UIColor.grayColor,YES);
                 [self target:[@"flag:" stringByAppendingString:q[@"key"]] rect:r];
             }
             if(wide) {
@@ -518,54 +502,53 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             }
         } else if(self.group==1) {
             double scale=[self.settings[@"cameraScale"] doubleValue];
-            HCText([NSString stringWithFormat:@"CAMERA  %.2f×",scale],CGRectMake(c.origin.x,c.origin.y,c.size.width,30),22,UIColor.whiteColor,YES);
+            HCText([NSString stringWithFormat:@"CAMERA  %.2f×",scale],CGRectMake(c.origin.x,c.origin.y,c.size.width,30),22,UIColor.blackColor,YES);
             CGRect enable=CGRectMake(c.origin.x,c.origin.y+40,c.size.width,36);
-            HCText([self.settings[@"cameraEnabled"] boolValue] ? @"CAMERA XA     ON" : @"CAMERA XA     OFF",enable,16,HCAccent(),YES);[self target:@"cameraEnabled" rect:enable];
+            HCText([self.settings[@"cameraEnabled"] boolValue] ? @"CAMERA XA     ON" : @"CAMERA XA     OFF",enable,16,HCMenuAccent(),YES);[self target:@"cameraEnabled" rect:enable];
             CGRect slider=CGRectMake(c.origin.x,c.origin.y+100,c.size.width,34);
-            [[UIColor colorWithWhite:0.3 alpha:1] setFill];UIRectFill(CGRectMake(slider.origin.x,slider.origin.y+15,slider.size.width,4));
+            [[UIColor colorWithWhite:0.8 alpha:1] setFill];UIRectFill(CGRectMake(slider.origin.x,slider.origin.y+15,slider.size.width,4));
             CGFloat knob=slider.origin.x+(scale-1)/1.3*slider.size.width;
-            [HCAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-9,slider.origin.y+8,18,18)] fill];[self target:@"camera" rect:slider];
-            HCText(HCCameraStatus[@"message"] ?: @"Bật camera và kiểm tra trong trận.",CGRectMake(c.origin.x,c.origin.y+155,c.size.width,75),12,UIColor.lightGrayColor,NO);
+            [HCMenuAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-9,slider.origin.y+8,18,18)] fill];[self target:@"camera" rect:slider];
+            HCText(HCCameraStatus[@"message"] ?: @"Bật camera và kiểm tra trong trận.",CGRectMake(c.origin.x,c.origin.y+155,c.size.width,75),12,UIColor.darkGrayColor,NO);
         } else if(self.group==3) {
             NSArray *fields=HCCalibrationFields();NSUInteger pages=(fields.count+4)/5;
             _calibrationPage=MAX(0,MIN((NSInteger)pages-1,_calibrationPage));
             CGRect toggle=CGRectMake(c.origin.x,c.origin.y,c.size.width-76,25);
-            HCText([self.settings[@"minimapAutoAlign"] isEqual:@NO] ? @"TỰ CĂN GAME: OFF" : ([HCEspStatus[@"minimapProjection"][@"available"] isEqual:@YES] ? @"TỰ CĂN GAME: ON" : @"AUTO: CHỜ ADAPTER/GAME"),toggle,11,HCAccent(),YES);
-            [self target:@"minimap-auto" rect:toggle];
+            HCText(@"CĂN CHỈNH THỦ CÔNG",toggle,11,HCMenuAccent(),YES);
             CGRect prev=CGRectMake(CGRectGetMaxX(c)-68,c.origin.y,30,25),next=CGRectMake(CGRectGetMaxX(c)-32,c.origin.y,30,25);
-            HCText(@"‹",prev,20,UIColor.whiteColor,YES);HCText(@"›",next,20,UIColor.whiteColor,YES);
+            HCText(@"‹",prev,20,UIColor.blackColor,YES);HCText(@"›",next,20,UIColor.blackColor,YES);
             [self target:@"cal-prev" rect:prev];[self target:@"cal-next" rect:next];
             NSUInteger pageStart=(NSUInteger)_calibrationPage*5;
             NSUInteger pageEnd=MIN(fields.count,pageStart+5);
             for(NSUInteger i=pageStart;i<pageEnd;i++) {
                 NSDictionary *field=fields[i];CGRect track=[self calibrationTrack:i];
                 double value=self.settings[field[@"key"]] ? [self.settings[field[@"key"]] doubleValue] : [field[@"default"] doubleValue];
-                HCText(field[@"title"],CGRectMake(c.origin.x,track.origin.y,c.size.width*0.46,13),10,UIColor.whiteColor,YES);
-                HCText([NSString stringWithFormat:@"%.2f",value],CGRectMake(c.origin.x,track.origin.y+13,c.size.width*0.46,13),9,HCAccent(),NO);
+                HCText(field[@"title"],CGRectMake(c.origin.x,track.origin.y,c.size.width*0.46,13),10,UIColor.blackColor,YES);
+                HCText([NSString stringWithFormat:@"%.2f",value],CGRectMake(c.origin.x,track.origin.y+13,c.size.width*0.46,13),9,HCMenuAccent(),NO);
                 [[UIColor colorWithWhite:0.4 alpha:0.8] setFill];UIRectFill(CGRectMake(track.origin.x,CGRectGetMidY(track)-2,track.size.width,4));
                 double fraction=(value-[field[@"min"] doubleValue])/([field[@"max"] doubleValue]-[field[@"min"] doubleValue]);
                 CGFloat knob=track.origin.x+HCClamp(fraction,0,1)*track.size.width;
-                [HCAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-5,CGRectGetMidY(track)-5,10,10)] fill];
+                [HCMenuAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-5,CGRectGetMidY(track)-5,10,10)] fill];
                 [self target:[@"adjust:" stringByAppendingString:field[@"key"]] rect:track];
             }
             CGRect edit=CGRectMake(c.origin.x,CGRectGetMaxY(c)-28,c.size.width*0.55,24);
-            HCText(@"KÉO KHUNG MAP",edit,10,HCAccent(),YES);[self target:@"minimap-edit" rect:edit];
+            HCText(@"KÉO KHUNG MAP",edit,10,HCMenuAccent(),YES);[self target:@"minimap-edit" rect:edit];
             CGRect rotate=CGRectMake(c.origin.x+c.size.width*0.56,CGRectGetMaxY(c)-28,c.size.width*0.44,24);
-            HCText([self.settings[@"minimapRotated"] boolValue] ? @"XOAY 180°: ON" : @"XOAY 180°: OFF",rotate,9,UIColor.whiteColor,NO);[self target:@"minimap-rotate" rect:rotate];
+            HCText([self.settings[@"minimapRotated"] boolValue] ? @"XOAY 180°: ON" : @"XOAY 180°: OFF",rotate,9,UIColor.blackColor,NO);[self target:@"minimap-rotate" rect:rotate];
         } else if(self.group==4) {
             CGRect row=CGRectMake(c.origin.x,c.origin.y,c.size.width,40);
-            HCText([self.settings[@"flags"][@"reports.enabled"] boolValue] ? @"TRUY VẤN TỐ CÁO: ON" : @"TRUY VẤN TỐ CÁO: OFF",row,16,HCAccent(),YES);
+            HCText([self.settings[@"flags"][@"reports.enabled"] boolValue] ? @"TRUY VẤN TỐ CÁO: ON" : @"TRUY VẤN TỐ CÁO: OFF",row,16,HCMenuAccent(),YES);
             [self target:@"flag:reports.enabled" rect:row];
             NSString *reportMessage=[HCReportsStatus[@"querySupported"] isEqual:@YES] ? HCReportsStatus[@"message"] : @"CHƯA TRUY VẤN MÁY CHỦ. Kích hoạt adapter trong app; cache rỗng không có nghĩa không bị tố cáo.";
-            HCText(reportMessage ?: @"CHƯA XÁC ĐỊNH",CGRectMake(c.origin.x,c.origin.y+32,c.size.width,43),10,UIColor.whiteColor,NO);
+            HCText(reportMessage ?: @"CHƯA XÁC ĐỊNH",CGRectMake(c.origin.x,c.origin.y+32,c.size.width,43),10,UIColor.blackColor,NO);
             CGRect refresh=CGRectMake(c.origin.x,c.origin.y+77,c.size.width,22);
-            HCText(@"TRUY VẤN LẠI",refresh,11,HCAccent(),YES);[self target:@"reports-refresh" rect:refresh];
+            HCText(@"TRUY VẤN LẠI",refresh,11,HCMenuAccent(),YES);[self target:@"reports-refresh" rect:refresh];
             NSArray *periods=@[@"all",@"week",@"month"],*titles=@[@"TẤT CẢ",@"TUẦN NÀY",@"THÁNG NÀY"];
             NSString *period=self.settings[@"reportsPeriod"] ?: @"all";
             for(NSInteger i=0;i<3;i++) {
                 CGRect filter=CGRectMake(c.origin.x+i*c.size.width/3,c.origin.y+102,c.size.width/3-3,22);
-                if([period isEqual:periods[i]]) { [[HCAccent() colorWithAlphaComponent:0.15] setFill];UIRectFill(filter); }
-                HCText(titles[i],CGRectInset(filter,3,4),9,UIColor.whiteColor,YES);[self target:[@"period:" stringByAppendingString:periods[i]] rect:filter];
+                if([period isEqual:periods[i]]) { [[HCMenuAccent() colorWithAlphaComponent:0.15] setFill];UIRectFill(filter); }
+                HCText(titles[i],CGRectInset(filter,3,4),9,UIColor.blackColor,YES);[self target:[@"period:" stringByAppendingString:periods[i]] rect:filter];
             }
             NSArray *records=HCFilteredReports(HCReportsStatus,period);
             _reportRecordIndex=MAX(0,MIN(_reportRecordIndex,(NSInteger)records.count-1));
@@ -574,10 +557,10 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 NSDictionary *record=records[records.count-1-_reportRecordIndex];
                 recordText=[NSString stringWithFormat:@"%@\n%@\nLý do: %@",record[@"time"] ?: @"Chưa rõ giờ",record[@"information"] ?: @"",record[@"reason"] ?: @"Chưa được cung cấp"];
             }
-            HCText(recordText,CGRectMake(c.origin.x,c.origin.y+129,c.size.width,56),10,UIColor.whiteColor,NO);
-            HCText([NSString stringWithFormat:@"%@/%@ phản hồi • %ld bản ghi",HCReportsStatus[@"receivedResponseCount"] ?: @0,HCReportsStatus[@"sentRequestCount"] ?: @0,(long)records.count],CGRectMake(c.origin.x,c.origin.y+188,c.size.width-65,20),9,UIColor.lightGrayColor,NO);
+            HCText(recordText,CGRectMake(c.origin.x,c.origin.y+129,c.size.width,56),10,UIColor.blackColor,NO);
+            HCText([NSString stringWithFormat:@"%@/%@ phản hồi • %ld bản ghi",HCReportsStatus[@"receivedResponseCount"] ?: @0,HCReportsStatus[@"sentRequestCount"] ?: @0,(long)records.count],CGRectMake(c.origin.x,c.origin.y+188,c.size.width-65,20),9,UIColor.darkGrayColor,NO);
             CGRect prev=CGRectMake(CGRectGetMaxX(c)-60,c.origin.y+185,26,24),next=CGRectMake(CGRectGetMaxX(c)-28,c.origin.y+185,26,24);
-            HCText(@"‹",prev,19,UIColor.whiteColor,YES);HCText(@"›",next,19,UIColor.whiteColor,YES);
+            HCText(@"‹",prev,19,UIColor.blackColor,YES);HCText(@"›",next,19,UIColor.blackColor,YES);
             [self target:@"report-prev" rect:prev];[self target:@"report-next" rect:next];
         } else {
             NSMutableArray *features=[NSMutableArray array];
@@ -588,21 +571,21 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             for(NSUInteger i=0;i<features.count;i++) {
                 NSDictionary *feature=features[i];
                 CGRect row=CGRectMake(c.origin.x+(i%columns)*(cellWidth+gap),c.origin.y+(i/columns)*rowHeight,cellWidth,rowHeight-6);
-                [[UIColor colorWithWhite:0.23 alpha:0.95] setFill];[[UIBezierPath bezierPathWithRoundedRect:row cornerRadius:10] fill];
+                [[UIColor colorWithWhite:0.95 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:row cornerRadius:10] fill];
                 BOOL on=[self.settings[@"flags"][feature[@"key"]] boolValue];
-                HCText(feature[@"title"],CGRectMake(row.origin.x+10,row.origin.y+9,row.size.width-54,row.size.height),12,UIColor.whiteColor,NO);
-                HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(row)-38,row.origin.y+9,34,22),10,on ? HCAccent() : UIColor.grayColor,YES);
+                HCText(feature[@"title"],CGRectMake(row.origin.x+10,row.origin.y+9,row.size.width-54,row.size.height),12,UIColor.blackColor,NO);
+                HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(row)-38,row.origin.y+9,34,22),10,on ? HCMenuAccent() : UIColor.grayColor,YES);
                 [self target:[@"flag:" stringByAppendingString:feature[@"key"]] rect:row];
             }
         }
         if(self.group==0) {
             CGRect adjust=CGRectMake(c.origin.x,CGRectGetMaxY(c)-29,c.size.width,26);
-            HCText(@"↔  CHỈNH KHUNG MINIMAP",CGRectInset(adjust,4,4),11,HCAccent(),YES);
+            HCText(@"↔  CHỈNH KHUNG MINIMAP",CGRectInset(adjust,4,4),11,HCMenuAccent(),YES);
             [self target:@"minimap-edit" rect:adjust];
         }
         CGRect privacy=CGRectMake(p.origin.x+66,CGRectGetMaxY(p)-31,MIN(240,p.size.width-178),22);
-        [[UIColor colorWithWhite:0.2 alpha:0.8] setFill];[[UIBezierPath bezierPathWithRoundedRect:privacy cornerRadius:7] fill];
-        HCText(HCCaptureProtected ? @"TỰ ẨN QUAY/CHỤP: ON" : @"TỰ ẨN QUAY/CHỤP: OFF",CGRectInset(privacy,7,5),9,HCCaptureProtected ? HCAccent() : UIColor.lightGrayColor,YES);
+        [[UIColor colorWithWhite:0.94 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:privacy cornerRadius:7] fill];
+        HCText(HCCaptureProtected ? @"TỰ ẨN QUAY/CHỤP: ON" : @"TỰ ẨN QUAY/CHỤP: OFF",CGRectInset(privacy,7,5),9,HCCaptureProtected ? HCMenuAccent() : UIColor.darkGrayColor,YES);
         [self target:@"capture" rect:privacy];
         CGRect stop=CGRectMake(CGRectGetMaxX(p)-104,CGRectGetMaxY(p)-33,94,25);
         HCText(@"TẮT NÚT NỔI",CGRectInset(stop,4,3),10,UIColor.systemOrangeColor,YES);[self target:@"stop" rect:stop];
@@ -663,41 +646,24 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     CGFloat mapSize=map.size.width;
     double extent=[self.settings[@"minimapWorldExtent"] doubleValue] ?: 60;
     BOOL rotated=[self.settings[@"minimapRotated"] boolValue];
-    if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && [self.settings[@"minimapAutoAlign"] isEqual:@NO]) {
+    if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue]) {
         [[UIColor colorWithWhite:0.12 alpha:0.18] setFill];
         [[UIBezierPath bezierPathWithRoundedRect:map cornerRadius:4] fill];
         [[HCAccent() colorWithAlphaComponent:0.6] setStroke];
         [[UIBezierPath bezierPathWithRect:map] stroke];
     }
-    if([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && ![self.settings[@"minimapAutoAlign"] isEqual:@NO] &&
-       ![HCEspStatus[@"minimapProjection"][@"available"] isEqual:@YES])
-        HCText(@"Minimap: chờ adapter/phép chiếu game",CGRectMake(map.origin.x,map.origin.y,190,22),9,UIColor.systemOrangeColor,YES);
     for (NSDictionary *target in HCEspStatus[@"targets"]) {
         int32_t mapID=[target[@"heroID"] intValue];
         if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && target[@"worldX"] && target[@"worldZ"]) {
             double u=0,v=0;
-            BOOL autoAlign=![self.settings[@"minimapAutoAlign"] isEqual:@NO];
-            NSDictionary *projection=[HCEspStatus[@"minimapProjection"] isKindOfClass:NSDictionary.class] ? HCEspStatus[@"minimapProjection"] : @{};
-            BOOL projected=NO;
-            BOOL validProjection=[projection isKindOfClass:NSDictionary.class] && [projection[@"available"] isEqual:@YES];
-            for(NSString *key in @[@"ox",@"oy",@"xx",@"xz",@"yx",@"yz"]) {
-                id number=projection[key];
-                if(![number isKindOfClass:NSNumber.class] || !isfinite([number doubleValue])) { validProjection=NO;break; }
-            }
-            if(autoAlign && validProjection) {
-                HCMinimapAffine transform={ [projection[@"ox"] doubleValue],[projection[@"oy"] doubleValue],
-                    [projection[@"xx"] doubleValue],[projection[@"xz"] doubleValue],[projection[@"yx"] doubleValue],[projection[@"yz"] doubleValue] };
-                projected=HCMinimapAffineProject(transform,[target[@"worldX"] doubleValue],[target[@"worldZ"] doubleValue],&u,&v);
-            } else if(!autoAlign) {
-                projected=HCMinimapManualProject([target[@"worldX"] doubleValue],[target[@"worldZ"] doubleValue],
-                    [self.settings[@"minimapCenterX"] doubleValue],[self.settings[@"minimapCenterZ"] doubleValue],extent,
-                    [self.settings[@"minimapAngle"] doubleValue],rotated,&u,&v);
-            }
+            BOOL projected=HCMinimapManualProject([target[@"worldX"] doubleValue],[target[@"worldZ"] doubleValue],
+                [self.settings[@"minimapCenterX"] doubleValue],[self.settings[@"minimapCenterZ"] doubleValue],extent,
+                [self.settings[@"minimapAngle"] doubleValue],rotated,&u,&v);
             if (projected) {
                 CGFloat iconSize=HCClamp([self.settings[@"minimapIconSize"] doubleValue] ?: 20,8,40);
                 // Icon size never changes the map transform or icon center.
-                CGFloat px=autoAlign ? u*w : map.origin.x+u*mapSize;
-                CGFloat py=autoAlign ? v*h : map.origin.y+v*mapSize;
+                CGFloat px=map.origin.x+u*mapSize;
+                CGFloat py=map.origin.y+v*mapSize;
                 CGRect icon=CGRectMake(px-iconSize/2,py-iconSize/2,iconSize,iconSize);
                 HCDrawHeroIcon(mapID,icon);
                 HCDrawHealthRing(target,CGRectInset(icon,-1.5,-1.5),YES,1.2);
@@ -800,7 +766,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         }
         else if ([target isEqual:@"minimap-auto"] || [target isEqual:@"minimap-rotate"]) {
             [self reloadSettings];
-            if([target isEqual:@"minimap-auto"]) self.settings[@"minimapAutoAlign"]=[self.settings[@"minimapAutoAlign"] isEqual:@NO] ? @YES : @NO;
+            if([target isEqual:@"minimap-auto"]) self.settings[@"minimapAutoAlign"]=@NO;
             else { self.settings[@"minimapRotated"]=[self.settings[@"minimapRotated"] boolValue] ? @NO : @YES;self.settings[@"minimapAutoAlign"]=@NO; }
             [self saveSettings];[self refreshEspSurface];
         }

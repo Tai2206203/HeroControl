@@ -1,3 +1,5 @@
+Build 28 / 0.12.1: manual-only minimap keeps saved calibration; opaque white menu, dark text and teal accents. No automatic projection calls or waiting gate. Report diagnostics distinguish missing roster from capture errors and export the underlying capture error/sequence. Real server query success remains unverified; no Xcode/iPhone SDK or device available here.
+
 SỬA LỖI BIÊN DỊCH CI BUILD 27
 
 - Thay selector NSCalendar không tồn tại bằng rangeOfUnit:startDate:interval:
