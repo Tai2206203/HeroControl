@@ -3,6 +3,23 @@
 #include "EspMemory.h"
 #define HC_LOGIC_SINGLETON_METHOD_RVA UINT64_C(0xD1129D0)
 typedef struct { int stage,count,listCount;uint32_t frameNumber;uint64_t framework;HCEspTarget targets[HC_ESP_MAX_TARGETS]; } HCLogicFrame;
+static inline void HCLogicCooldowns(HCCameraMemory m,uint64_t actor,int values[3]) {
+    for(int i=0;i<3;i++) values[i]=-1;
+    uint64_t component=0,klass=0,owner=0,array=0,length=0;
+    if(!m.read(m.context,actor+0x328,&component,8) || !HCCameraPointer(component) ||
+       !m.read(m.context,component,&klass,8) || !HCCameraName(m,klass,"LSkillComponent") ||
+       !m.read(m.context,component+0x20,&owner,8) || owner!=actor ||
+       !m.read(m.context,component+0x88,&array,8) || !HCCameraPointer(array) ||
+       !m.read(m.context,array+0x10,&length,8) || length<4 || length>32) return;
+    for(int i=0;i<3;i++) {
+        uint64_t slot=0,slotOwner=0;int32_t level=0;uint32_t cd[2]={0};
+        if(m.read(m.context,array+0x18+(i+1)*8,&slot,8) && HCCameraPointer(slot) &&
+           m.read(m.context,slot,&klass,8) && HCCameraName(m,klass,"SkillSlot") &&
+           m.read(m.context,slot+0x38,&slotOwner,8) && slotOwner==actor &&
+           m.read(m.context,slot+0x4C,&level,4) && level>0 && level<=18 &&
+           m.read(m.context,slot+0xFC,cd,8) && (cd[0]^cd[1])<=600000) values[i]=(int)(((cd[0]^cd[1])+999)/1000);
+    }
+}
 // Follows the instantiated Singleton<LLogicCore>.get_instance metadata path
 // used by native code at 0x265F6FC. No remote functions are invoked.
 static inline bool HCLogicRead(HCCameraMemory m,uint64_t base,int hostCamp,HCLogicFrame *out) {
@@ -75,7 +92,8 @@ static inline bool HCLogicRead(HCCameraMemory m,uint64_t base,int hostCamp,HCLog
             t.hp=(int32_t)(hp[0]^hp[1]);t.hpCurrentKnown=true;
         }
         t.logicPosition=true;t.positionFrame=out->frameNumber;
-        for(int k=0;k<3;k++) t.cooldowns[k]=-1;
+        HCLogicCooldowns(m,actor,t.cooldowns);
+        for(int k=0;k<3;k++) if(t.cooldowns[k]>=0) t.logicCooldowns=true;
         out->targets[out->count++]=t;
     }
     uint64_t itemsAfter=0,frameworkAfter=0;int32_t sizeAfter=0,stateAfter=0;uint32_t frameAfter=0;
@@ -103,6 +121,7 @@ static inline void HCLogicMerge(HCEspFrame *visual,const HCLogicFrame *logic,boo
                 v->worldX=t.worldX;v->worldY=t.worldY;v->worldZ=t.worldZ;v->logicPosition=true;v->positionFrame=t.positionFrame;
             }
             if(t.hpCurrentKnown) { v->hp=t.hp;v->hpCurrentKnown=true;v->hpKnown=v->maxHP>=t.hp && v->maxHP>0; }
+            for(int k=0;k<3;k++) if(t.cooldowns[k]>=0) { v->cooldowns[k]=t.cooldowns[k];v->logicCooldowns=true; }
         } else if(visual->count<HC_ESP_MAX_TARGETS) visual->targets[visual->count++]=t;
     }
     int count=visual->count;visual->count=visual->projected=0;

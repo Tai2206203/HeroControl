@@ -3,6 +3,7 @@
 #include "../BackendSDK/CameraMemory.h"
 #include "../BackendSDK/EspMemory.h"
 #include "../BackendSDK/LogicEsp.h"
+#include "../BackendSDK/LuaReports.h"
 
 typedef kern_return_t (*HCMachWrite)(mach_port_t, mach_vm_address_t, vm_offset_t, mach_msg_type_number_t);
 typedef struct { mach_port_t task; HCRemoteRead read; HCMachWrite write; } HCCameraTask;
@@ -15,11 +16,20 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
     return target->write && (size == 1 || size == 4) &&
         target->write(target->task, address, (vm_offset_t)(uintptr_t)buffer, (mach_msg_type_number_t)size) == KERN_SUCCESS;
 }
+typedef struct { HCCameraTask target; NSTimeInterval deadline; bool exceeded; } HCReceiptReadTask;
+static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, size_t size) {
+    HCReceiptReadTask *value = context;
+    if (NSProcessInfo.processInfo.systemUptime > value->deadline) { value->exceeded = true; return false; }
+    return HCEngineRead(&value->target, address, buffer, size);
+}
 
 @implementation HCCameraEngine {
     NSString *_profile;
     void (^_report)(NSDictionary *);
     void (^_espReport)(NSDictionary *);
+    void (^_reportsReport)(NSDictionary *);
+    BOOL _reportsActive;
+    NSTimeInterval _nextReportsRead;
     BOOL _espActive;
     BOOL _logicLayoutVerified;
     NSDictionary *_settings;
@@ -46,10 +56,11 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
     NSTimeInterval _lastEmission;
     NSString *_lastCode;
 }
-- (instancetype)initWithProfile:(NSString *)profile report:(void (^)(NSDictionary *))report espReport:(void (^)(NSDictionary *))espReport {
+- (instancetype)initWithProfile:(NSString *)profile report:(void (^)(NSDictionary *))report espReport:(void (^)(NSDictionary *))espReport reportsReport:(void (^)(NSDictionary *))reportsReport {
     if ((self = [super init])) {
         _profile = [profile copy]; _report = [report copy];
         _espReport = [espReport copy];
+        _reportsReport = [reportsReport copy];
         _dateFormatter = [NSISO8601DateFormatter new];
         _frameLock = [NSLock new]; _requestedHz = 60;
         _queue = dispatch_queue_create("local.herocontrol.camera", DISPATCH_QUEUE_SERIAL);
@@ -69,6 +80,7 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
     dispatch_async(dispatch_get_main_queue(), ^{ report(value); });
 }
 - (void)releaseTarget {
+    if (_reportsActive && _pid) [self emitReports:@{@"code": @"reports_session_reset", @"message": @"Phiên đọc game đã thay đổi; đang chờ mẫu thư mới.", @"records": @[], @"querySupported": @NO}];
     if (_target.task != MACH_PORT_NULL) mach_port_deallocate(mach_task_self(), _target.task);
     _target = (HCCameraTask){0}; _base = 0; _pid = 0; _hasWritten = NO;
     _logicLayoutVerified = NO;
@@ -98,6 +110,35 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
         if (latest) callback(latest);
     });
 }
+- (void)emitReports:(NSDictionary *)value {
+    void (^callback)(NSDictionary *) = _reportsReport;
+    dispatch_async(dispatch_get_main_queue(), ^{ callback(value); });
+}
+- (void)readReports {
+    HCReceiptScan scan;
+    HCReceiptReadTask readTask = {_target, NSProcessInfo.processInfo.systemUptime + 0.05, false};
+    HCCameraMemory readOnly = {&readTask, HCReceiptBudgetRead, NULL};
+    BOOL available = HCReadReceiptCache(readOnly, _base, &scan);
+    NSMutableArray *records = [NSMutableArray array];
+    NSString *account = [NSString stringWithFormat:@"%llu", (unsigned long long)scan.account];
+    NSTimeInterval now = NSDate.date.timeIntervalSince1970;
+    if (available) for (int i = 0; i < scan.count; i++) {
+        HCReceipt receipt = scan.records[i];
+        NSString *time = receipt.sent >= 946684800 && receipt.sent <= now + 300 ?
+            [_dateFormatter stringFromDate:[NSDate dateWithTimeIntervalSince1970:receipt.sent]] : @"Chưa xác minh thời gian máy chủ";
+        NSString *subject = [NSString stringWithUTF8String:receipt.subject];
+        [records addObject:@{@"id": [NSString stringWithFormat:@"%@:mail:%llu:%llu", account, (unsigned long long)receipt.mailIndex, (unsigned long long)receipt.sent],
+            @"time": time, @"information": subject.length ? subject : @"Thư thông báo tố cáo",
+            @"reason": [NSString stringWithUTF8String:receipt.reason] ?: @"Không đọc được mã lý do"}];
+    }
+    NSString *message = available ? (records.count ? @"Đã đọc thư tố cáo game đã tải cho tài khoản này." : @"Chưa quan sát được thư tố cáo trong cache đã đọc; không kết luận không có tố cáo.") :
+        @"Chưa đọc được cache thư tố cáo. Mở hộp thư trong game, quay lại và kiểm tra bước đọc.";
+    [self emitReports:@{@"code": available ? @"complaint_mail_cache_read" : @"complaint_mail_cache_unavailable",
+        @"message": message, @"available": available ? @YES : @NO, @"stage": @(scan.stage), @"tablesRead": @(scan.tables),
+        @"accountID": account, @"source": @"cached_game_mail", @"querySupported": @NO, @"records": records,
+        @"readBudgetExceeded": readTask.exceeded ? @YES : @NO,
+        @"timestamp": [_dateFormatter stringFromDate:NSDate.date]}];
+}
 - (void)readEsp:(BOOL)unseenOnly {
     HCEspFrame frame;
     NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;
@@ -110,16 +151,20 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
     _readSamples++;
     if (now - _readWindow >= 1) { _measuredReadHz = _readSamples / (now - _readWindow); _readSamples = 0; _readWindow = now; }
     NSMutableArray *targets = [NSMutableArray array];
-    NSUInteger hiddenCount = 0, logicCount = 0;
+    NSUInteger hiddenCount = 0, logicCount = 0, cooldownKnownCount = 0;
     for (int i = 0; i < frame.count; i++) {
         HCEspTarget t = frame.targets[i];
         if (!t.visible) hiddenCount++;
         if (t.logicPosition) logicCount++;
+        NSUInteger knownSlots = 0;
+        for (int k = 0; k < 3; k++) if (t.cooldowns[k] >= 0) knownSlots++;
+        cooldownKnownCount += knownSlots;
         [targets addObject:@{@"objectID": @(t.objectID), @"heroID": @(t.heroID), @"hp": @(t.hp), @"maxHP": @(t.maxHP),
             @"worldX": @(t.worldX), @"worldZ": @(t.worldZ), @"x": @(t.x), @"feetY": @(t.feetY), @"headY": @(t.headY),
             @"visible": t.visible ? @YES : @NO, @"onScreen": t.onScreen ? @YES : @NO,
             @"hpKnown": t.hpKnown ? @YES : @NO, @"hpCurrentKnown": t.hpCurrentKnown ? @YES : @NO,
             @"positionSource": t.logicPosition ? @"logic" : @"visual", @"positionFrame": @(t.positionFrame),
+            @"cooldownSource": knownSlots ? (t.logicCooldowns ? @"logic" : @"visual") : @"unavailable",
             @"cooldowns": @[@(t.cooldowns[0]), @(t.cooldowns[1]), @(t.cooldowns[2])]}];
     }
     NSString *code = status == HC_ESP_OK ? @"esp_frame_read" : status == HC_ESP_MATRICES_PENDING ? @"esp_matrices_pending" : @"esp_waiting";
@@ -129,6 +174,7 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
         @"hiddenClientCount": @(hiddenCount),
         @"logicAvailable": logicAvailable ? @YES : @NO, @"logicStage": @(logic.stage), @"logicTargetCount": @(logicCount),
         @"logicFrameNumber": @(logic.frameNumber),
+        @"cooldownKnownCount": @(cooldownKnownCount),
         @"listCount": @(frame.listCount), @"matricesValid": frame.matricesValid ? @YES : @NO,
         @"matrixStage": @(frame.matrixStage), @"viewMode": @(frame.viewMode), @"projectionDirty": @(frame.projectionDirty),
         @"nativeCamera": [NSString stringWithFormat:@"0x%llx", (unsigned long long)frame.nativeCamera],
@@ -192,6 +238,9 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
         id espFlag = [flags isKindOfClass:NSDictionary.class] ? flags[@"__ifxEnemyEspEnabledV1"] : nil;
         BOOL espEnabled = [espFlag isKindOfClass:NSNumber.class] && [espFlag doubleValue] == 1;
         BOOL cameraEnabled = [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;
+        BOOL reportsEnabled = [flags[@"reports.enabled"] isEqual:@YES];
+        if (!reportsEnabled && _reportsActive) [self emitReports:@{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO}];
+        _reportsActive = reportsEnabled;
         _requestedHz = [settings[@"espReadHz"] isEqual:@120] ? 120 : 60;
         NSInteger targetHz = espEnabled ? _requestedHz : 10;
         if (_timerHz != targetHz) {
@@ -205,7 +254,7 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
             BOOL wasActive = _hasWritten; [self restoreCamera];
             if (!wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"] && ![_lastReport[@"code"] isEqual:@"camera_disabled"])
                 [self emit:@"camera_disabled" message:@"Camera xa đang tắt." extra:nil];
-            if (!espEnabled) { [self releaseTarget]; _nextDiscovery = 0; return; }
+            if (!espEnabled && !reportsEnabled) { [self releaseTarget]; _nextDiscovery = 0; return; }
         }
         id value = settings[@"cameraScale"];
         double scale = [value isKindOfClass:NSNumber.class] ? [value doubleValue] : NAN;
@@ -216,11 +265,13 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
             _nextDiscovery = now + 2;
             if (![self discover]) {
                 if (espEnabled) [self emitEsp:@{@"code": @"esp_access_unavailable", @"message": @"Chưa xác minh quyền đọc và module game.", @"targets": @[]}];
+                if (reportsEnabled) [self emitReports:@{@"code": @"reports_access_unavailable", @"message": @"Chưa xác minh quyền đọc và module game.", @"records": @[], @"querySupported": @NO}];
                 return;
             }
         }
         if (!_target.task) return;
         if (espEnabled) [self readEsp:[flags[@"DoroCheat.Reference.R1.Unseen"] boolValue]];
+        if (reportsEnabled && now >= _nextReportsRead) { _nextReportsRead = now + 2; [self readReports]; }
         if (!cameraEnabled) return;
         // Preserve the already verified camera write cadence independently of ESP.
         if (now < _nextCameraTick) return;

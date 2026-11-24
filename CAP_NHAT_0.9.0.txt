@@ -1,0 +1,77 @@
+HERO CONTROL 0.9.0 — BUILD 19
+
+GIỮ CAMERA, THÊM COOLDOWN LOGIC VÀ CHECK THƯ TỐ CÁO
+
+Camera xa, Box và HP đã được người dùng xác nhận hoạt động ở build 18.
+Bản này không đổi CameraMemory.h, hệ số camera đang lưu hay cách ghi camera.
+Nút thử chung chỉ bật ESP + đọc thư tố cáo, giữ cameraEnabled/cameraScale.
+
+ESP KỸ NĂNG
+- Đọc LActorRoot.SkillControl+0x328 → LSkillComponent.SkillSlotArray+0x88.
+- Đọc 3 slot chính, kiểm tra owner/level, giải CrypticInt32 cooldown tại +0xFC
+  bằng XOR, làm tròn số giây lên. Getter native 0x4D240B4 xác nhận offset.
+- Vẫn dùng cooldown hiển thị khi nguồn logic chưa có. Thiếu dữ liệu hiện ?.
+- Vẽ nhãn S1/S2/S3; báo cáo có cooldownKnownCount và targets[].cooldownSource.
+- Icon vẫn là mã tướng, chưa có ảnh chân dung; Map vẫn là radar tương đối.
+  Hai phần này chưa được thay bằng ảnh/minimap thực của game.
+
+CHECK TỐ CÁO: NGUỒN THỰC SỰ ĐƯỢC TRIỂN KHAI
+Đọc thông báo tố cáo ĐÃ ĐƯỢC GAME TẢI trong cache hộp thư của tài khoản
+đang đăng nhập. Không yêu cầu thay HeroSkin, không chạy Lua hay gửi yêu cầu mạng.
+
+Đối chiếu tài liệu menu cũ:
+- HeroSkin_1/strings/217.lua, m.observe: lọc COM_MAIL_SYSTEM_BECOMPLAINT,
+  mailIndex/sendTime/subject, userDataExtra.UserData.BeComplaintHistory.
+- dump.cs xác nhận COM_MAIL_SYSTEM_BECOMPLAINT = 5.
+- Menu cũ còn có requestComplaintHistory dùng Lua NetworkModule.SendLobbyMsg;
+  ĐƯỜNG TRUY VẤN LỊCH SỬ MÁY CHỦ NÀY CHƯA ĐƯỢC TIPA TRIỂN KHAI.
+
+Bộ đọc mới dùng LuaRoot._luaEnv → Lua state → registry/globals →
+package.loaded['AOV.Mail.MailSys'] → upvalues của GetMailList → cache thư.
+Layout/hash Lua 5.3 được đối chiếu trực tiếp với mã native trong cùng module:
+lua_getglobal 0x96E75B8, luaH_getint 0x9707C58, hash 0x9702CEC,
+lua_getupvalue 0x96E9218. Không gọi các hàm này trong game; chỉ đọc cấu trúc.
+Đọc UUID tài khoản 64-bit từ CRoleInfoManager, không chuyển qua double.
+Kiểm tra tài khoản/LuaEnv trước và sau; đổi tài khoản hoặc VM bị hủy thì bỏ mẫu.
+Giới hạn số lần đọc, số bảng, độ sâu, bản ghi; tối đa 50 ms mỗi lần quét.
+Quét khoảng 2 giây/lần. Chỉ duyệt bảng/upvalues liên quan tới GetMailList,
+bỏ qua upvalue _G; không duyệt toàn bộ dữ liệu toàn cục của Lua.
+
+GIỚI HẠN KẾT QUẢ
+- Chỉ quan sát các thư subtype 5 có cấu trúc BeComplaintHistory trong cache.
+- UserDataType và các mã lý do được hiển thị dưới dạng giá trị thô; không
+  suy diễn mã chưa xác minh thành kết luận cụ thể như “hack” hay “đã bị phạt”.
+- Không có thư không có nghĩa là không có tố cáo; game có thể chưa tải thư,
+  đã xóa thư hoặc chưa phát sinh thông báo cho một tố cáo chưa xử lý.
+- querySupported=false luôn được ghi rõ: chưa truy vấn toàn bộ lịch sử server.
+- Bộ đọc cache mới chưa được kiểm chứng trên iPhone, có thể cần chỉnh theo
+  cấu trúc upvalue thực tế. Nếu không thấy cache, trả unavailable và bước đọc,
+  không giả số 0 thành kết quả thành công “không bị tố cáo”.
+
+CÁCH THỬ CHUNG
+1. Trong C:\Users\Admin\Downloads\HeroControl chạy git push.
+2. Chờ Actions xanh, cài .tipa mới, kiểm tra phiên bản 0.9.0 build 19.
+3. Tắt/bật nút nổi để thay tiến trình cũ. Bấm “Bật ESP + đọc thư tố cáo
+   (giữ camera)” hoặc bật công tắc Reports. Camera giữ hệ số của bạn.
+4. Trong game mở hộp thư hệ thống để game tải thư; nếu có thư tố cáo cũ,
+   mở thư đó để tải chi tiết rồi quay lại Hero Control thẻ Reports.
+5. Học kỹ năng trong trận tập; kiểm tra S1/S2/S3 thay đổi khi dùng kỹ năng.
+6. Bấm “Xuất kết quả chung”. Bản này tải lại trạng thái overlay trước khi
+   xuất; màn chẩn đoán kernel cũng đính kèm trạng thái overlay nếu đã có.
+
+ĐỌC BÁO CÁO
+overlay.reports:
+  code: complaint_mail_cache_read hoặc complaint_mail_cache_unavailable
+  stage: 1 tài khoản, 2 LuaEnv, 3 registry/globals, 4 package,
+         5 loaded, 6 MailSys, 7 GetMailList, 8 cache/upvalues, 9 hoàn tất
+  source: cached_game_mail; querySupported: false
+  records: thư đã quan sát; accountID giữ nguyên chuỗi thập phân 64-bit
+  readBudgetExceeded: đã vượt ngân sách thời gian đọc hay chưa
+overlay.esp: cooldownKnownCount, targets[].cooldowns/cooldownSource.
+
+KIỂM THỬ
+Fixture C cho bảng/hash Lua, upvalues, subtype, tài khoản trên 2^53, đổi tài
+khoản, disposed VM, giới hạn đọc; không thực thi Lua hoặc mạng trong test.
+Fixture cooldown logic: XOR, làm tròn ms, 0 giây và dữ liệu ngoài giới hạn.
+Camera, ESP, logic, CString và 11 kiểm thử Python được chạy tại Windows.
+Xcode/SDK iPhone/XCTest chờ GitHub Actions; chưa xác nhận tính năng mới trên máy.

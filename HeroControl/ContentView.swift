@@ -57,7 +57,7 @@ struct ContentView: View {
                 Button("Đặt lại", role: .destructive) { store.reset() }
             } message: { Text("Muốn đưa game về cấu hình này, cần bấm Áp dụng sau khi kết nối backend.") }
             .sheet(isPresented: $showConnection) { connectionDetails }
-            .sheet(isPresented: $showKernelCheck) { KernelDiagnosticsView(store: store) }
+            .sheet(isPresented: $showKernelCheck) { KernelDiagnosticsView(store: store, overlay: overlay) }
             .sheet(item: $shareItem) { ActivitySheet(items: [$0.url]) }
             .task(id: scenePhase) {
                 guard scenePhase == .active else { return }
@@ -79,6 +79,7 @@ struct ContentView: View {
                 Text("ESP: \(overlay.state?.esp?.code ?? "chưa chạy") • chiếu được: \(overlay.state?.esp?.projectedCount ?? 0)/\(overlay.state?.esp?.targetCount ?? 0)")
                 Text(String(format: "Đọc ESP: %.1f Hz • lượt vẽ: %.1f/s • màn hình tối đa %ld Hz", overlay.state?.esp?.measuredReadHz ?? 0, overlay.state?.overlayDrawFPS ?? 0, overlay.state?.displayLimitHz ?? 60))
                 Text("Nguồn logic: \(overlay.state?.esp?.logicAvailable == true ? "đã đọc" : "chưa đọc") • mục tiêu logic: \(overlay.state?.esp?.logicTargetCount ?? 0) • bước: \(overlay.state?.esp?.logicStage ?? 0)")
+                Text("Cooldown đã đọc: \(overlay.state?.esp?.cooldownKnownCount ?? 0) slot")
             }
             if let esp = overlay.state?.esp, let stage = esp.matrixStage {
                 Text("Ma trận: bước \(stage)/7 • chế độ view: \(esp.viewMode ?? -1) • projection dirty: \(esp.projectionDirty ?? -1)")
@@ -87,9 +88,9 @@ struct ContentView: View {
                 Text("Mẫu trong trận gần nhất: \(sample.projectedCount ?? 0)/\(sample.targetCount ?? 0) • \(sample.timestamp ?? "")")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Text("Tố cáo: chưa hỗ trợ — chưa có nguồn dữ liệu.").foregroundStyle(.orange)
+            Text("Thư tố cáo: \(overlay.state?.reports?.code ?? "chưa đọc") • \(overlay.state?.reports?.records?.count ?? 0) bản ghi")
             if let error = overlay.state?.settingsError, !error.isEmpty { Text(error).foregroundStyle(.orange) }
-            Button("Bật thử camera 1.50× + toàn bộ lớp ESP") {
+            Button("Bật ESP + đọc thư tố cáo (giữ camera)") {
                 store.prepareCombinedCheck()
                 Task {
                     if !overlay.running, let profile = store.prepareOverlayProfile() { await overlay.start(profile: profile) }
@@ -100,8 +101,13 @@ struct ContentView: View {
             Text("Sau khi bật, vào trận tập và thu menu. Chưa có kiểm chứng hình ảnh tự động; số lần ghi và số mục tiêu không thay thế việc đối chiếu trực tiếp.")
                 .font(.caption).foregroundStyle(.secondary)
             Button("Xuất kết quả chung", systemImage: "square.and.arrow.up") {
-                do { shareItem = ShareItem(url: try store.exportDiagnostics(overlayState: overlay.state)); exportError = nil }
-                catch { exportError = error.localizedDescription }
+                Task {
+                    await overlay.refresh()
+                    do {
+                        guard let state = overlay.state else { throw BackendError.unavailable("Chưa có báo cáo nút nổi. Bật nút nổi rồi xuất lại.") }
+                        shareItem = ShareItem(url: try store.exportDiagnostics(overlayState: state)); exportError = nil
+                    } catch { exportError = error.localizedDescription }
+                }
             }
         }.font(.footnote).padding(16).background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
     }
@@ -201,7 +207,7 @@ struct ContentView: View {
                     Toggle(feature.title, isOn: Binding(
                         get: { store.settings.flags[feature.key] ?? false },
                         set: { store.setFlag(feature.key, $0) }))
-                        .disabled(store.selectedGroup == .reports)
+                        .disabled(!overlay.running)
                     if store.connected && !store.supports(feature.key) {
                         Text("Backend chưa hỗ trợ").font(.caption).foregroundStyle(.orange)
                     }
@@ -249,7 +255,7 @@ struct ContentView: View {
                     Text(String(format: "Giá trị game: %.3f → ghi: %.3f", source, written)).font(.caption)
                 }
             }
-            Text("Camera và ESP tự cập nhật khi bật. Tắt camera để yêu cầu hoàn tác. Theo dõi tố cáo chưa được triển khai.")
+            Text("Camera và ESP tự cập nhật khi bật. Tắt camera để yêu cầu hoàn tác. Thẻ Reports chỉ đọc thư tố cáo game đã tải.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
     }
@@ -283,7 +289,11 @@ struct ContentView: View {
 
     private var reportControls: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if let reports = store.snapshot?.reports, !reports.isEmpty {
+            Text(overlay.state?.reports?.message ?? "Bật đọc thư tố cáo và mở hộp thư trong game.")
+            if let stage = overlay.state?.reports?.stage { Text("Bước đọc: \(stage)/9").font(.caption.monospaced()) }
+            Text("Nguồn: thư game đã tải cho tài khoản hiện tại. Chưa tự truy vấn toàn bộ lịch sử máy chủ; không có bản ghi không có nghĩa là không bị tố cáo.")
+                .font(.footnote).foregroundStyle(.orange)
+            if let reports = overlay.state?.reports?.records, !reports.isEmpty {
                 ForEach(reports) { report in
                     VStack(alignment: .leading, spacing: 5) {
                         Text(report.time).font(.caption.monospaced()).foregroundStyle(accent)
@@ -294,7 +304,7 @@ struct ContentView: View {
                 }
             } else {
                 ContentUnavailableView("Chưa có bản ghi", systemImage: "list.bullet.rectangle",
-                    description: Text("Chưa nhận dữ liệu từ backend. Trạng thái này không có nghĩa là không có tố cáo."))
+                    description: Text("Chưa quan sát được thư tố cáo trong cache đã đọc. Mở hộp thư trong game rồi kiểm tra lại."))
             }
         }
     }

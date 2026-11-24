@@ -8,7 +8,7 @@ typedef struct {
     float worldX, worldY, worldZ, x, feetY, headY;
     bool visible, onScreen;
     bool hpKnown;
-    bool hpCurrentKnown, logicPosition;
+    bool hpCurrentKnown, logicPosition, logicCooldowns;
     uint32_t positionFrame;
     int cooldowns[3];
 } HCEspTarget;

@@ -22,6 +22,15 @@ struct OverlayState: Codable {
 struct FeatureCheckStatus: Codable {
     let code: String
     let message: String
+    let available: Bool?
+    let stage: Int?
+    let tablesRead: Int?
+    let accountID: String?
+    let source: String?
+    let querySupported: Bool?
+    let readBudgetExceeded: Bool?
+    let records: [ReportRecord]?
+    let timestamp: String?
 }
 
 struct EspStatus: Codable {
@@ -49,6 +58,7 @@ struct EspStatus: Codable {
     let logicStage: Int?
     let logicTargetCount: Int?
     let logicFrameNumber: UInt32?
+    let cooldownKnownCount: Int?
     let sampleUptime: Double?
 }
 
@@ -68,6 +78,7 @@ struct EspTargetStatus: Codable {
     let hpKnown: Bool?
     let hpCurrentKnown: Bool?
     let positionSource: String?
+    let cooldownSource: String?
     let positionFrame: UInt32?
 }
 

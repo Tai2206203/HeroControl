@@ -58,9 +58,7 @@ final class ControlStore: ObservableObject {
         for feature in Feature.all where feature.group == .esp {
             settings.flags[feature.key] = feature.key != "DoroCheat.Reference.R1.Unseen"
         }
-        settings.flags["reports.enabled"] = false
-        settings.cameraScale = 1.5
-        settings.cameraEnabled = true
+        settings.flags["reports.enabled"] = true
         changed()
     }
     func setSkin(hero: UInt32, skin: Int?) {

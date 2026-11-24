@@ -33,6 +33,9 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/logic-esp-check.c" -o "$OUTPUT/logic-esp-check"
 "$OUTPUT/logic-esp-check"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/lua-reports-check.c" -o "$OUTPUT/lua-reports-check"
+"$OUTPUT/lua-reports-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/remote-cstring-check.c" -o "$OUTPUT/remote-cstring-check"
 "$OUTPUT/remote-cstring-check"
 printf 'Built independent Hero Control overlay: %s\n' "$OUTPUT"

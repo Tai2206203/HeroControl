@@ -75,6 +75,7 @@ static HCCameraEngine *HCCamera;
 static NSDictionary *HCCameraStatus;
 static NSDictionary *HCEspStatus;
 static NSDictionary *HCEspLastSample;
+static NSDictionary *HCReportsStatus;
 static NSUInteger HCEspDraws;
 static double HCEspDrawWindow, HCEspDrawFPS;
 static NSString *HCStartupStage = @"entry";
@@ -90,8 +91,8 @@ static void HCState(void) {
         @"esp": HCEspStatus ?: @{@"code": @"esp_disabled", @"message": @"ESP đang tắt."},
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
-        @"reports": @{@"code": @"unsupported", @"message": @"Chưa có nguồn dữ liệu tố cáo."},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.8.0", @"stage": HCStartupStage};
+        @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.9.0", @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -231,7 +232,7 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         HCText(@"HERO CONTROL", CGRectMake(p.origin.x + 14, p.origin.y + 14, p.size.width - 70, 24), 17, HCAccent(), YES);
         CGRect close = CGRectMake(CGRectGetMaxX(p) - 44, p.origin.y + 6, 38, 36);
         HCText(@"×", CGRectInset(close, 8, 0), 28, UIColor.whiteColor, NO); [self target:@"close" rect:close];
-        HCText(HCSettingsError ?: @"Camera + ESP: xem kết quả kiểm chứng\nTố cáo: chưa hỗ trợ.", CGRectMake(p.origin.x + 14, p.origin.y + 43, p.size.width - 28, 34), 11,
+        HCText(HCSettingsError ?: @"Camera + ESP: xem kết quả kiểm chứng\nReports: đọc thư game đã tải.", CGRectMake(p.origin.x + 14, p.origin.y + 43, p.size.width - 28, 34), 11,
             HCSettingsError ? UIColor.systemOrangeColor : UIColor.lightGrayColor, NO);
         NSArray *tabs = @[@"ESP", @"Camera", @"Reports"];
         NSArray *groups = @[@0, @1, @4];
@@ -261,7 +262,11 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
             [self target:@"camera" rect:slider];
             HCText(HCCameraStatus[@"message"] ?: @"Bật camera xa rồi vào trận tập để thử.", CGRectMake(p.origin.x + 14, y + 107, p.size.width - 28, 70), 12, UIColor.lightGrayColor, NO);
         } else if (self.group == 4) {
-            HCText(@"Chưa có dữ liệu tố cáo. Không thể xác nhận chức năng này hoạt động.", CGRectMake(p.origin.x + 14, y, p.size.width - 28, 80), 14, UIColor.systemOrangeColor, NO);
+            CGRect row = CGRectMake(p.origin.x + 14, y, p.size.width - 28, 32);
+            HCText([self.settings[@"flags"][@"reports.enabled"] boolValue] ? @"Đọc thư tố cáo: ON" : @"Đọc thư tố cáo: OFF", row, 14, HCAccent(), YES);
+            [self target:@"flag:reports.enabled" rect:row];
+            HCText(HCReportsStatus[@"message"] ?: @"Mở hộp thư trong game để game tải thông báo.", CGRectMake(p.origin.x + 14, y + 38, p.size.width - 28, 90), 12, UIColor.lightGrayColor, NO);
+            HCText(@"Chỉ thư đã tải. Chưa truy vấn toàn bộ lịch sử máy chủ.", CGRectMake(p.origin.x + 14, y + 132, p.size.width - 28, 45), 12, UIColor.systemOrangeColor, NO);
         } else {
             NSArray *features = [HCFeatures() filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"group == %ld", (long)self.group]];
             CGFloat rowHeight = MIN(28, (p.size.height - 160) / MAX((NSUInteger)1, features.count));
@@ -311,11 +316,12 @@ static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX
         if ([flags[@"DoroCheat.Reference.R1.Icon"] boolValue])
             HCText([NSString stringWithFormat:@"#%@", target[@"heroID"]], CGRectMake(x - 34, top - 24, 68, 18), 11, color, YES);
         if ([flags[@"DoroCheat.Reference.R1.HP"] boolValue] && ![target[@"hpKnown"] boolValue])
-            HCText([target[@"hpCurrentKnown"] boolValue] ? [NSString stringWithFormat:@"HP %@", target[@"hp"]] : @"HP ?", CGRectMake(x - 35, top - 20, 70, 18), 10, color, NO);
+            HCText([target[@"hpCurrentKnown"] boolValue] ? [NSString stringWithFormat:@"HP %@", target[@"hp"]] : @"HP ?", CGRectMake(x - 35, top - 40, 70, 18), 10, color, NO);
         if ([flags[@"DoroCheat.Reference.R1.Check"] boolValue]) {
             NSMutableArray *texts = [NSMutableArray array];
             for (NSNumber *cd in target[@"cooldowns"]) [texts addObject:cd.intValue < 0 ? @"?" : cd.stringValue];
-            HCText([texts componentsJoinedByString:@" / "], CGRectMake(x - 45, bottom + 3, 90, 18), 11, color, YES);
+            NSString *text = texts.count == 3 ? [NSString stringWithFormat:@"S1:%@  S2:%@  S3:%@", texts[0], texts[1], texts[2]] : @"Chưa đọc CD";
+            HCText(text, CGRectMake(x - 75, bottom + 3, 150, 18), 10, color, YES);
         }
     }
     if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && [HCEspStatus[@"hasHostPosition"] boolValue]) {
@@ -505,6 +511,9 @@ static void HCUpdateLock(void) {
         // Preserve the last actor sample for export after switching away from
         // the game. It is historical evidence, never a frame to draw now.
         if ([report[@"listCount"] integerValue] > 0) HCEspLastSample = report;
+    } reportsReport:^(NSDictionary *report) {
+        HCReportsStatus = report;
+        if (HCMenuOpen && HCCanvas.group == 4) [HCCanvas setNeedsDisplay];
     }];
     [HCCamera start];
     self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayTick:)];

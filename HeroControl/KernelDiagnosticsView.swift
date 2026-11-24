@@ -3,6 +3,7 @@ import UIKit
 
 struct KernelDiagnosticsView: View {
     @ObservedObject var store: ControlStore
+    @ObservedObject var overlay: OverlayController
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
     @State private var exportedFile: URL?
@@ -118,7 +119,7 @@ struct KernelDiagnosticsView: View {
                 }
                 Section("Gửi kết quả") {
                     Button("Chuẩn bị file chẩn đoán") {
-                        exportedFile = try? store.exportDiagnostics()
+                        exportedFile = try? store.exportDiagnostics(overlayState: overlay.state)
                     }
                     if let url = exportedFile { ShareLink("Chia sẻ file JSON", item: url) }
                 }

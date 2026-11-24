@@ -1,4 +1,15 @@
-HERO CONTROL 0.8.0 — BUILD 18
+HERO CONTROL 0.9.0 — BUILD 19
+
+Thêm fixture Lua receipt: hash/layout bảng, upvalues, UID 64-bit trên 2^53,
+lọc subtype, đổi tài khoản, LuaEnv disposed và giới hạn số lần đọc.
+Không thực thi Lua/gửi mạng trong kiểm thử; chỉ dữ liệu bộ nhớ mô phỏng.
+Thêm cooldown logic tại SkillSlot+0xFC, XOR và làm tròn ms → giây.
+CameraMemory.h giữ nguyên; XCTest thử chung giữ cameraScale/cameraEnabled.
+Giao diện chỉ hứa đọc thư đã tải, querySupported=false; chưa có truy vấn
+lịch sử toàn bộ máy chủ. Bộ đọc cache mới chưa kiểm chứng trên iPhone.
+Xem CAP_NHAT_0.9.0.txt. Xcode/SDK iPhone/XCTest chờ Actions.
+
+LỊCH SỬ 0.8.0 — BUILD 18:
 
 Thêm kiểm thử C cho nguồn LActorRoot: tướng logic di chuyển khi không
 có đối tượng hiển thị; chiếu lại từng mẫu; XOR HP; bỏ actor chết/tái chế;

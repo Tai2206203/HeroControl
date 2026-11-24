@@ -59,7 +59,7 @@ struct Feature: Identifiable {
         .init(key: "DoroCheat.Style.Skin", title: "Mod Skin", group: .skins),
         .init(key: "DoroCheat.Style.BeforeMatch", title: "Before Match", group: .skins),
         .init(key: "DoroCheat.Style.LiveChange", title: "Live Change", group: .skins),
-        .init(key: "reports.enabled", title: "Theo dõi tố cáo", group: .reports)
+        .init(key: "reports.enabled", title: "Đọc thư thông báo tố cáo", group: .reports)
     ]
     static let cameraKey = "DoroCheat.Reference.R2.CameraScale"
 }

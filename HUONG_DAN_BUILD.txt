@@ -1,21 +1,22 @@
-HERO CONTROL 0.8.0 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
+HERO CONTROL 0.9.0 — MÃ NGUỒN ỨNG DỤNG ĐIỀU KHIỂN RIÊNG
 
-CẬP NHẬT HIỆN TẠI: xem CAP_NHAT_0.8.0.txt để thử camera + ESP cùng lúc;
+CẬP NHẬT HIỆN TẠI: xem CAP_NHAT_0.9.0.txt để thử camera + ESP cùng lúc;
 xem CAP_NHAT_0.4.0.txt để dùng và kiểm tra nút nổi.
 Mã nguồn đã thêm overlay độc lập, cần kiểm tra trên iPhone sau build.
-Máy Windows chỉ kiểm tra tĩnh/Python; GitHub Actions biên dịch trên macOS.
+Máy Windows kiểm tra tĩnh/Python và fixture C; GitHub Actions build iOS trên macOS.
 
 TRẠNG THÁI BÀN GIAO
 
 Đã triển khai giao diện, lưu cấu hình, xuất chẩn đoán, bộ nạp C ABI,
 project Xcode, kiểm thử và script đóng gói .tipa. Bộ chọn hiện tập trung
-vào ESP, Camera và trạng thái Reports chưa hỗ trợ.
+vào ESP, Camera và đọc cache thư thông báo tố cáo trong Reports.
 
 Đã thêm backend chẩn đoán libkrw và công cụ terminal root.
 Đã thêm overlay riêng, bộ ghi camera có đọc lại và bộ đọc/vẽ ESP.
 Camera/ESP cần kiểm chứng hình ảnh trên iPhone; không có xác nhận chạy
-thành công trên thiết bị tại máy build Windows. Skin và theo dõi tố cáo
-chưa triển khai. Icon là mã tướng, Map là radar tương đối ±60m.
+thành công trên thiết bị tại máy build Windows. Skin và truy vấn toàn bộ
+lịch sử tố cáo máy chủ chưa triển khai. Reports đọc cache thư đã tải;
+bộ đọc mới cần kiểm chứng trên thiết bị. Icon là mã tướng, Map là radar ±60m.
 Xem bảng kiểm chứng chung; không dùng trạng thái kết nối chẩn đoán
 để kết luận camera hoặc ESP hoạt động.
 

@@ -130,7 +130,7 @@ static NSDictionary *HCGameInspection(void) {
                     result[@"unityBase"] = [NSString stringWithFormat:@"0x%llx", (unsigned long long)entries[i].base];
                     result[@"moduleMatchesDump"] = @([uuid isEqual:HCExpectedUnityUUID]);
                     result[@"code"] = [uuid isEqual:HCExpectedUnityUUID] ? @"game_memory_module_verified" : @"game_dump_mismatch";
-                    result[@"message"] = [uuid isEqual:HCExpectedUnityUUID] ? @"Module game khớp dump. Camera và ESP do nút nổi xử lý; xem kết quả kiểm chứng riêng. Tố cáo chưa hỗ trợ." : @"Đã đọc game nhưng UUID không khớp dump; không dùng các offset từ bộ dump này.";
+                    result[@"message"] = [uuid isEqual:HCExpectedUnityUUID] ? @"Module game khớp dump. Xem trạng thái camera, ESP và thư tố cáo trong báo cáo nút nổi." : @"Đã đọc game nhưng UUID không khớp dump; không dùng các offset từ bộ dump này.";
                     break;
                 }
                 result[@"imageCount"] = @(prefix.count); result[@"imagePathReadFailures"] = @(pathFailures);

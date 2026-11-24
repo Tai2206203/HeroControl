@@ -47,18 +47,28 @@ final class ControlTests: XCTestCase {
         XCTAssertThrowsError(try ProfileCodec.decode(Data(String(decoding: old, as: UTF8.self).replacingOccurrences(of: ":1,\"Doro", with: ":2,\"Doro").utf8)))
     }
     @MainActor
-    func testCombinedCheckEnablesCameraAndEspButDoesNotClaimReports() throws {
+    func testCombinedCheckPreservesWorkingCameraAndEnablesEspAndMailReader() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let store = ControlStore(directory: folder)
+        store.setCamera(2.04)
+        store.setCameraEnabled(true)
         store.prepareCombinedCheck()
         XCTAssertEqual(store.settings.cameraEnabled, true)
-        XCTAssertEqual(store.settings.cameraScale, 1.5)
+        XCTAssertEqual(store.settings.cameraScale, 2.04)
         XCTAssertEqual(store.settings.flags["__ifxEnemyEspEnabledV1"], true)
         XCTAssertEqual(store.settings.flags["DoroCheat.Reference.R1.Unseen"], false)
-        XCTAssertEqual(store.settings.flags["reports.enabled"], false)
+        XCTAssertEqual(store.settings.flags["reports.enabled"], true)
         XCTAssertFalse(store.isApplied)
+    }
+    func testMailCacheStatusDoesNotClaimServerHistoryQuery() throws {
+        let json = Data(#"{"code":"complaint_mail_cache_read","message":"cache only","available":true,"stage":9,"accountID":"9007199254740993","source":"cached_game_mail","querySupported":false,"records":[{"id":"mail:42","time":"2023-11-14T22:13:20Z","information":"notice","reason":"ChgCreditType=7"}]}"#.utf8)
+        let report = try JSONDecoder().decode(FeatureCheckStatus.self, from: json)
+        XCTAssertEqual(report.accountID, "9007199254740993")
+        XCTAssertEqual(report.querySupported, false)
+        XCTAssertEqual(report.records?.count, 1)
+        XCTAssertEqual(report.source, "cached_game_mail")
     }
     @MainActor
     func testLegacyProfileDoesNotEnableCameraAndCanPersistExplicitOptIn() throws {
