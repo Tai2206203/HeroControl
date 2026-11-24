@@ -470,8 +470,11 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         }
         BOOL apply = [action isEqual:@"apply"];
         BOOL installRuntime = [action isEqual:@"installRuntime"], removeRuntime = [action isEqual:@"removeRuntime"];
-        BOOL runtimeEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"HeroControl.runtimeInstalled"];
-        if (installRuntime || removeRuntime || [action isEqual:@"runtimeStatus"] || (runtimeEnabled && ([action isEqual:@"status"] || apply))) {
+        NSDictionary *requestSettings=[parsed[@"settings"] isKindOfClass:NSDictionary.class] ? parsed[@"settings"] : @{};
+        NSDictionary *requestFlags=[requestSettings[@"flags"] isKindOfClass:NSDictionary.class] ? requestSettings[@"flags"] : @{};
+        BOOL runtimeEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"HeroControl.runtimeInstalled"] || [requestSettings[@"gameRuntimeEnabled"] isEqual:@YES];
+        BOOL reportsRequested=[requestFlags[@"reports.enabled"] isEqual:@YES];
+        if (installRuntime || removeRuntime || [action isEqual:@"runtimeStatus"] || (runtimeEnabled && ([action isEqual:@"status"] || apply)) || (reportsRequested && [action isEqual:@"status"])) {
             NSDictionary *config = @{@"settings": parsed[@"settings"] ?: @{}, @"revision": parsed[@"revision"] ?: @""};
             NSString *command = installRuntime ? @"--runtime-install" : removeRuntime ? @"--runtime-remove" : apply ? @"--runtime-apply" : @"--runtime-status";
             HCRuntimeSessionReport = HCDiagnoseMode(NO, command, (installRuntime || apply) ? config : nil);
@@ -494,7 +497,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
         else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.11.2",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.12.0",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report
@@ -518,15 +521,11 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
             snapshot[@"sessionID"]=runtime[@"sessionID"] ?: @"";
             snapshot[@"backendName"]=@"HeroControl in-process donor runtime";
             snapshot[@"supportedKeys"]=@[@"HeroControl.ESP.HeroID",@"__ifxEnemyEspEnabledV1",@"DoroCheat.Reference.R1.Box",@"DoroCheat.Reference.R1.Icon",@"DoroCheat.Reference.R1.HP",
-                @"DoroCheat.Reference.R1.Map",@"DoroCheat.Reference.R1.Unseen",@"DoroCheat.Reference.R1.Check",@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Banner",
-                @"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange",@"reports.enabled",@"DoroCheat.Reference.R2.CameraScale"];
-            NSMutableArray *supported=[snapshot[@"supportedKeys"] mutableCopy];
-            NSDictionary *skins=[parsed[@"settings"] isKindOfClass:NSDictionary.class] ? parsed[@"settings"][@"selectedSkins"] : nil;
-            if ([skins isKindOfClass:NSDictionary.class]) for (NSString *hero in skins) [supported addObject:[@"DoroCheat.Style.SelectedSkin." stringByAppendingString:hero]];
-            snapshot[@"supportedKeys"]=supported;
+                @"DoroCheat.Reference.R1.Map",@"DoroCheat.Reference.R1.Unseen",@"DoroCheat.Reference.R1.Check",@"DoroCheat.Style.Banner",
+                @"reports.enabled",@"DoroCheat.Reference.R2.CameraScale"];
             if ([runtime[@"appliedRevision"] isKindOfClass:NSString.class]) snapshot[@"appliedRevision"]=runtime[@"appliedRevision"];
         }
-        BOOL runtimeAction=([action isEqual:@"status"] && HCRuntimeSessionReport && !runtime) || installRuntime || removeRuntime || [action isEqual:@"runtimeStatus"] || (runtimeEnabled && (apply || [action isEqual:@"status"]));
+        BOOL runtimeAction=(reportsRequested && [action isEqual:@"status"]) || ([action isEqual:@"status"] && HCRuntimeSessionReport && !runtime) || installRuntime || removeRuntime || [action isEqual:@"runtimeStatus"] || (runtimeEnabled && (apply || [action isEqual:@"status"]));
         if (runtimeAction) { message=HCRuntimeSessionReport[@"summary"] ?: @"Chưa có phản hồi runtime.";snapshot[@"message"]=message; }
         BOOL ok=!apply;
         if (apply) ok=(runtimeConnected && [runtime[@"appliedRevision"] isEqual:parsed[@"revision"]]) ||

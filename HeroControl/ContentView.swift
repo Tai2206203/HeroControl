@@ -33,7 +33,7 @@ struct ContentView: View {
                     controls
                     if let error = store.persistenceError { Text(error).foregroundStyle(.orange).font(.footnote) }
                     if let error = exportError { Text(error).foregroundStyle(.orange).font(.footnote) }
-                    if store.settings.gameRuntimeEnabled == true || store.selectedGroup == .style || store.selectedGroup == .skins {
+                    if store.settings.gameRuntimeEnabled == true || store.selectedGroup == .style {
                       Button { Task { await store.apply() } } label: {
                         HStack {
                             if store.busy { ProgressView().tint(.black) }
@@ -142,7 +142,7 @@ struct ContentView: View {
     private var runtimeCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("CHỨC NĂNG GAME GỐC", systemImage: "puzzlepiece.extension").font(.headline)
-            Text("Ảnh tướng và minimap dùng lớp ESP riêng với 130 ảnh đi kèm. Camera, skin và truy vấn tố cáo vẫn dùng adapter game.")
+            Text("Ảnh tướng và minimap dùng lớp ESP riêng với 130 ảnh đi kèm. Camera và truy vấn tố cáo vẫn dùng adapter game.")
             Text(store.snapshot?.runtime?.message ?? "Cài adapter khi game đang mở và khớp phiên bản. Sau đó đóng hoàn toàn, mở lại game rồi quay về đây kiểm tra.")
                 .foregroundStyle(.secondary)
             if let phase = store.snapshot?.runtime?.phase { Text("Trạng thái: \(phase)").font(.caption.monospaced()) }
@@ -152,7 +152,7 @@ struct ContentView: View {
                 if let value = report.installPOSIXError { Text("Lỗi POSIX: \(value)").font(.caption.monospaced()) }
             }
             if let result = store.runtimeOperationMessage { Text("Lần cài/gỡ gần nhất: \(result)").font(.caption) }
-            if let error = store.snapshot?.runtime?.catalogError { Text("Danh mục skin: \(error)").foregroundStyle(.orange) }
+            if let error = store.snapshot?.runtime?.catalogError { Text("Danh mục tướng: \(error)").foregroundStyle(.orange) }
             Button("Cài / cập nhật adapter game") { Task { await store.installRuntime() } }
                 .disabled(store.busy || store.persistenceError != nil)
             Button("Kiểm tra adapter") { Task { await store.refresh() } }.disabled(store.busy)
@@ -311,7 +311,7 @@ struct ContentView: View {
             }
             switch store.selectedGroup {
             case .camera: cameraControls
-            case .skins: skinControls
+            case .calibration: Text("Mở menu nổi → CĂN CHỈNH để chỉnh toàn bộ kích thước ESP, vị trí, hướng và phạm vi minimap.")
             case .reports: reportControls
             case .esp:
                 Toggle("Tự động ẩn menu & ESP khi quay/chụp màn hình", isOn: Binding(
@@ -339,33 +339,12 @@ struct ContentView: View {
                     .font(.footnote).foregroundStyle(.secondary)
                 Text("Các công tắc và vị trí được tự lưu; mở lại sẽ khôi phục cấu hình gần nhất.")
                     .font(.caption).foregroundStyle(.secondary)
-                DisclosureGroup("Kích thước ESP / camera xa") {
-                    minimapSlider("Độ rộng box", key: "esp.width", value: store.settings.espBoxWidthScale ?? 1, range: 0.5...3)
-                    minimapSlider("Độ cao box", key: "esp.height", value: store.settings.espBoxHeightScale ?? 1, range: 0.5...3)
-                    minimapSlider("Kích thước icon trong box", key: "esp.icon", value: store.settings.espIconSize ?? 32, range: 12...64)
-                    Text("Icon luôn căn giữa box và tự thu nhỏ để nằm gọn trong box khi camera xa. Các hệ số box áp dụng theo tọa độ chiếu hiện tại.").font(.footnote)
-                }
-                DisclosureGroup("Căn chỉnh ESP Minimap") {
-                    minimapSlider("Vị trí ngang", key: "x", value: store.settings.minimapX ?? 0.015, range: 0...1)
-                    minimapSlider("Vị trí dọc", key: "y", value: store.settings.minimapY ?? 0.02, range: 0...1)
-                    minimapSlider("Kích thước icon minimap", key: "iconSize", value: store.settings.minimapIconSize ?? 20, range: 8...40)
-                    minimapSlider("Kích thước khung", key: "size", value: store.settings.minimapSize ?? 150, range: 80...240)
-                    minimapSlider("Nửa chiều rộng bản đồ thế giới", key: "extent", value: store.settings.minimapWorldExtent ?? 60, range: 30...200)
-                    Toggle("Xoay bản đồ 180°", isOn: Binding(get: { store.settings.minimapRotated ?? false }, set: { store.setMinimapRotated($0) }))
-                    Text("Căn khung ESP trùng minimap trong game; xoay nếu hai phe dùng hướng bản đồ ngược nhau.").font(.footnote)
-                }
+                Text("Toàn bộ căn chỉnh nằm trong menu nổi → CĂN CHỈNH. Auto minimap dùng phép chiếu từ game; chế độ thủ công có tâm, góc và phạm vi riêng.").font(.footnote)
             case .style:
                 Text("Lựa chọn này cần backend áp dụng vào tài nguyên và hành vi game lúc chạy.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }.padding(18).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 20))
-    }
-
-    private func minimapSlider(_ title: String, key: String, value: Double, range: ClosedRange<Double>) -> some View {
-        VStack(alignment: .leading) {
-            Text("\(title): \(value, specifier: "%.2f")").font(.caption)
-            Slider(value: Binding(get: { value }, set: { store.setMinimap(key, $0) }), in: range)
-        }
     }
 
     private var cameraControls: some View {
@@ -394,33 +373,6 @@ struct ContentView: View {
         }
     }
 
-    private var skinControls: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("CHỌN SKIN THEO TƯỚNG").font(.caption.bold()).foregroundStyle(.secondary)
-            if let heroes = store.snapshot?.heroes, !heroes.isEmpty {
-                ForEach(heroes) { hero in
-                    Picker(hero.name, selection: Binding<Int>(
-                        get: { store.settings.selectedSkins[String(hero.id)] ?? -1 },
-                        set: { store.setSkin(hero: hero.id, skin: $0 < 0 ? nil : $0) })) {
-                        Text("Theo game").tag(-1)
-                        ForEach(hero.skins) { skin in Text(skin.name).tag(skin.id) }
-                    }.pickerStyle(.menu)
-                }
-            } else {
-                ContentUnavailableView("Chưa có danh sách tướng", systemImage: "person.crop.square",
-                    description: Text("Danh sách thật sẽ xuất hiện khi backend đọc được dữ liệu game."))
-            }
-            if !store.settings.selectedSkins.isEmpty {
-                Text("Đã lưu \(store.settings.selectedSkins.count) lựa chọn skin.").font(.caption).foregroundStyle(.secondary)
-                Button("Xóa các lựa chọn skin") {
-                    for key in Array(store.settings.selectedSkins.keys) {
-                        if let hero = UInt32(key) { store.setSkin(hero: hero, skin: nil) }
-                    }
-                }.buttonStyle(.bordered)
-            }
-        }
-    }
-
     private var reportControls: some View {
         VStack(alignment: .leading, spacing: 14) {
             if store.settings.gameRuntimeEnabled != true {
@@ -441,7 +393,12 @@ struct ContentView: View {
                 if report.transportFault == true { Text("Luồng phản hồi hết hạn. Đăng nhập lại trước khi tiếp tục truy vấn.").foregroundStyle(.orange) }
                 if report.recordsTruncated == true { Text("Báo cáo giới hạn 2048 bản ghi; nhật ký đầy đủ được giữ trong dữ liệu game.").foregroundStyle(.orange) }
             }
-            if let reports = reportStatus?.records, !reports.isEmpty {
+            Picker("Thời gian bản ghi (UTC+7)", selection: Binding(get: { store.settings.reportsPeriod ?? "all" }, set: { store.setReportsPeriod($0) })) {
+                Text("Tất cả").tag("all");Text("Tuần này").tag("week");Text("Tháng này").tag("month")
+            }.pickerStyle(.segmented)
+            Button("Truy vấn lại") { store.refreshReports() }
+            let reports = ReportHistory.filter(reportStatus?.records ?? [], period: store.settings.reportsPeriod ?? "all", now: (reportStatus?.serverTime).map { Date(timeIntervalSince1970: $0) } ?? Date())
+            if !reports.isEmpty {
                 ForEach(reports) { report in
                     VStack(alignment: .leading, spacing: 5) {
                         Text(report.time).font(.caption.monospaced()).foregroundStyle(accent)
@@ -451,7 +408,7 @@ struct ContentView: View {
                     Divider()
                 }
             } else {
-                ContentUnavailableView("Chưa có bản ghi", systemImage: "list.bullet.rectangle",
+                ContentUnavailableView("Chưa xác định — chưa có bản ghi phù hợp", systemImage: "list.bullet.rectangle",
                     description: Text("Chưa nhận được bản ghi từ máy chủ/nhật ký. Kiểm tra trạng thái adapter và số phản hồi."))
             }
         }
@@ -476,7 +433,7 @@ struct ContentView: View {
                     }
                 }
                 Section("Bản ứng dụng này") {
-                    Text("TIPA đi kèm ảnh tướng offline và lớp ESP riêng. Adapter xử lý camera, skin và truy vấn máy chủ trong bộ nhớ game. Chức năng cần được đối chiếu trên thiết bị.")
+                    Text("TIPA đi kèm ảnh tướng offline và lớp ESP riêng. Adapter xử lý camera và truy vấn máy chủ trong bộ nhớ game. Chức năng cần được đối chiếu trên thiết bị.")
                 }
             }.navigationTitle("Thông tin kết nối")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Đóng") { showConnection = false } } }

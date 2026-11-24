@@ -126,7 +126,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.11.2", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.12.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -169,6 +169,40 @@ static void HCStop(NSString *message, BOOL failed) {
 @end
 
 static UIColor *HCAccent(void) { return [UIColor colorWithRed:0.39 green:0.88 blue:0.78 alpha:1]; }
+static NSArray *HCCalibrationFields(void) {
+    static NSArray *fields;static dispatch_once_t once;dispatch_once(&once,^{ fields=@[
+        @{@"key":@"minimapX",@"title":@"Khung ngang",@"min":@0,@"max":@1,@"step":@0.005,@"default":@0.015},
+        @{@"key":@"minimapY",@"title":@"Khung dọc",@"min":@0,@"max":@1,@"step":@0.005,@"default":@0.02},
+        @{@"key":@"minimapSize",@"title":@"Cỡ khung",@"min":@80,@"max":@240,@"step":@1,@"default":@150},
+        @{@"key":@"minimapIconSize",@"title":@"Cỡ icon map",@"min":@8,@"max":@40,@"step":@1,@"default":@20},
+        @{@"key":@"minimapWorldExtent",@"title":@"Phạm vi thế giới",@"min":@30,@"max":@200,@"step":@1,@"default":@60},
+        @{@"key":@"minimapCenterX",@"title":@"Tâm thế giới X",@"min":@-200,@"max":@200,@"step":@1,@"default":@0},
+        @{@"key":@"minimapCenterZ",@"title":@"Tâm thế giới Z",@"min":@-200,@"max":@200,@"step":@1,@"default":@0},
+        @{@"key":@"minimapAngle",@"title":@"Góc bản đồ",@"min":@-180,@"max":@180,@"step":@1,@"default":@0},
+        @{@"key":@"espBoxWidthScale",@"title":@"Rộng box",@"min":@0.5,@"max":@3,@"step":@0.05,@"default":@1},
+        @{@"key":@"espBoxHeightScale",@"title":@"Cao box",@"min":@0.5,@"max":@3,@"step":@0.05,@"default":@1},
+        @{@"key":@"espIconSize",@"title":@"Cỡ icon ESP",@"min":@12,@"max":@64,@"step":@1,@"default":@32},
+        @{@"key":@"espReadHz",@"title":@"Nhịp đọc ESP",@"min":@60,@"max":@120,@"step":@60,@"default":@60},
+]; });return fields;
+}
+static NSArray *HCFilteredReports(NSDictionary *status,NSString *period) {
+    NSArray *records=[status[@"records"] isKindOfClass:NSArray.class] ? status[@"records"] : @[];
+    if([period isEqual:@"all"] || !period) return records;
+    NSCalendar *calendar=[[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierISO8601];
+    calendar.timeZone=[NSTimeZone timeZoneForSecondsFromGMT:25200];
+    NSDate *now=[status[@"serverTime"] doubleValue]>0 ? [NSDate dateWithTimeIntervalSince1970:[status[@"serverTime"] doubleValue]] : NSDate.date;
+    NSDateInterval *interval=[calendar dateIntervalOfUnit:[period isEqual:@"week"] ? NSCalendarUnitWeekOfYear : NSCalendarUnitMonth forDate:now];
+    NSDateFormatter *formatter=[NSDateFormatter new];formatter.locale=[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+    formatter.dateFormat=@"yyyy-MM-dd HH:mm:ss XXXXX";
+    NSISO8601DateFormatter *iso=[NSISO8601DateFormatter new];
+    NSMutableArray *result=[NSMutableArray array];
+    for(NSDictionary *record in records) {
+        NSDate *date=[record[@"eventTime"] doubleValue]>0 ? [NSDate dateWithTimeIntervalSince1970:[record[@"eventTime"] doubleValue]] :
+            ([formatter dateFromString:record[@"time"] ?: @""] ?: [iso dateFromString:record[@"time"] ?: @""]);
+        if(date && [date compare:interval.startDate]!=NSOrderedAscending && [date compare:now]!=NSOrderedDescending) [result addObject:record];
+    }
+    return result;
+}
 static void HCText(NSString *text, CGRect rect, CGFloat size, UIColor *color, BOOL bold) {
     [text drawInRect:rect withAttributes:@{NSFontAttributeName: bold ? [UIFont boldSystemFontOfSize:size] : [UIFont systemFontOfSize:size],
         NSForegroundColorAttributeName: color}];
@@ -193,6 +227,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 }
 
 @implementation HCOverlayCanvas {
+    NSInteger _calibrationPage, _reportRecordIndex;
     BOOL _editingMinimap;
     CGRect _startMapRect;
     double _menuOpenedAt, _nextMenuRedraw;
@@ -294,6 +329,8 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if ([key isEqual:@"flags"]) continue;
         if (![self.settings[key] isEqual:self.baseSettings[key]]) merged[key]=self.settings[key];
     }
+    [mergedFlags removeObjectsForKeys:@[@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange"]];
+    merged[@"selectedSkins"]=@{};
     self.settings=merged;
     NSError *error = nil;
     NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"schemaVersion": @1, @"settings": self.settings, @"revision": NSUUID.UUID.UUIDString}
@@ -320,7 +357,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 }
 - (void)tile:(CGRect)rect title:(NSString *)title subtitle:(NSString *)subtitle image:(int32_t)hero action:(NSString *)action {
     HCFillGradient(rect,[UIColor colorWithRed:0.16 green:0.20 blue:0.25 alpha:0.98],[UIColor colorWithRed:0.08 green:0.11 blue:0.15 alpha:0.98]);
-    NSString *glyph=hero==130 || hero==156 ? @"viewfinder" : hero==118 ? @"square.stack.3d.up.fill" : hero==537 ? @"camera.fill" : @"envelope.fill";
+    NSString *glyph=hero==130 || hero==156 ? @"viewfinder" : hero==118 ? @"slider.horizontal.3" : hero==537 ? @"camera.fill" : @"envelope.fill";
     UIImage *symbol=[[UIImage systemImageNamed:glyph] imageWithTintColor:[HCAccent() colorWithAlphaComponent:0.22] renderingMode:UIImageRenderingModeAlwaysOriginal];
     [symbol drawInRect:CGRectMake(CGRectGetMaxX(rect)-43,rect.origin.y+10,28,28)];
     [[HCAccent() colorWithAlphaComponent:0.18] setStroke];
@@ -329,6 +366,23 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     HCText(title,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-47,rect.size.width-18,22),font,UIColor.whiteColor,YES);
     HCText(subtitle,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-23,rect.size.width-18,18),8,UIColor.lightGrayColor,NO);
     [self target:action rect:rect];
+}
+- (CGRect)calibrationTrack:(NSUInteger)index {
+    CGRect c=[self contentRect];CGFloat rowHeight=(c.size.height-68)/5;
+    return CGRectMake(c.origin.x+c.size.width*0.48,c.origin.y+31+(index%5)*rowHeight,c.size.width*0.5,rowHeight-3);
+}
+- (void)calibrationAt:(CGPoint)point {
+    NSString *key=[self.activeTarget substringFromIndex:7];
+    NSArray *fields=HCCalibrationFields();
+    for(NSUInteger i=0;i<fields.count;i++) if([fields[i][@"key"] isEqual:key]) {
+        NSDictionary *field=fields[i];CGRect track=[self calibrationTrack:i];
+        double minimum=[field[@"min"] doubleValue],maximum=[field[@"max"] doubleValue],step=[field[@"step"] doubleValue];
+        double fraction=HCClamp((point.x-track.origin.x)/track.size.width,0,1);
+        double value=HCClamp(minimum+round((fraction*(maximum-minimum))/step)*step,minimum,maximum);
+        self.settings[key]=[key isEqual:@"espReadHz"] ? @(lround(value)) : @(value);
+        if([key hasPrefix:@"minimap"] && ![key isEqual:@"minimapIconSize"]) self.settings[@"minimapAutoAlign"]=@NO;
+        [self refreshEspSurface];[self setNeedsDisplay];break;
+    }
 }
 - (CGRect)minimapRect {
     CGFloat w=self.bounds.size.width,h=self.bounds.size.height;
@@ -399,13 +453,21 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         CGContextSetAlpha(ctx,fade);
         HCFillGradient(p,[UIColor colorWithRed:0.10 green:0.13 blue:0.18 alpha:0.98],[UIColor colorWithRed:0.035 green:0.05 blue:0.075 alpha:0.98]);
         CGContextSaveGState(ctx);[outline addClip];
-        NSArray *covers=@[@"nakroth-loi-quang.png",@"nakroth-thu-nguyen.jpg",@"nakroth-quy-thuong.jpg"];
+        NSArray *covers=@[@"violet-sss.png",@"violet-nobara.jpg",@"tulen-gojo.jpg"];
         double cycle=NSProcessInfo.processInfo.systemUptime/14.0;
         NSUInteger cover=(NSUInteger)floor(cycle)%covers.count;
         CGFloat blend=HCClamp((cycle-floor(cycle)-0.88)/0.12,0,1);
         CGFloat zoom=1.025+0.015*sin(NSProcessInfo.processInfo.systemUptime*0.12);
         HCDrawImageFill(HCThemeImage(covers[cover]),p,0.38*(1-blend),zoom);
         if(blend>0) HCDrawImageFill(HCThemeImage(covers[(cover+1)%covers.count]),p,0.38*blend,zoom);
+        double animationTime=NSProcessInfo.processInfo.systemUptime;
+        for(int particle=0;particle<9;particle++) {
+            double u=fmod(particle*0.173+animationTime*0.009,1.0);
+            double v=fmod(particle*0.267+animationTime*0.018,1.0);
+            CGFloat radius=1.1+0.7*sin(animationTime+particle);
+            [[HCAccent() colorWithAlphaComponent:0.12+0.09*sin(animationTime*0.7+particle)] setFill];
+            [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(p.origin.x+u*p.size.width,p.origin.y+(1-v)*p.size.height,radius*2,radius*2)] fill];
+        }
         CGContextRestoreGState(ctx);
         CGFloat pulse=0.18+0.08*sin(NSProcessInfo.processInfo.systemUptime*1.7);
         [[HCAccent() colorWithAlphaComponent:pulse] setStroke];
@@ -414,7 +476,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         [[UIColor colorWithWhite:0.65 alpha:0.25] setStroke];outline.lineWidth=1;[outline stroke];
         CGRect side=CGRectMake(p.origin.x+10,p.origin.y+10,44,p.size.height-20);
         [[UIColor colorWithWhite:0.18 alpha:0.98] setFill];[[UIBezierPath bezierPathWithRoundedRect:side cornerRadius:25] fill];
-        NSArray *symbols=@[@"house.fill",@"viewfinder",@"camera.fill",@"paintbrush.fill",@"square.stack.3d.up.fill",@"envelope.fill"];
+        NSArray *symbols=@[@"house.fill",@"viewfinder",@"camera.fill",@"paintbrush.fill",@"slider.horizontal.3",@"envelope.fill"];
         NSArray *groups=@[@5,@0,@1,@2,@3,@4];
         CGFloat step=MIN(46,(side.size.height-12)/6);
         for(NSInteger i=0;i<6;i++) {
@@ -448,7 +510,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             if(wide) {
                 CGFloat x=c.origin.x+leftWidth+14,tw=(c.size.width-leftWidth-24)/2,th=(c.size.height-12)/2;
                 [self tile:CGRectMake(x,c.origin.y,tw,th) title:@"ESP" subtitle:@"ẢNH TƯỚNG / ID" image:156 action:@"tab:0"];
-                [self tile:CGRectMake(x+tw+10,c.origin.y,tw,th) title:@"SKINS" subtitle:@"CHỌN TRANG PHỤC" image:118 action:@"tab:3"];
+                [self tile:CGRectMake(x+tw+10,c.origin.y,tw,th) title:@"CĂN CHỈNH" subtitle:@"BOX / ICON / MINIMAP" image:118 action:@"tab:3"];
                 [self tile:CGRectMake(x,c.origin.y+th+12,tw,th) title:@"CAMERA" subtitle:@"GÓC NHÌN" image:537 action:@"tab:1"];
                 [self tile:CGRectMake(x+tw+10,c.origin.y+th+12,tw,th) title:@"REPORTS" subtitle:@"LỊCH SỬ TỐ CÁO" image:193 action:@"tab:4"];
             }
@@ -462,11 +524,57 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             CGFloat knob=slider.origin.x+(scale-1)/1.3*slider.size.width;
             [HCAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-9,slider.origin.y+8,18,18)] fill];[self target:@"camera" rect:slider];
             HCText(HCCameraStatus[@"message"] ?: @"Bật camera và kiểm tra trong trận.",CGRectMake(c.origin.x,c.origin.y+155,c.size.width,75),12,UIColor.lightGrayColor,NO);
+        } else if(self.group==3) {
+            NSArray *fields=HCCalibrationFields();NSUInteger pages=(fields.count+4)/5;
+            _calibrationPage=MAX(0,MIN((NSInteger)pages-1,_calibrationPage));
+            CGRect toggle=CGRectMake(c.origin.x,c.origin.y,c.size.width-76,25);
+            HCText([self.settings[@"minimapAutoAlign"] isEqual:@NO] ? @"TỰ CĂN GAME: OFF" : ([HCEspStatus[@"minimapProjection"][@"available"] isEqual:@YES] ? @"TỰ CĂN GAME: ON" : @"AUTO: CHỜ ADAPTER/GAME"),toggle,11,HCAccent(),YES);
+            [self target:@"minimap-auto" rect:toggle];
+            CGRect prev=CGRectMake(CGRectGetMaxX(c)-68,c.origin.y,30,25),next=CGRectMake(CGRectGetMaxX(c)-32,c.origin.y,30,25);
+            HCText(@"‹",prev,20,UIColor.whiteColor,YES);HCText(@"›",next,20,UIColor.whiteColor,YES);
+            [self target:@"cal-prev" rect:prev];[self target:@"cal-next" rect:next];
+            for(NSUInteger i=_calibrationPage*5;i<MIN(fields.count,(_calibrationPage+1)*5);i++) {
+                NSDictionary *field=fields[i];CGRect track=[self calibrationTrack:i];
+                double value=self.settings[field[@"key"]] ? [self.settings[field[@"key"]] doubleValue] : [field[@"default"] doubleValue];
+                HCText(field[@"title"],CGRectMake(c.origin.x,track.origin.y,c.size.width*0.46,13),10,UIColor.whiteColor,YES);
+                HCText([NSString stringWithFormat:@"%.2f",value],CGRectMake(c.origin.x,track.origin.y+13,c.size.width*0.46,13),9,HCAccent(),NO);
+                [[UIColor colorWithWhite:0.4 alpha:0.8] setFill];UIRectFill(CGRectMake(track.origin.x,CGRectGetMidY(track)-2,track.size.width,4));
+                double fraction=(value-[field[@"min"] doubleValue])/([field[@"max"] doubleValue]-[field[@"min"] doubleValue]);
+                CGFloat knob=track.origin.x+HCClamp(fraction,0,1)*track.size.width;
+                [HCAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-5,CGRectGetMidY(track)-5,10,10)] fill];
+                [self target:[@"adjust:" stringByAppendingString:field[@"key"]] rect:track];
+            }
+            CGRect edit=CGRectMake(c.origin.x,CGRectGetMaxY(c)-28,c.size.width*0.55,24);
+            HCText(@"KÉO KHUNG MAP",edit,10,HCAccent(),YES);[self target:@"minimap-edit" rect:edit];
+            CGRect rotate=CGRectMake(c.origin.x+c.size.width*0.56,CGRectGetMaxY(c)-28,c.size.width*0.44,24);
+            HCText([self.settings[@"minimapRotated"] boolValue] ? @"XOAY 180°: ON" : @"XOAY 180°: OFF",rotate,9,UIColor.whiteColor,NO);[self target:@"minimap-rotate" rect:rotate];
         } else if(self.group==4) {
             CGRect row=CGRectMake(c.origin.x,c.origin.y,c.size.width,40);
             HCText([self.settings[@"flags"][@"reports.enabled"] boolValue] ? @"TRUY VẤN TỐ CÁO: ON" : @"TRUY VẤN TỐ CÁO: OFF",row,16,HCAccent(),YES);
             [self target:@"flag:reports.enabled" rect:row];
-            HCText(HCReportsStatus[@"message"] ?: @"Cài adapter để truy vấn lịch sử máy chủ.",CGRectMake(c.origin.x,c.origin.y+60,c.size.width,120),14,UIColor.whiteColor,NO);
+            NSString *reportMessage=[HCReportsStatus[@"querySupported"] isEqual:@YES] ? HCReportsStatus[@"message"] : @"CHƯA TRUY VẤN MÁY CHỦ. Kích hoạt adapter trong app; cache rỗng không có nghĩa không bị tố cáo.";
+            HCText(reportMessage ?: @"CHƯA XÁC ĐỊNH",CGRectMake(c.origin.x,c.origin.y+32,c.size.width,43),10,UIColor.whiteColor,NO);
+            CGRect refresh=CGRectMake(c.origin.x,c.origin.y+77,c.size.width,22);
+            HCText(@"TRUY VẤN LẠI",refresh,11,HCAccent(),YES);[self target:@"reports-refresh" rect:refresh];
+            NSArray *periods=@[@"all",@"week",@"month"],*titles=@[@"TẤT CẢ",@"TUẦN NÀY",@"THÁNG NÀY"];
+            NSString *period=self.settings[@"reportsPeriod"] ?: @"all";
+            for(NSInteger i=0;i<3;i++) {
+                CGRect filter=CGRectMake(c.origin.x+i*c.size.width/3,c.origin.y+102,c.size.width/3-3,22);
+                if([period isEqual:periods[i]]) { [[HCAccent() colorWithAlphaComponent:0.15] setFill];UIRectFill(filter); }
+                HCText(titles[i],CGRectInset(filter,3,4),9,UIColor.whiteColor,YES);[self target:[@"period:" stringByAppendingString:periods[i]] rect:filter];
+            }
+            NSArray *records=HCFilteredReports(HCReportsStatus,period);
+            _reportRecordIndex=MAX(0,MIN(_reportRecordIndex,(NSInteger)records.count-1));
+            NSString *row=@"Chưa có bản ghi phù hợp trong dữ liệu đã thu thập. Không kết luận không bị tố cáo.";
+            if(records.count) {
+                NSDictionary *record=records[records.count-1-_reportRecordIndex];
+                row=[NSString stringWithFormat:@"%@\n%@\nLý do: %@",record[@"time"] ?: @"Chưa rõ giờ",record[@"information"] ?: @"",record[@"reason"] ?: @"Chưa được cung cấp"];
+            }
+            HCText(row,CGRectMake(c.origin.x,c.origin.y+129,c.size.width,56),10,UIColor.whiteColor,NO);
+            HCText([NSString stringWithFormat:@"%@/%@ phản hồi • %ld bản ghi",HCReportsStatus[@"receivedResponseCount"] ?: @0,HCReportsStatus[@"sentRequestCount"] ?: @0,(long)records.count],CGRectMake(c.origin.x,c.origin.y+188,c.size.width-65,20),9,UIColor.lightGrayColor,NO);
+            CGRect prev=CGRectMake(CGRectGetMaxX(c)-60,c.origin.y+185,26,24),next=CGRectMake(CGRectGetMaxX(c)-28,c.origin.y+185,26,24);
+            HCText(@"‹",prev,19,UIColor.whiteColor,YES);HCText(@"›",next,19,UIColor.whiteColor,YES);
+            [self target:@"report-prev" rect:prev];[self target:@"report-next" rect:next];
         } else {
             NSMutableArray *features=[NSMutableArray array];
             for(NSDictionary *feature in HCFeatures()) if([feature[@"group"] integerValue]==self.group) [features addObject:feature];
@@ -551,21 +659,42 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     CGFloat mapSize=map.size.width;
     double extent=[self.settings[@"minimapWorldExtent"] doubleValue] ?: 60;
     BOOL rotated=[self.settings[@"minimapRotated"] boolValue];
-    if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue]) {
+    if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && [self.settings[@"minimapAutoAlign"] isEqual:@NO]) {
         [[UIColor colorWithWhite:0.12 alpha:0.18] setFill];
         [[UIBezierPath bezierPathWithRoundedRect:map cornerRadius:4] fill];
         [[HCAccent() colorWithAlphaComponent:0.6] setStroke];
         [[UIBezierPath bezierPathWithRect:map] stroke];
     }
+    if([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && ![self.settings[@"minimapAutoAlign"] isEqual:@NO] &&
+       ![HCEspStatus[@"minimapProjection"][@"available"] isEqual:@YES])
+        HCText(@"Minimap: chờ adapter/phép chiếu game",CGRectMake(map.origin.x,map.origin.y,190,22),9,UIColor.systemOrangeColor,YES);
     for (NSDictionary *target in HCEspStatus[@"targets"]) {
         int32_t mapID=[target[@"heroID"] intValue];
         if ([flags[@"DoroCheat.Reference.R1.Map"] boolValue] && target[@"worldX"] && target[@"worldZ"]) {
             double u=0,v=0;
-            if (HCMinimapProject([target[@"worldX"] doubleValue],[target[@"worldZ"] doubleValue],extent,rotated,&u,&v)) {
+            BOOL autoAlign=![self.settings[@"minimapAutoAlign"] isEqual:@NO];
+            NSDictionary *projection=[HCEspStatus[@"minimapProjection"] isKindOfClass:NSDictionary.class] ? HCEspStatus[@"minimapProjection"] : @{};
+            BOOL projected=NO;
+            BOOL validProjection=[projection isKindOfClass:NSDictionary.class] && [projection[@"available"] isEqual:@YES];
+            for(NSString *key in @[@"ox",@"oy",@"xx",@"xz",@"yx",@"yz"]) {
+                id number=projection[key];
+                if(![number isKindOfClass:NSNumber.class] || !isfinite([number doubleValue])) { validProjection=NO;break; }
+            }
+            if(autoAlign && validProjection) {
+                HCMinimapAffine transform={ [projection[@"ox"] doubleValue],[projection[@"oy"] doubleValue],
+                    [projection[@"xx"] doubleValue],[projection[@"xz"] doubleValue],[projection[@"yx"] doubleValue],[projection[@"yz"] doubleValue] };
+                projected=HCMinimapAffineProject(transform,[target[@"worldX"] doubleValue],[target[@"worldZ"] doubleValue],&u,&v);
+            } else if(!autoAlign) {
+                projected=HCMinimapManualProject([target[@"worldX"] doubleValue],[target[@"worldZ"] doubleValue],
+                    [self.settings[@"minimapCenterX"] doubleValue],[self.settings[@"minimapCenterZ"] doubleValue],extent,
+                    [self.settings[@"minimapAngle"] doubleValue],rotated,&u,&v);
+            }
+            if (projected) {
                 CGFloat iconSize=HCClamp([self.settings[@"minimapIconSize"] doubleValue] ?: 20,8,40);
-                CGFloat margin=iconSize/2+3;
-                CGRect icon=CGRectMake(map.origin.x+margin+u*(mapSize-2*margin)-iconSize/2,
-                    map.origin.y+margin+v*(mapSize-2*margin)-iconSize/2,iconSize,iconSize);
+                // Icon size never changes the map transform or icon center.
+                CGFloat px=autoAlign ? u*w : map.origin.x+u*mapSize;
+                CGFloat py=autoAlign ? v*h : map.origin.y+v*mapSize;
+                CGRect icon=CGRectMake(px-iconSize/2,py-iconSize/2,iconSize,iconSize);
                 HCDrawHeroIcon(mapID,icon);
                 HCDrawHealthRing(target,CGRectInset(icon,-1.5,-1.5),YES,1.2);
             }
@@ -635,6 +764,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         self.pointer = pointer; self.activeTarget = target;
         self.startPoint = point; self.startBubble = self.bubble; self.dragged = NO;
         if ([target isEqual:@"camera"]) { [self reloadSettings]; [self cameraAt:point]; }
+        if ([target hasPrefix:@"adjust:"]) { [self reloadSettings];[self calibrationAt:point]; }
         if ([target isEqual:@"minimap-move"] || [target isEqual:@"minimap-resize"]) { [self reloadSettings];_startMapRect=[self minimapRect]; }
     } else if (pointer != self.pointer) return;
     HCTouchCount++;
@@ -648,18 +778,30 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 [self setNeedsDisplay];
             }
         } else if ([self.activeTarget isEqual:@"camera"]) [self cameraAt:point];
+        else if ([self.activeTarget hasPrefix:@"adjust:"]) [self calibrationAt:point];
         else if ([self.activeTarget isEqual:@"minimap-move"] || [self.activeTarget isEqual:@"minimap-resize"]) [self minimapAt:point];
     } else if (phase == UITouchPhaseEnded || phase == UITouchPhaseCancelled) {
         NSString *target = self.activeTarget;
         BOOL mapGesture=[target isEqual:@"minimap-move"] || [target isEqual:@"minimap-resize"];
         if(phase==UITouchPhaseEnded && mapGesture) [self minimapAt:point];
+        if(phase==UITouchPhaseEnded && [target hasPrefix:@"adjust:"]) [self calibrationAt:point];
         self.activeTarget = nil; self.pointer = -1;
         if (phase == UITouchPhaseCancelled) { [self reloadSettings]; return; }
-        if (mapGesture) { [self saveSettings];return; }
+        if (mapGesture || [target hasPrefix:@"adjust:"]) { [self saveSettings];return; }
         if ([target isEqual:@"camera"]) { [self cameraAt:point]; [self saveSettings]; return; }
         if (self.dragged || ![[self targetAt:point] isEqual:target]) return;
         if ([target isEqual:@"bubble"] || [target isEqual:@"close"]) [self toggleMenu];
+        else if ([target isEqual:@"cal-prev"] || [target isEqual:@"cal-next"]) {
+            _calibrationPage+= [target isEqual:@"cal-next"] ? 1 : -1;[self setNeedsDisplay];
+        }
+        else if ([target isEqual:@"minimap-auto"] || [target isEqual:@"minimap-rotate"]) {
+            [self reloadSettings];
+            if([target isEqual:@"minimap-auto"]) self.settings[@"minimapAutoAlign"]=[self.settings[@"minimapAutoAlign"] isEqual:@NO] ? @YES : @NO;
+            else { self.settings[@"minimapRotated"]=[self.settings[@"minimapRotated"] boolValue] ? @NO : @YES;self.settings[@"minimapAutoAlign"]=@NO; }
+            [self saveSettings];[self refreshEspSurface];
+        }
         else if ([target isEqual:@"minimap-edit"]) {
+            [self reloadSettings];self.settings[@"minimapAutoAlign"]=@NO;[self saveSettings];
             _editingMinimap=YES;HCMenuOpen=NO;[self setNeedsDisplay];
         }
         else if ([target isEqual:@"minimap-icon-smaller"] || [target isEqual:@"minimap-icon-larger"]) {
@@ -671,6 +813,15 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         else if ([target isEqual:@"minimap-done"]) { _editingMinimap=NO;[self setNeedsDisplay]; }
         else if ([target isEqual:@"stop"]) HCStop(@"Đã tắt nút nổi. Mở Hero Control để bật lại.", NO);
         else if ([target hasPrefix:@"tab:"]) { self.group = [[target substringFromIndex:4] integerValue]; [self setNeedsDisplay]; }
+        else if ([target hasPrefix:@"period:"]) {
+            [self reloadSettings];self.settings[@"reportsPeriod"]=[target substringFromIndex:7];_reportRecordIndex=0;[self saveSettings];
+        }
+        else if ([target isEqual:@"report-prev"] || [target isEqual:@"report-next"]) {
+            _reportRecordIndex+=[target isEqual:@"report-next"] ? 1 : -1;[self setNeedsDisplay];
+        }
+        else if ([target isEqual:@"reports-refresh"]) {
+            [self reloadSettings];self.settings[@"reportsRefreshID"]=NSUUID.UUID.UUIDString;self.settings[@"flags"][@"reports.enabled"]=@YES;[self saveSettings];
+        }
         else if ([target isEqual:@"capture"]) {
             [self reloadSettings];
             if(self.settings) { self.settings[@"espCaptureProtected"]=[self.settings[@"espCaptureProtected"] isEqual:@NO] ? @YES : @NO;[self saveSettings];[self refreshEspSurface]; }
@@ -767,7 +918,7 @@ static void HCUpdateLock(void) {
     HCStage(@"delegate_launch");
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0), ^{
         @autoreleasepool {
-            for(NSString *name in @[@"app-background.jpg",@"nakroth-loi-quang.png",@"nakroth-thu-nguyen.jpg",@"nakroth-quy-thuong.jpg"]) (void)HCThemeImage(name);
+            for(NSString *name in @[@"app-background.jpg",@"violet-sss.png",@"violet-nobara.jpg",@"tulen-gojo.jpg"]) (void)HCThemeImage(name);
         }
     });
     HCOverlayController *controller = [HCOverlayController new];

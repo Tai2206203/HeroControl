@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define HC_RUNTIME_BUILD "26"
+#define HC_RUNTIME_BUILD "27"
 #ifndef HC_RUNTIME_GENERATION
 #define HC_RUNTIME_GENERATION "development"
 #endif
@@ -19,23 +19,32 @@ static NSString *const HCRuntimeFolder = @"Documents/HeroControlRuntime";
 static inline BOOL HCRuntimeSettingsValid(id settings) {
     if (![settings isKindOfClass:NSDictionary.class]) return NO;
     id flags=settings[@"flags"], skins=settings[@"selectedSkins"], scale=settings[@"cameraScale"];
-    if (![flags isKindOfClass:NSDictionary.class] || [flags count]!=(flags[@"HeroControl.ESP.HeroID"] ? 14 : 13) || ![skins isKindOfClass:NSDictionary.class] || [skins count]>512 ||
+    if (![flags isKindOfClass:NSDictionary.class] || [flags count]>14 || ![skins isKindOfClass:NSDictionary.class] || [skins count]>512 ||
         ![scale isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)scale)==CFBooleanGetTypeID() ||
         !isfinite([scale doubleValue]) || [scale doubleValue]<1 || [scale doubleValue]>2.3) return NO;
     NSArray *keys=@[@"__ifxEnemyEspEnabledV1", @"DoroCheat.Reference.R1.Box", @"DoroCheat.Reference.R1.Icon", @"DoroCheat.Reference.R1.HP",
-        @"DoroCheat.Reference.R1.Map", @"DoroCheat.Reference.R1.Unseen", @"DoroCheat.Reference.R1.Check", @"DoroCheat.Style.Buttons",
-        @"DoroCheat.Style.Banner", @"DoroCheat.Style.Skin", @"DoroCheat.Style.BeforeMatch", @"DoroCheat.Style.LiveChange", @"reports.enabled"];
+        @"DoroCheat.Reference.R1.Map", @"DoroCheat.Reference.R1.Unseen", @"DoroCheat.Reference.R1.Check",
+        @"DoroCheat.Style.Banner", @"reports.enabled"];
     for (NSString *key in keys) {
         id flag=flags[key];
         if (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID()) return NO;
     }
+    NSArray *optional=@[@"HeroControl.ESP.HeroID",@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange"];
+    for(id key in flags) {
+        if(![keys containsObject:key] && ![optional containsObject:key]) return NO;
+        id flag=flags[key];if(![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID()) return NO;
+    }
+    id period=settings[@"reportsPeriod"];
+    if(period && ![@[@"all",@"week",@"month"] containsObject:period]) return NO;
+    id refresh=settings[@"reportsRefreshID"];
+    if(refresh && (![refresh isKindOfClass:NSString.class] || [refresh length]>128)) return NO;
     id heroIDFlag=flags[@"HeroControl.ESP.HeroID"];
     if (heroIDFlag && (![heroIDFlag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)heroIDFlag)!=CFBooleanGetTypeID())) return NO;
-    for (NSString *key in @[@"cameraEnabled",@"gameRuntimeEnabled",@"espCaptureProtected",@"minimapRotated"]) {
+    for (NSString *key in @[@"cameraEnabled",@"gameRuntimeEnabled",@"espCaptureProtected",@"minimapRotated",@"minimapAutoAlign"]) {
         id flag=settings[key];
         if (flag && (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID())) return NO;
     }
-    NSDictionary *ranges=@{@"minimapX":@[@0,@1],@"minimapY":@[@0,@1],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200],@"minimapIconSize":@[@8,@40],@"espBoxWidthScale":@[@0.5,@3],@"espBoxHeightScale":@[@0.5,@3],@"espIconSize":@[@12,@64]};
+    NSDictionary *ranges=@{@"minimapX":@[@0,@1],@"minimapY":@[@0,@1],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200],@"minimapIconSize":@[@8,@40],@"espBoxWidthScale":@[@0.5,@3],@"espBoxHeightScale":@[@0.5,@3],@"espIconSize":@[@12,@64],@"minimapCenterX":@[@-200,@200],@"minimapCenterZ":@[@-200,@200],@"minimapAngle":@[@-180,@180]};
     for (NSString *key in ranges) {
         id value=settings[key];NSArray *range=ranges[key];
         if (value && (![value isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)value)==CFBooleanGetTypeID() ||

@@ -59,6 +59,9 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     NSString *_lastCode;
     NSString *_profileRevision;
     NSString *_runtimeDirectory;
+    NSDictionary *_minimapProjection;
+    NSTimeInterval _minimapProjectionUptime;
+    pid_t _minimapProjectionPID;
     NSTimeInterval _nextRuntimeSync;
     HCEspSampleBuffer _espSamples;
 }
@@ -123,6 +126,8 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         state=HCRuntimeReadJSON([_runtimeDirectory stringByAppendingPathComponent:@"state.json"],4*1024*1024);
     }
     BOOL responding=HCRuntimeFresh(state);
+    _minimapProjection=responding && [state[@"minimapProjection"] isKindOfClass:NSDictionary.class] ? state[@"minimapProjection"] : nil;
+    _minimapProjectionUptime=[state[@"heartbeat"] doubleValue];_minimapProjectionPID=[state[@"pid"] intValue];
     NSString *message=state[@"message"] ?: @"Chưa có adapter game phản hồi. Cài adapter trong Hero Control rồi khởi động lại game.";
     if (!responding && [state[@"phase"] isEqual:@"active"]) message=@"Phản hồi adapter đã cũ. Không sử dụng mẫu này làm trạng thái hiện tại.";
     [self emit:responding ? @"camera_game_runtime" : @"runtime_unavailable" message:message extra:nil];
@@ -218,6 +223,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         @"matrixStage": @(frame.matrixStage), @"viewMode": @(frame.viewMode), @"projectionDirty": @(frame.projectionDirty),
         @"nativeCamera": [NSString stringWithFormat:@"0x%llx", (unsigned long long)frame.nativeCamera],
         @"hostX": @(frame.hostX), @"hostZ": @(frame.hostZ), @"hasHostPosition": frame.hasHostPosition ? @YES : @NO,
+        @"minimapProjection": (_minimapProjectionPID==_pid && now-_minimapProjectionUptime>=0 && now-_minimapProjectionUptime<2.5) ? (_minimapProjection ?: @{}) : @{},
         @"targets": targets, @"sampleUptime": @(presentation.sourceTime), @"readSampleUptime": @(now),
         @"sampleRetained": presentation.retained ? @YES : @NO, @"sampleAge": @(presentation.age), @"holdWindowSeconds": @(HC_ESP_HOLD_SECONDS),
         @"timestamp": [_dateFormatter stringFromDate:NSDate.date]}];
@@ -292,6 +298,13 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
                 if (_timerHz!=10) { _timerHz=10;dispatch_source_set_timer(_timer,DISPATCH_TIME_NOW,100*NSEC_PER_MSEC,10*NSEC_PER_MSEC); }
                 return;
             }
+        }
+        if(!runtimeMode && now>=_nextRuntimeSync) {
+            _nextRuntimeSync=now+1;
+            NSString *directory=HCRuntimeFindDirectory();
+            NSDictionary *state=directory ? HCRuntimeReadJSON([directory stringByAppendingPathComponent:@"state.json"],4*1024*1024) : nil;
+            _minimapProjection=HCRuntimeFresh(state) && [state[@"minimapProjection"] isKindOfClass:NSDictionary.class] ? state[@"minimapProjection"] : nil;
+            _minimapProjectionUptime=[state[@"heartbeat"] doubleValue];_minimapProjectionPID=[state[@"pid"] intValue];
         }
         id espFlag = [flags isKindOfClass:NSDictionary.class] ? flags[@"__ifxEnemyEspEnabledV1"] : nil;
         BOOL espEnabled = [espFlag isKindOfClass:NSNumber.class] && [espFlag doubleValue] == 1;

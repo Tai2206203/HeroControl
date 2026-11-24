@@ -1,3 +1,21 @@
+HERO CONTROL 0.12.0 — BUILD 27
+
+- 16 unittest Python qua; asset manifest xác minh 3 ảnh SSS/hợp tác mới.
+- 8 fixture C qua, gồm affine có shear/rotation, singular rejection và manual
+  center/angle. Tâm icon không dùng padding phụ thuộc kích thước icon nữa.
+- Lua smoke qua với mock hàm chiếu game: lấy đúng hệ số normalized và giữ
+  phase active nhưng projection unavailable nếu binding không có out params.
+- Lua smoke xác nhận không ghi SelectedSkin, flag skin=0, metadata skins=false;
+  dữ liệu rỗng trả reports_unknown và canConcludeNoReports=false.
+- Thêm XCTest migrate các flag skin cũ (kể cả numeric) mà giữ ESP, lọc tuần/
+  tháng theo UTC+7 và giữ nguyên lý do. XCTest chưa chạy tại Windows.
+- Project/45 PBX objects/10 toggle keys, cú pháp 9 Swift/4 Objective-C-header,
+  shell và Python được kiểm tra. Cần Xcode CI để biên dịch native/XCTest.
+- Đã đối chiếu Lua gốc 217.lua, VM_028 và dump.cs trong thư mục người dùng.
+  Phép chiếu game thật, menu slider, query/tuần-tháng cần iPhone xác nhận.
+  Log build26 gửi lên chưa có runtime và thiếu gameRuntimeEnabled: không
+  thể chứng minh query máy chủ đã hoạt động, không kết luận không bị tố cáo.
+
 HERO CONTROL 0.11.2 — BUILD 26
 
 - 16 unittest Python qua, gồm hash của ảnh người dùng và 3 nền trang phục.

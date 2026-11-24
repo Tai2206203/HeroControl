@@ -34,6 +34,31 @@ local function listJson(values)
   return json(values)
 end
 
+local function readMinimapProjection()
+  local ok,value=pcall(function()
+    local battle=CS.Assets.Scripts.GameSystem.CBattleSystem.instance
+    assert(battle and battle.m_isInBattle,'battle_not_ready')
+    local width,height=tonumber(CS.UnityEngine.Screen.width),tonumber(CS.UnityEngine.Screen.height)
+    assert(width and height and width>0 and height>0,'screen_not_ready')
+    local function project(x,z)
+      local _,sx,sy=CS.Assets.Scripts.GameSystem.MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint(CS.UnityEngine.Vector3(x,0,z),true,0,0)
+      sx,sy=tonumber(sx),tonumber(sy)
+      assert(sx and sy and sx==sx and sy==sy and math.abs(sx)<1e8 and math.abs(sy)<1e8,'screen_projection_binding_unavailable')
+      return sx/width,1-sy/height
+    end
+    local ox,oy=project(0,0)
+    local xx,yx=project(16,0)
+    local xz,yz=project(0,16)
+    local checkX,checkY=project(16,16)
+    assert(math.abs(checkX-(xx+xz-ox))<0.001 and math.abs(checkY-(yx+yz-oy))<0.001,'projection_not_affine')
+    local a,b,c,d=(xx-ox)/16,(xz-ox)/16,(yx-oy)/16,(yz-oy)/16
+    assert(math.abs(a*d-b*c)>1e-10,'projection_singular')
+    return {available=true,source='game_screen_projection',ox=ox,oy=oy,xx=a,xz=b,yx=c,yz=d}
+  end)
+  if ok then return value end
+  return {available=false,source='game_screen_projection',error=tostring(value)}
+end
+
 function HeroControlRuntimePulse(config, directory)
   local ok,result=pcall(function()
     if CS==nil or N==nil then
@@ -58,7 +83,8 @@ function HeroControlRuntimePulse(config, directory)
         -- ESP now belongs to the independent capture-protected HUD. Leave
         -- donor skins/camera/report hooks active without duplicate game ESP.
         local isEsp=key=='__ifxEnemyEspEnabledV1' or key:match('^DoroCheat%.Reference%.R1%.')
-        local effective=not isEsp and value
+        local retired=key=='DoroCheat.Style.Buttons' or key=='DoroCheat.Style.Skin' or key=='DoroCheat.Style.BeforeMatch' or key=='DoroCheat.Style.LiveChange'
+        local effective=not isEsp and not retired and value
         prefs.SetInt(key,effective and 1 or 0)
         assert(prefs.GetInt(key,-1)==(effective and 1 or 0),'flag_readback:'..key)
       end
@@ -66,16 +92,13 @@ function HeroControlRuntimePulse(config, directory)
     local scale=settings.cameraEnabled and settings.cameraScale or 1.0
     prefs.SetFloat('DoroCheat.Reference.R2.CameraScale',scale)
     assert(math.abs(prefs.GetFloat('DoroCheat.Reference.R2.CameraScale',0)-scale)<0.0001,'camera_readback')
-    -- Removing a selection must remove the old preference as well.
-    for hero in pairs(runtime.previousSkins) do
-      if settings.selectedSkins[hero]==nil then prefs.DeleteKey('DoroCheat.Style.SelectedSkin.'..hero) end
+    -- Retired features are forced off even for a legacy profile.
+    for _,key in ipairs({'Buttons','Skin','BeforeMatch','LiveChange'}) do prefs.SetInt('DoroCheat.Style.'..key,0) end
+    for hero in pairs(settings.selectedSkins or {}) do
+      prefs.DeleteKey('DoroCheat.Style.SelectedSkin.'..hero)
+      prefs.DeleteKey('DoroCheat.Style.VerifiedSkin.'..hero)
     end
-    for hero,skin in pairs(settings.selectedSkins) do
-      prefs.SetInt('DoroCheat.Style.SelectedSkin.'..hero,skin)
-      assert(prefs.GetInt('DoroCheat.Style.SelectedSkin.'..hero,-1)==skin,'skin_readback')
-    end
-    runtime.previousSkins=settings.selectedSkins
-    -- Do not manufacture VerifiedSkin. The donor validates resources itself.
+    runtime.previousSkins={}
     if runtime.savedRevision~=config.revision then prefs.Save();runtime.savedRevision=config.revision end
 
     local monitor=rawget(_G,'DoroCheatCheckToR9')
@@ -86,7 +109,14 @@ function HeroControlRuntimePulse(config, directory)
     end
     if settings.flags['reports.enabled'] and not monitor.enabled then monitor.command('/checkto on') end
     if not settings.flags['reports.enabled'] and monitor.enabled then monitor.command('/checkto off') end
-    if settings.flags['reports.enabled'] then monitor.tick() end
+    if settings.flags['reports.enabled'] then
+      if settings.reportsRefreshID and runtime.lastReportsRefresh~=settings.reportsRefreshID then
+        local polling=rawget(_G,'ComplaintMonitorPolling')
+        if polling then polling.cooldownTicks=0;polling.candidateIndex=1 end
+        runtime.lastReportsRefresh=settings.reportsRefreshID
+      end
+      monitor.tick()
+    end
     local records={}
     -- Export every retained receipt, rather than only today's last 50 rows.
     -- The ledger remains durable in the game's existing account-specific path.
@@ -94,7 +124,7 @@ function HeroControlRuntimePulse(config, directory)
     local recordBytes=0
     for index=#retained,math.max(1,#retained-2047),-1 do
       local r=retained[index]
-      local record={id=tostring(r.id),time=monitor.formatTime(r.event),
+      local record={id=tostring(r.id),time=monitor.formatTime(r.event),eventTime=tonumber(r.event),
         information=tostring(r.subject or ''),reason=tostring(r.reason or ''),source=r.source}
       local size=#json(record)
       if recordBytes+size>1024*1024 then break end
@@ -103,8 +133,21 @@ function HeroControlRuntimePulse(config, directory)
     end
     local transport=rawget(_G,'ComplaintMonitorRuntime') or {}
     local polling=rawget(_G,'ComplaintMonitorPolling') or {}
-    local reports={code=settings.flags['reports.enabled'] and 'server_history_monitoring' or 'reports_disabled',
-      message=monitor.queryStatus or monitor.status(),source='server_history_and_mail',
+    local serverTime
+    pcall(function() serverTime=tonumber(monitor.api.now()) end)
+    if serverTime and (serverTime~=serverTime or math.abs(serverTime)==math.huge) then serverTime=nil end
+    local reportCode='reports_disabled'
+    local reportMessage='Truy vấn tố cáo đang tắt.'
+    if settings.flags['reports.enabled'] then
+      reportCode=#records>0 and 'reports_records_observed' or 'reports_unknown'
+      reportMessage=(#records>0 and 'Đã có bản ghi được quan sát. ' or 'CHƯA XÁC ĐỊNH: chưa có bản ghi quan sát được; không kết luận không bị tố cáo. ')..tostring(monitor.queryStatus or monitor.status())
+      if transport.transportFault then reportCode='reports_transport_fault' end
+    end
+    local reports={code=reportCode,
+      message=reportMessage,source='server_history_and_mail',
+      serverTime=serverTime,canConcludeNoReports=false,scope='known_player_history_and_delivered_mail',
+      transportError=tostring(transport.errorMessage or ''),
+      refreshID=runtime.lastReportsRefresh,
       querySupported=true,completeHistoryGuaranteed=false,
       accountID=monitor.account,sentRequestCount=transport.sentRequestCount or 0,
       receivedResponseCount=transport.receivedResponseCount or 0,
@@ -170,12 +213,19 @@ function HeroControlRuntimePulse(config, directory)
         runtime.catalogError=tostring(catalogError)
       else runtime.catalogError=nil end
     end
-    local state={phase='active',code='runtime_configuration_readback',
+    if runtime.catalogReady and not runtime.skinPrefsCleared then
+      for _,hero in ipairs(runtime.catalog) do
+        prefs.DeleteKey('DoroCheat.Style.SelectedSkin.'..tostring(hero.id))
+        prefs.DeleteKey('DoroCheat.Style.VerifiedSkin.'..tostring(hero.id))
+      end
+      prefs.Save();runtime.skinPrefsCleared=true
+    end
+    local state={minimapProjection=readMinimapProjection(),phase='active',code='runtime_configuration_readback',
       message='Runtime đã nạp hai patch và đọc lại cấu hình. Cần đối chiếu hình ảnh và phản hồi máy chủ.',
       appliedRevision=config.revision,acknowledgement='preferences_readback',
       effectsVerified=false,catalogError=runtime.catalogError,
       features={icon='bundled_hud_portrait',minimap='calibrated_hud_minimap',radar=false,
-        skins='donor_resource_validation',reports='server_available_per_known_player'}}
+        skins=false,reports='server_available_per_known_player'}}
     local encoded=json(state)
     return encoded:sub(1,-2)..',"reports":'..reportJson..',"heroes":'..listJson(runtime.catalog)..'}'
   end)

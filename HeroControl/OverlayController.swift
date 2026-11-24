@@ -28,6 +28,7 @@ struct OverlayState: Codable {
 }
 
 struct EspStatus: Codable {
+    var minimapProjection: MinimapProjectionStatus? = nil
     let code: String
     let message: String
     let memoryStatus: Int?

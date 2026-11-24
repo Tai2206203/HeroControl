@@ -57,6 +57,8 @@ final class ControlStore: ObservableObject {
     }
     func setCamera(_ value: Double) { edit { settings.cameraScale = value } }
     func setCameraEnabled(_ value: Bool) { edit { settings.cameraEnabled = value } }
+    func setReportsPeriod(_ value: String) { edit { settings.reportsPeriod = value } }
+    func refreshReports() { edit { settings.reportsRefreshID = UUID().uuidString; settings.flags["reports.enabled"] = true } }
     func setCaptureProtected(_ value: Bool) { edit { settings.espCaptureProtected = value } }
     func setMinimap(_ key: String, _ value: Double) {
         edit {
@@ -80,14 +82,6 @@ final class ControlStore: ObservableObject {
             // Starting workers must not overwrite the user's saved ESP choices.
             settings.flags["__ifxEnemyEspEnabledV1"] = true
             settings.flags["reports.enabled"] = true
-        }
-    }
-    func setSkin(hero: UInt32, skin: Int?) {
-        edit {
-            if let skin, let entry = snapshot?.heroes.first(where: { $0.id == hero }),
-               entry.skins.contains(where: { $0.id == skin }) {
-                settings.selectedSkins[String(hero)] = skin
-            } else if skin == nil { settings.selectedSkins.removeValue(forKey: String(hero)) }
         }
     }
     func reset() {

@@ -21,8 +21,11 @@ function bin:GetEnumerator()
 end
 CS={System={IO={File={ReadAllBytes=function() return {} end},MemoryStream=function() return {Dispose=function() end} end}},
  IFix={Core={PatchManager={Load=function() loads=loads+1;return {} end}}},
- Assets={Scripts={Framework={GameDataMgr={heroSkinDatabin=bin}}}},
- UnityEngine={PlayerPrefs={
+ Assets={Scripts={Framework={GameDataMgr={heroSkinDatabin=bin}},GameSystem={
+ CBattleSystem={instance={m_isInBattle=true}},MiniMapSysUT={Set3DUIWorldPos_ByScreenPoint=function(p)
+   return {},100+2*p.x+p.z,200+p.x-3*p.z
+ end}}}},
+ UnityEngine={Screen={width=1000,height=500},Vector3=function(x,y,z) return {x=x,y=y,z=z} end,PlayerPrefs={
   SetInt=function(k,v) prefs[k]=v end,GetInt=function(k,d) if prefs[k]==nil then return d end;return prefs[k] end,
   SetFloat=function(k,v) prefs[k]=v end,GetFloat=function(k,d) return prefs[k] or d end,
   DeleteKey=function(k) prefs[k]=nil end,Save=function() saves=saves+1 end}}}
@@ -31,6 +34,16 @@ local config={revision='revision-1',settings={flags={['reports.enabled']=true,['
  ['DoroCheat.Reference.R1.Map']=true},cameraEnabled=true,cameraScale=1.75,selectedSkins={['123']=7}}}
 local reply=HeroControlRuntimePulse(config,'/fixture')
 assert(reply:find('"phase":"active"',1,true),reply)
+assert(reply:find('"source":"game_screen_projection"',1,true),reply)
+assert(reply:find('"ox":0.1',1,true),reply)
+assert(reply:find('"oy":0.6',1,true),reply)
+assert(reply:find('"skins":false',1,true),reply)
+local oldProjection=CS.Assets.Scripts.GameSystem.MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint
+CS.Assets.Scripts.GameSystem.MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint=function() return {} end
+local unavailable=HeroControlRuntimePulse(config,'/fixture')
+assert(unavailable:find('"phase":"active"',1,true),unavailable)
+assert(unavailable:find('"available":false',1,true),unavailable)
+CS.Assets.Scripts.GameSystem.MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint=oldProjection
 assert(reply:find('"querySupported":true',1,true),reply)
 assert(reply:find('"completeHistoryGuaranteed":false',1,true),reply)
 assert(reply:find('"recordsTruncated":true',1,true),reply)
@@ -40,10 +53,11 @@ assert(not reply:find('"records":{}',1,true),reply)
 assert(prefs['DoroCheat.Reference.R2.CameraScale']==1.75)
 assert(prefs['DoroCheat.Reference.R1.Icon']==0)
 assert(prefs['DoroCheat.Reference.R1.Map']==0)
-assert(prefs['DoroCheat.Style.SelectedSkin.123']==7)
+assert(prefs['DoroCheat.Style.SelectedSkin.123']==nil)
+assert(prefs['DoroCheat.Style.Skin']==0)
 assert(prefs['DoroCheat.Style.VerifiedSkin.123']==nil)
-assert(loads==2 and saves==1)
-HeroControlRuntimePulse(config,'/fixture');assert(loads==2 and saves==1)
+assert(loads==2 and saves==2)
+HeroControlRuntimePulse(config,'/fixture');assert(loads==2 and saves==2)
 config.revision='revision-2';config.settings.selectedSkins={};config.settings.cameraEnabled=false
 config.settings.flags['reports.enabled']=false;monitor.records={}
 reply=HeroControlRuntimePulse(config,'/fixture')
@@ -51,6 +65,10 @@ assert(prefs['DoroCheat.Style.SelectedSkin.123']==nil)
 assert(prefs['DoroCheat.Reference.R2.CameraScale']==1)
 assert(not monitor.enabled)
 assert(reply:find('"records":[]',1,true),reply)
+config.settings.flags['reports.enabled']=true
+reply=HeroControlRuntimePulse(config,'/fixture')
+assert(reply:find('"code":"reports_unknown"',1,true),reply)
+assert(reply:find('"canConcludeNoReports":false',1,true),reply)
 -- An absent reflected hero-name field must preserve usable numeric IDs.
 HeroControlNativeRuntime.catalogReady=false
 HeroControlNativeRuntime.catalog={}

@@ -10,6 +10,12 @@ enum ProfileCodec {
         var payload = data
         if var root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
            var settings = root["settings"] as? [String: Any], var flags = settings["flags"] as? [String: Any] {
+            for key in ["DoroCheat.Style.Buttons", "DoroCheat.Style.Skin", "DoroCheat.Style.BeforeMatch", "DoroCheat.Style.LiveChange"] {
+                if flags.removeValue(forKey: key) != nil { changed = true }
+            }
+            if let oldSkins = settings["selectedSkins"] as? [String: Any], !oldSkins.isEmpty {
+                settings["selectedSkins"] = [String: Int](); changed = true
+            }
             for key in Feature.all.map(\.key) {
                 if let n = flags[key] as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID(), n.doubleValue == 0 || n.doubleValue == 1 {
                     flags[key] = n.doubleValue == 1; changed = true
@@ -28,14 +34,14 @@ enum ProfileCodec {
 }
 
 enum FeatureGroup: String, CaseIterable, Identifiable {
-    case esp = "ESP", camera = "Camera", style = "Style", skins = "Skins", reports = "Reports"
+    case esp = "ESP", camera = "Camera", style = "Style", calibration = "Căn chỉnh", reports = "Reports"
     var id: String { rawValue }
     var symbol: String {
         switch self {
         case .esp: return "viewfinder"
         case .camera: return "camera"
         case .style: return "paintbrush"
-        case .skins: return "person.crop.square"
+        case .calibration: return "slider.horizontal.3"
         case .reports: return "list.bullet.rectangle"
         }
     }
@@ -55,11 +61,7 @@ struct Feature: Identifiable {
         .init(key: "DoroCheat.Reference.R1.Map", title: "ESP Minimap", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Unseen", title: "Unseen only", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Check", title: "ESP Check / kỹ năng", group: .esp),
-        .init(key: "DoroCheat.Style.Buttons", title: "Skin Buttons", group: .style),
         .init(key: "DoroCheat.Style.Banner", title: "Kill Banner", group: .style),
-        .init(key: "DoroCheat.Style.Skin", title: "Mod Skin", group: .skins),
-        .init(key: "DoroCheat.Style.BeforeMatch", title: "Before Match", group: .skins),
-        .init(key: "DoroCheat.Style.LiveChange", title: "Live Change", group: .skins),
         .init(key: "reports.enabled", title: "Truy vấn lịch sử tố cáo", group: .reports)
     ]
     static let cameraKey = "DoroCheat.Reference.R2.CameraScale"
@@ -82,6 +84,12 @@ struct ControlSettings: Codable, Equatable {
     var espIconSize: Double? = nil
     var minimapWorldExtent: Double? = nil
     var minimapRotated: Bool? = nil
+    var minimapAutoAlign: Bool? = nil
+    var minimapCenterX: Double? = nil
+    var minimapCenterZ: Double? = nil
+    var minimapAngle: Double? = nil
+    var reportsRefreshID: String? = nil
+    var reportsPeriod: String? = nil
     mutating func normalize() {
         flags = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, flags[$0.key] ?? false) })
         cameraScale = cameraScale.isFinite ? min(2.3, max(1, cameraScale)) : 1
@@ -94,12 +102,15 @@ struct ControlSettings: Codable, Equatable {
         if let v = espBoxHeightScale { espBoxHeightScale = v.isFinite ? min(3, max(0.5, v)) : 1 }
         if let v = espIconSize { espIconSize = v.isFinite ? min(64, max(12, v)) : 32 }
         if let v = minimapWorldExtent { minimapWorldExtent = v.isFinite ? min(200, max(30, v)) : 60 }
-        selectedSkins = selectedSkins.filter { UInt32($0.key) != nil && $0.value >= 0 && $0.value <= Int(UInt32.max) }
+        if let v = minimapCenterX { minimapCenterX = v.isFinite ? min(200, max(-200, v)) : 0 }
+        if let v = minimapCenterZ { minimapCenterZ = v.isFinite ? min(200, max(-200, v)) : 0 }
+        if let v = minimapAngle { minimapAngle = v.isFinite ? min(180, max(-180, v)) : 0 }
+        if let period = reportsPeriod, !["all", "week", "month"].contains(period) { reportsPeriod = "all" }
+        selectedSkins = [:] // Legacy decode only; skin modification was removed.
     }
     var preferenceValues: [String: Double] {
         var result = Dictionary(uniqueKeysWithValues: flags.map { ($0.key, $0.value ? 1.0 : 0.0) })
         result[Feature.cameraKey] = cameraScale
-        for (hero, skin) in selectedSkins { result["DoroCheat.Style.SelectedSkin.\(hero)"] = Double(skin) }
         return result
     }
 }
@@ -120,6 +131,8 @@ struct ReportRecord: Codable, Identifiable {
     let time: String
     let information: String
     let reason: String
+    var eventTime: TimeInterval? = nil
+    var source: String? = nil
 }
 
 struct BackendSnapshot: Codable {
@@ -159,12 +172,18 @@ struct FeatureCheckStatus: Codable {
     var recordsTruncated: Bool? = nil
     var retainedRecordCount: Int? = nil
     var serverResultCode: Int? = nil
+    var serverTime: TimeInterval? = nil
+    var canConcludeNoReports: Bool? = nil
+    var scope: String? = nil
+    var transportError: String? = nil
+    var refreshID: String? = nil
     let readBudgetExceeded: Bool?
     let records: [ReportRecord]?
     let timestamp: String?
 }
 
 struct GameRuntimeStatus: Codable {
+    var minimapProjection: MinimapProjectionStatus? = nil
     let phase: String?
     let code: String?
     let message: String?
@@ -304,5 +323,34 @@ struct HeroIconEntry: Identifiable {
         return "\u{FEFF}hero_id,hero_name,image_file\r\n" + entries.map {
             "\($0.id),\(quote($0.name)),\(quote($0.imageFile))\r\n"
         }.joined()
+    }
+}
+
+struct MinimapProjectionStatus: Codable {
+    let available: Bool?
+    let source: String?
+    let error: String?
+    let ox: Double?
+    let oy: Double?
+    let xx: Double?
+    let xz: Double?
+    let yx: Double?
+    let yz: Double?
+}
+enum ReportHistory {
+    static func filter(_ records: [ReportRecord], period: String, now: Date = Date()) -> [ReportRecord] {
+        guard period != "all" else { return records }
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = TimeZone(secondsFromGMT: 25200)!
+        let unit: Calendar.Component = period == "week" ? .weekOfYear : .month
+        guard let start = calendar.dateInterval(of: unit, for: now)?.start else { return [] }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss XXXXX"
+        return records.filter {
+            let date = $0.eventTime.flatMap { $0 > 0 ? Date(timeIntervalSince1970: $0) : nil }
+                ?? formatter.date(from: $0.time) ?? ISO8601DateFormatter().date(from: $0.time)
+            return date.map { $0 >= start && $0 <= now } ?? false
+        }
     }
 }

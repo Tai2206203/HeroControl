@@ -1,0 +1,75 @@
+HERO CONTROL 0.12.0 — BUILD 27
+
+ĐỐI CHIẾU TÀI LIỆU CŨ
+
+Đã xem lại analysis_heroskin/modified/HeroSkin_1/strings/217.lua, các đoạn
+captureCandidates/requestComplaintHistory/collectComplaintRecords, m.bounds,
+m.list, bảng lý do, và HeroSkin_2/functions/VM_028.il.txt cùng dump.cs.
+Lua gốc có lọc tuần/tháng theo UTC+7 và lý do tố cáo. API đang dùng là lịch sử
+của người chơi đã biết UID/world, lọc BeComplaintUid về tài khoản hiện tại;
+không thấy một API bảo đảm toàn bộ tố cáo nhắm vào tài khoản theo khoảng ngày.
+Bản import đã giữ bản ghi baseline (Lua gốc bỏ B nếu không phải trận mới),
+và vẫn kiểm tra tài khoản, FIFO, trùng bản ghi. Không sửa file tham khảo.
+
+MINIMAP
+
+Lỗi xác định trong bộ vẽ cũ: có padding phụ thuộc cỡ icon nên khi đổi icon,
+chính tọa độ tâm cũng đổi; thêm giả định world ±60 và hướng cố định không
+đảm bảo khớp bản đồ thực. Nay tâm không phụ thuộc cỡ icon.
+Thêm auto từ hàm game MiniMapSysUT.Set3DUIWorldPos_ByScreenPoint: lấy mẫu
+(0,0), (16,0), (0,16), (16,16), chuẩn hóa theo Unity Screen, kiểm tra affine
+và determinant. Adapter xuất 6 hệ số; overlay chỉ dùng trạng thái đúng PID,
+generation/build và còn mới dưới 2,5 giây. Xử lý hướng/scale theo phép chiếu
+game, không theo camera xa. Binding chưa hỗ trợ thì báo chờ, không vẽ bằng
+hệ số đoán. Hàm/binding thật cần kiểm chứng trên iPhone sau CI.
+Chế độ thủ công có tâm thế giới X/Z, góc, extent, khung X/Y/size. Không co
+vùng bản đồ theo cỡ icon. Đổi khung/hướng/phạm vi sẽ tự chuyển sang thủ công.
+
+CĂN CHỈNH TRONG MENU NỔI
+
+Tab CĂN CHỈNH thay Skins; có ba trang chuyển bằng ‹ / ›, slider kéo trực tiếp:
+X/Y khung, cỡ khung/icon, extent, tâm X/Z, góc, rộng/cao box, cỡ icon ESP,
+nhịp đọc. Có bật/tắt AUTO, xoay 180° và kéo khung trực tiếp. Lưu khi thả tay.
+App không còn các slider căn chỉnh riêng; vẫn có nơi xem trạng thái/chẩn đoán.
+
+TỐ CÁO
+
+Log người dùng build 26: connected=false, không có runtime, settings không có
+gameRuntimeEnabled. Log chỉ chứng minh đọc module/kernel, chưa chứng minh
+adapter/query máy chủ đã hoạt động. Không kết luận không bị tố cáo từ reports=[].
+Khi bật check, app cũng kiểm tra trạng thái adapter để không giấu tình trạng
+chưa nạp chỉ vì runtimeInstalled trong app chưa được đánh dấu.
+Runtime báo reports_unknown nếu chưa quan sát bản ghi; canConcludeNoReports=false,
+không đổi thành "không có tố cáo". Hiện phạm vi dữ liệu, lỗi transport, số gửi/
+nhận; có TRUY VẤN LẠI trong menu (không xóa fault cần đăng nhập lại).
+Bộ lọc tất cả/tuần/tháng có cả menu và app. Hiện thời gian và lý do bản ghi,
+‹ / › xem bản ghi khác. Lọc theo thời gian event/trận mà máy chủ cung cấp,
+không phải bảo đảm tải lại mọi tố cáo trong tuần/tháng. Bản ghi thiếu thời
+gian không được đoán vào kỳ. Danh sách chỉ bao phủ nguồn đã thu thập được.
+Cần cài/kích hoạt adapter rồi đóng/mở lại game; cache-only không gửi truy vấn.
+
+BỎ MOD SKIN
+
+Gỡ tab/toggle mod skin, before-match, live-change và skin buttons khỏi app/
+menu/supported keys; xóa lựa chọn cũ khi migrate profile. Runtime buộc cờ cũ
+về 0 và xóa custom SelectedSkin/VerifiedSkin khi đọc được catalog. Payload
+tham khảo có hook dùng chung vẫn giữ để camera/reports hoạt động; không
+cung cấp đường kích hoạt thay trang phục. Ảnh nền là tài nguyên giao diện,
+không phải tính năng thay skin trong game.
+
+NỀN ĐỘNG
+
+Thay ba nền Nakroth bằng Violet Thứ nguyên vệ thần (SSS), Violet Nobara
+Kugisaki và Tulen Satoru Gojo (hợp tác). Ảnh từ Garena, đóng gói offline;
+chuyển ảnh/zoom/pan nhẹ và hạt sáng. Đây là hiệu ứng UI trên ảnh, không phải
+video hay mô hình trang phục. Giữ ảnh cá nhân làm nền app/nút nổi.
+Nguồn: https://lienquan.garena.vn/hoc-vien/tuong-skin/d/violet/
+https://lienquan.garena.vn/hoc-vien/tuong-skin/d/tulen/
+
+CẬP NHẬT
+
+Git push, đợi CI, tắt overlay cũ, cài TIPA mới. Cài/kích hoạt adapter trong
+app rồi đóng hẳn và mở lại game. AUTO cần phản hồi adapter/phép chiếu game;
+nếu chưa có, chọn thủ công trong CĂN CHỈNH và căn tâm/góc/phạm vi/khung.
+Cần đối chiếu ảnh minimap và query thật trên thiết bị, không coi fixture mô
+phỏng là bảo đảm mọi chức năng đã chạy đúng trong game.

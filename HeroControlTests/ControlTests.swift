@@ -2,6 +2,28 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    func testRetiredSkinSettingsMigrateWithoutLosingEspFlags() throws {
+        let data = Data(#"{"schemaVersion":1,"settings":{"flags":{"DoroCheat.Style.Skin":1,"DoroCheat.Style.Buttons":true,"DoroCheat.Reference.R1.Icon":true},"cameraScale":1.5,"selectedSkins":{"123":7}}}"#.utf8)
+        let (saved, migrated) = try ProfileCodec.decode(data)
+        XCTAssertTrue(migrated)
+        XCTAssertNil(saved.settings.flags["DoroCheat.Style.Skin"])
+        XCTAssertEqual(saved.settings.flags["DoroCheat.Reference.R1.Icon"], true)
+        XCTAssertTrue(saved.settings.selectedSkins.isEmpty)
+    }
+    func testReportWeekMonthFiltersPreserveReasonsAndUseUTC7() throws {
+        let formatter = ISO8601DateFormatter()
+        let now = try XCTUnwrap(formatter.date(from: "2026-11-25T12:00:00+07:00"))
+        func record(_ id: String, _ time: String) throws -> ReportRecord {
+            let date = try XCTUnwrap(formatter.date(from: time))
+            return ReportRecord(id: id, time: time, information: "server", reason: "Cố ý chết", eventTime: date.timeIntervalSince1970)
+        }
+        let records = try [record("week", "2026-11-23T00:00:00+07:00"), record("month", "2026-11-20T12:00:00+07:00"), record("old", "2026-10-31T12:00:00+07:00")]
+        XCTAssertEqual(ReportHistory.filter(records, period: "week", now: now).map(\.id), ["week"])
+        XCTAssertEqual(ReportHistory.filter(records, period: "month", now: now).map(\.id), ["week", "month"])
+        XCTAssertEqual(ReportHistory.filter(records, period: "all", now: now).count, 3)
+        XCTAssertEqual(ReportHistory.filter(records, period: "week", now: now).first?.reason, "Cố ý chết")
+    }
+
     @MainActor
     func testSavedEspChoicesAndMinimapSurviveRestartAndCombinedStart() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -258,7 +280,7 @@ final class ControlTests: XCTestCase {
         XCTAssertEqual(profile, loaded)
         XCTAssertEqual(loaded.preferenceValues["DoroCheat.Reference.R1.HP"], 1)
         XCTAssertEqual(loaded.preferenceValues[Feature.cameraKey], 1.75)
-        XCTAssertEqual(loaded.preferenceValues["DoroCheat.Style.SelectedSkin.123"], 7)
+        XCTAssertNil(loaded.preferenceValues["DoroCheat.Style.SelectedSkin.123"])
     }
 
     func testInvalidImportedValuesAreNormalized() {
@@ -269,7 +291,7 @@ final class ControlTests: XCTestCase {
         profile.normalize()
         XCTAssertEqual(profile.cameraScale, 1)
         XCTAssertNil(profile.flags["unknown"])
-        XCTAssertEqual(profile.selectedSkins, ["2": 7])
+        XCTAssertTrue(profile.selectedSkins.isEmpty)
         profile.cameraScale = 7
         profile.normalize()
         XCTAssertEqual(profile.cameraScale, 2.3)
