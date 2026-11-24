@@ -191,7 +191,9 @@ static NSArray *HCFilteredReports(NSDictionary *status,NSString *period) {
     NSCalendar *calendar=[[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierISO8601];
     calendar.timeZone=[NSTimeZone timeZoneForSecondsFromGMT:25200];
     NSDate *now=[status[@"serverTime"] doubleValue]>0 ? [NSDate dateWithTimeIntervalSince1970:[status[@"serverTime"] doubleValue]] : NSDate.date;
-    NSDateInterval *interval=[calendar dateIntervalOfUnit:[period isEqual:@"week"] ? NSCalendarUnitWeekOfYear : NSCalendarUnitMonth forDate:now];
+    NSDate *periodStart=nil;NSTimeInterval periodDuration=0;
+    NSCalendarUnit unit=[period isEqual:@"week"] ? NSCalendarUnitWeekOfYear : NSCalendarUnitMonth;
+    if(![calendar rangeOfUnit:unit startDate:&periodStart interval:&periodDuration forDate:now] || !periodStart) return @[];
     NSDateFormatter *formatter=[NSDateFormatter new];formatter.locale=[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
     formatter.dateFormat=@"yyyy-MM-dd HH:mm:ss XXXXX";
     NSISO8601DateFormatter *iso=[NSISO8601DateFormatter new];
@@ -199,7 +201,7 @@ static NSArray *HCFilteredReports(NSDictionary *status,NSString *period) {
     for(NSDictionary *record in records) {
         NSDate *date=[record[@"eventTime"] doubleValue]>0 ? [NSDate dateWithTimeIntervalSince1970:[record[@"eventTime"] doubleValue]] :
             ([formatter dateFromString:record[@"time"] ?: @""] ?: [iso dateFromString:record[@"time"] ?: @""]);
-        if(date && [date compare:interval.startDate]!=NSOrderedAscending && [date compare:now]!=NSOrderedDescending) [result addObject:record];
+        if(date && [date compare:periodStart]!=NSOrderedAscending && [date compare:now]!=NSOrderedDescending) [result addObject:record];
     }
     return result;
 }
@@ -533,7 +535,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             CGRect prev=CGRectMake(CGRectGetMaxX(c)-68,c.origin.y,30,25),next=CGRectMake(CGRectGetMaxX(c)-32,c.origin.y,30,25);
             HCText(@"‹",prev,20,UIColor.whiteColor,YES);HCText(@"›",next,20,UIColor.whiteColor,YES);
             [self target:@"cal-prev" rect:prev];[self target:@"cal-next" rect:next];
-            for(NSUInteger i=_calibrationPage*5;i<MIN(fields.count,(_calibrationPage+1)*5);i++) {
+            NSUInteger pageStart=(NSUInteger)_calibrationPage*5;
+            NSUInteger pageEnd=MIN(fields.count,pageStart+5);
+            for(NSUInteger i=pageStart;i<pageEnd;i++) {
                 NSDictionary *field=fields[i];CGRect track=[self calibrationTrack:i];
                 double value=self.settings[field[@"key"]] ? [self.settings[field[@"key"]] doubleValue] : [field[@"default"] doubleValue];
                 HCText(field[@"title"],CGRectMake(c.origin.x,track.origin.y,c.size.width*0.46,13),10,UIColor.whiteColor,YES);
@@ -565,12 +569,12 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             }
             NSArray *records=HCFilteredReports(HCReportsStatus,period);
             _reportRecordIndex=MAX(0,MIN(_reportRecordIndex,(NSInteger)records.count-1));
-            NSString *row=@"Chưa có bản ghi phù hợp trong dữ liệu đã thu thập. Không kết luận không bị tố cáo.";
+            NSString *recordText=@"Chưa có bản ghi phù hợp trong dữ liệu đã thu thập. Không kết luận không bị tố cáo.";
             if(records.count) {
                 NSDictionary *record=records[records.count-1-_reportRecordIndex];
-                row=[NSString stringWithFormat:@"%@\n%@\nLý do: %@",record[@"time"] ?: @"Chưa rõ giờ",record[@"information"] ?: @"",record[@"reason"] ?: @"Chưa được cung cấp"];
+                recordText=[NSString stringWithFormat:@"%@\n%@\nLý do: %@",record[@"time"] ?: @"Chưa rõ giờ",record[@"information"] ?: @"",record[@"reason"] ?: @"Chưa được cung cấp"];
             }
-            HCText(row,CGRectMake(c.origin.x,c.origin.y+129,c.size.width,56),10,UIColor.whiteColor,NO);
+            HCText(recordText,CGRectMake(c.origin.x,c.origin.y+129,c.size.width,56),10,UIColor.whiteColor,NO);
             HCText([NSString stringWithFormat:@"%@/%@ phản hồi • %ld bản ghi",HCReportsStatus[@"receivedResponseCount"] ?: @0,HCReportsStatus[@"sentRequestCount"] ?: @0,(long)records.count],CGRectMake(c.origin.x,c.origin.y+188,c.size.width-65,20),9,UIColor.lightGrayColor,NO);
             CGRect prev=CGRectMake(CGRectGetMaxX(c)-60,c.origin.y+185,26,24),next=CGRectMake(CGRectGetMaxX(c)-28,c.origin.y+185,26,24);
             HCText(@"‹",prev,19,UIColor.whiteColor,YES);HCText(@"›",next,19,UIColor.whiteColor,YES);

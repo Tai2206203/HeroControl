@@ -971,8 +971,8 @@
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 74063,
-    "sha256": "b8f5c71b0b8885b3db38e004f3bf9dd9179355787780253b32bd20a9ea6af408"
+    "bytes": 74301,
+    "sha256": "5bee2587fea7246a81941992ce1d86b524750454fbe4976a6c2ea21cd78b07f6"
   },
   {
     "path": "Overlay/Info.plist",
@@ -1076,8 +1076,8 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 17289,
-    "sha256": "cc6b28a0d202b6f86708182278c0a727384103ef60ef61b78f7a060fafd6b302"
+    "bytes": 18115,
+    "sha256": "cc612ee6a40d16ef49721a5217d3f31d2146d2817a7a4ceb2900dfbefb511fdb"
   },
   {
     "path": "scripts/build-diagnostics.sh",

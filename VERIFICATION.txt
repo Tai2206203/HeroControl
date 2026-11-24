@@ -1,3 +1,15 @@
+SỬA LỖI BIÊN DỊCH CI BUILD 27
+
+- Thay selector NSCalendar không tồn tại bằng rangeOfUnit:startDate:interval:
+  forDate:, kiểm tra kết quả trước khi dùng thời điểm đầu tuần/tháng (UTC+7).
+- Đổi biến chuỗi nội dung bản ghi thành recordText để không trùng CGRect row.
+- Dùng NSUInteger nhất quán cho biên trang căn chỉnh, loại cảnh báo sign-compare.
+- Validate-project và 16 unittest Python qua. Windows không có iPhone SDK;
+  cần push lại để CI Xcode xác nhận biên dịch. Cảnh báo unused-function của
+  nhánh host diagnostics không phải nguyên nhân thất bại trong log đã gửi.
+- Hợp đồng API đối chiếu Apple:
+  https://developer.apple.com/documentation/foundation/nscalendar/range(of:start:interval:for:)?language=objc
+
 HERO CONTROL 0.12.0 — BUILD 27
 
 - 16 unittest Python qua; asset manifest xác minh 3 ảnh SSS/hợp tác mới.
