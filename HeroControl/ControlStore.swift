@@ -73,9 +73,8 @@ final class ControlStore: ObservableObject {
     func setEspReadHz(_ value: Int) { edit { settings.espReadHz = value } }
     func prepareCombinedCheck() {
         edit {
-            for feature in Feature.all where feature.group == .esp {
-                settings.flags[feature.key] = feature.key != "DoroCheat.Reference.R1.Unseen"
-            }
+            // Starting workers must not overwrite the user's saved ESP choices.
+            settings.flags["__ifxEnemyEspEnabledV1"] = true
             settings.flags["reports.enabled"] = true
         }
     }

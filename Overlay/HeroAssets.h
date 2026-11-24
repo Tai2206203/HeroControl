@@ -1,4 +1,6 @@
 #import <UIKit/UIKit.h>
+#import <objc/runtime.h>
+#include "../BackendSDK/EspVisualStyle.h"
 
 static NSDictionary *HCHeroCatalog(void) {
     static NSDictionary *entries;
@@ -45,7 +47,32 @@ static void HCDrawHeroIcon(int32_t heroID,CGRect rect) {
             NSFontAttributeName:[UIFont boldSystemFontOfSize:9],NSForegroundColorAttributeName:UIColor.whiteColor}];
     }
     CGContextRestoreGState(context);
-    [[UIColor colorWithRed:1 green:0.44 blue:0.48 alpha:1] setStroke];circle.lineWidth=1.5;[circle stroke];
+    [[UIColor colorWithWhite:0.7 alpha:0.4] setStroke];circle.lineWidth=0.6;[circle stroke];
+}
+
+static void HCDrawHealthRing(NSDictionary *target,CGRect ring,BOOL redOnly,CGFloat width) {
+    HCHeroHealth health=HCHeroHealthValue([target[@"hp"] doubleValue],[target[@"maxHP"] doubleValue],[target[@"hpKnown"] boolValue]);
+    UIBezierPath *track=[UIBezierPath bezierPathWithOvalInRect:ring];
+    [[UIColor colorWithWhite:0.12 alpha:0.85] setStroke];track.lineWidth=width;[track stroke];
+    if(!health.known) {
+        CGFloat pattern[]={2,3};[track setLineDash:pattern count:2 phase:0];
+        [[UIColor colorWithWhite:0.65 alpha:0.85] setStroke];track.lineWidth=width;[track stroke];return;
+    }
+    if(health.ratio<=0) return;
+    UIColor *color=redOnly ? [UIColor colorWithRed:1 green:0.16 blue:0.22 alpha:1] :
+        [UIColor colorWithRed:health.red green:health.green blue:health.blue alpha:1];
+    UIBezierPath *arc=[UIBezierPath bezierPathWithArcCenter:CGPointMake(CGRectGetMidX(ring),CGRectGetMidY(ring))
+        radius:ring.size.width/2 startAngle:-M_PI_2 endAngle:-M_PI_2+M_PI*2*health.ratio clockwise:YES];
+    [color setStroke];arc.lineWidth=width;arc.lineCapStyle=kCGLineCapRound;[arc stroke];
+}
+static void HCFillGradient(CGRect rect,UIColor *first,UIColor *last) {
+    CGContextRef context=UIGraphicsGetCurrentContext();
+    CGContextSaveGState(context);[[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:14] addClip];
+    CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
+    NSArray *colors=@[(__bridge id)first.CGColor,(__bridge id)last.CGColor];
+    CGGradientRef gradient=CGGradientCreateWithColors(space,(__bridge CFArrayRef)colors,NULL);
+    CGContextDrawLinearGradient(context,gradient,rect.origin,CGPointMake(CGRectGetMaxX(rect),CGRectGetMaxY(rect)),0);
+    CGGradientRelease(gradient);CGColorSpaceRelease(space);CGContextRestoreGState(context);
 }
 
 @protocol HCEspPainting <NSObject>
@@ -66,4 +93,24 @@ static UIView *HCSecureCanvas(UIView *view) {
         UIView *found=HCSecureCanvas(child);if (found) return found;
     }
     return nil;
+}
+
+// Copy the secure text canvas's own compositor mask rather than hard-coding
+// undocumented mask bits. Readback only verifies configuration, not a screenshot.
+static BOOL HCConfigureCaptureLayer(CALayer *layer,CALayer *secureLayer,BOOL enabled) {
+    static char previousMaskKey;
+    @try {
+        NSNumber *previous=objc_getAssociatedObject(layer,&previousMaskKey);
+        if(!enabled) {
+            if(previous) { [layer setValue:previous forKey:@"disableUpdateMask"];objc_setAssociatedObject(layer,&previousMaskKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
+            return YES;
+        }
+        id secureMask=[secureLayer valueForKey:@"disableUpdateMask"];
+        id current=[layer valueForKey:@"disableUpdateMask"];
+        if(![secureMask isKindOfClass:NSNumber.class] || ![current isKindOfClass:NSNumber.class] || [secureMask unsignedIntValue]==0) return NO;
+        if(!previous) objc_setAssociatedObject(layer,&previousMaskKey,current,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        NSNumber *wanted=@([current unsignedIntValue] | [secureMask unsignedIntValue]);
+        [layer setValue:wanted forKey:@"disableUpdateMask"];
+        return [[layer valueForKey:@"disableUpdateMask"] isEqual:wanted];
+    } @catch(NSException *exception) { (void)exception;return NO; }
 }

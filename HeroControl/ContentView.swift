@@ -303,12 +303,17 @@ struct ContentView: View {
             case .skins: skinControls
             case .reports: reportControls
             case .esp:
-                Toggle("Bảo vệ ESP khi quay/chụp màn hình", isOn: Binding(
+                Toggle("Tự động ẩn menu & ESP khi quay/chụp màn hình", isOn: Binding(
                     get: { store.settings.espCaptureProtected ?? true }, set: { store.setCaptureProtected($0) }))
-                Text("ESP vẽ trên lớp riêng. Khi phát hiện đang quay, ESP sẽ tạm ẩn cả trên máy. Chống chụp ảnh dùng lớp bảo mật thử nghiệm, cần thử trên iPhone.")
+                Text("Cả menu và ESP nằm trong lớp bảo vệ chung. Khi phát hiện đang quay, toàn bộ overlay sẽ tạm ẩn cả trên máy. Chống chụp ảnh cần đối chiếu thực tế trên iPhone.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if overlay.state?.secureHostAvailable == false && (store.settings.espCaptureProtected ?? true) {
-                    Text("Máy chưa tạo được lớp bảo mật: ESP đang ẩn. Có thể tắt bảo vệ để kiểm tra hiển thị.")
+                    Text("Máy chưa tạo được lớp bảo mật: menu và ESP đang ẩn. Tắt công tắc này để kiểm tra hiển thị.")
+                        .font(.footnote).foregroundStyle(.orange)
+                }
+                if (store.settings.espCaptureProtected ?? true), overlay.state?.captureLayerConfigured == false,
+                   overlay.state?.secureHostAvailable == true {
+                    Text("Chưa xác nhận cấu hình chặn chụp ảnh trên máy này. Chế độ tự ẩn khi phát hiện quay vẫn hoạt động; hãy kiểm tra ảnh chụp thực tế.")
                         .font(.footnote).foregroundStyle(.orange)
                 }
                 Text("130 ảnh tướng đã đóng gói từ file Excel. Không tải ảnh mạng trong trận. Bật nút nổi và Enable ESP để vẽ.")
@@ -317,9 +322,15 @@ struct ContentView: View {
                     Text("60 Hz").tag(60)
                     Text("120 Hz").tag(120)
                 }.pickerStyle(.segmented)
+                Text("Menu nổi → ESP → CHỈNH KHUNG MINIMAP: kéo khung để di chuyển, kéo góc ↘ để đổi kích thước, bấm XONG. Tự lưu khi thả tay.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Text("HP quanh icon đổi từ xanh → vàng → đỏ theo lượng máu. Vòng minimap màu đỏ thể hiện lượng máu còn lại; nét đứt xám nghĩa là chưa đọc đủ HP tối đa.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Text("Các công tắc và vị trí được tự lưu; mở lại sẽ khôi phục cấu hình gần nhất.")
+                    .font(.caption).foregroundStyle(.secondary)
                 DisclosureGroup("Căn chỉnh ESP Minimap") {
-                    minimapSlider("Vị trí ngang", key: "x", value: store.settings.minimapX ?? 0.015, range: 0...0.8)
-                    minimapSlider("Vị trí dọc", key: "y", value: store.settings.minimapY ?? 0.02, range: 0...0.8)
+                    minimapSlider("Vị trí ngang", key: "x", value: store.settings.minimapX ?? 0.015, range: 0...1)
+                    minimapSlider("Vị trí dọc", key: "y", value: store.settings.minimapY ?? 0.02, range: 0...1)
                     minimapSlider("Kích thước", key: "size", value: store.settings.minimapSize ?? 150, range: 80...240)
                     minimapSlider("Nửa chiều rộng bản đồ thế giới", key: "extent", value: store.settings.minimapWorldExtent ?? 60, range: 30...200)
                     Toggle("Xoay bản đồ 180°", isOn: Binding(get: { store.settings.minimapRotated ?? false }, set: { store.setMinimapRotated($0) }))

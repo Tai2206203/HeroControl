@@ -82,8 +82,8 @@ struct ControlSettings: Codable, Equatable {
         flags = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, flags[$0.key] ?? false) })
         cameraScale = cameraScale.isFinite ? min(2.3, max(1, cameraScale)) : 1
         if let hz = espReadHz, hz != 60 && hz != 120 { espReadHz = 60 }
-        if let v = minimapX { minimapX = v.isFinite ? min(0.8, max(0, v)) : 0.015 }
-        if let v = minimapY { minimapY = v.isFinite ? min(0.8, max(0, v)) : 0.02 }
+        if let v = minimapX { minimapX = v.isFinite ? min(1, max(0, v)) : 0.015 }
+        if let v = minimapY { minimapY = v.isFinite ? min(1, max(0, v)) : 0.02 }
         if let v = minimapSize { minimapSize = v.isFinite ? min(240, max(80, v)) : 150 }
         if let v = minimapWorldExtent { minimapWorldExtent = v.isFinite ? min(200, max(30, v)) : 60 }
         selectedSkins = selectedSkins.filter { UInt32($0.key) != nil && $0.value >= 0 && $0.value <= Int(UInt32.max) }

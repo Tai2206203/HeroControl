@@ -1,0 +1,65 @@
+HERO CONTROL 0.11.1 — BUILD 25
+
+MENU
+
+Thu gọn menu ngang tối đa 640×330pt và theo tỷ lệ màn hình; dọc tối đa
+360×440pt. Bỏ ảnh tướng phóng lớn làm nền/bìa, dùng nền gradient xanh đen,
+biểu tượng đơn giản, fade mở menu 180ms và nhấn sáng nhẹ. Chỉ vẽ hiệu ứng
+menu khoảng 20Hz khi mở. Bố cục điều khiển giữ các chức năng hiện có.
+
+ICON VÀ HP
+
+Icon nằm trong phần trên ESP box. Cả icon và vòng HP co theo chiều rộng box,
+không tràn ra ngoài; box quá nhỏ thì bỏ icon thay vì vẽ vượt khung.
+ESP HP nay vẽ vòng quanh icon, xanh khi nhiều máu, vàng ở khoảng nửa máu,
+đỏ khi thấp máu; độ dài cung theo tỷ lệ HP/maxHP. Bật HP sẽ hiện icon làm nền
+cho vòng ngay cả khi công tắc Icon tắt. Bỏ thanh HP ngang cũ.
+Mỗi ảnh minimap có vòng đỏ mỏng 1,2pt thể hiện lượng máu còn lại, độc lập
+công tắc HP của icon trong box. Khi HP/maxHP chưa xác minh, vẽ vòng xám nét
+đứt; không tự suy đoán maxHP hoặc hiển thị đầy máu giả.
+
+KÉO MINIMAP VÀ TỰ LƯU
+
+Menu nổi → ESP → CHỈNH KHUNG MINIMAP. Menu thu lại, xuất hiện khung kéo:
+- Kéo bên trong khung để di chuyển lên/xuống/trái/phải.
+- Kéo góc ↘ để đổi kích thước, 80–240pt và không vượt màn hình.
+- Thả tay để lưu. XONG kết thúc chỉnh. Hủy cử chỉ không lưu thay đổi dở dang.
+Vị trí lưu theo tỷ lệ màn hình, được chặn theo cạnh khung để không ra ngoài.
+App vẫn có slider căn vị trí/kích thước/hướng/world extent. Vị trí X/Y nay
+cho phép toàn miền 0–1, không giới hạn 0,8 như bản trước.
+Mọi công tắc vẫn tự lưu qua profile chung app/nút nổi. Nút khởi động ESP +
+reports chỉ bật master/reports, không bật lại toàn bộ lựa chọn ESP riêng.
+
+TỰ ĐỘNG ẨN MENU VÀ ESP
+
+Có công tắc rõ ràng “Tự động ẩn menu & ESP khi quay/chụp màn hình” trong app,
+và “TỰ ẨN QUAY/CHỤP: ON/OFF” dưới menu nổi. Dùng trường cấu hình cũ
+espCaptureProtected để giữ lựa chọn đã lưu.
+
+Sửa phạm vi bảo vệ: đưa cả canvas menu, nút nổi và lớp ESP vào cùng secure
+host dưới root view. Bản trước chỉ đặt ESP vào host nên menu không được bảo vệ.
+Khi thay chế độ, kích hoạt lại secureTextEntry; thử sao chép mask compositor
+thực tế từ lớp secure vào layer menu/ESP, có bắt exception và đọc lại giá trị.
+Không hard-code giá trị bit mask, không coi đọc lại thành công là kiểm thử
+chụp ảnh thành công. captureScope=menu_and_esp; captureLayerConfigured chỉ
+báo cấu hình mask; secureHostAvailable chỉ báo tìm thấy host.
+Theo dõi UIScreenCapturedDidChangeNotification và kiểm tra isCaptured trên
+mỗi nhịp vẽ. Khi phát hiện quay/mirror, ẩn toàn bộ overlay trên máy lẫn bản ghi;
+khi kết thúc sẽ hiện lại. Tắt công tắc thì bỏ auto-hide, chuyển về host thường
+và khôi phục mask gốc. Khi bật mà không có secure host, ẩn overlay an toàn;
+có thể tắt công tắc trong app để khôi phục hiển thị.
+
+Giới hạn: cơ chế secure canvas/mask là phụ thuộc UIKit/jailbreak. Windows
+không kiểm chứng được ảnh chụp/quay thật. Chưa bảo đảm hoạt động với mọi iOS,
+ReplayKit hay công cụ capture. Cần chụp ảnh và quay lại trên điện thoại để đối
+chiếu. Không dùng notification chụp xong để tuyên bố đã ngăn ảnh trước đó.
+Tham khảo hợp đồng UIKit và cơ chế secure layer trong mã nguồn Telegram:
+https://developer.apple.com/documentation/uikit/uiscreen/iscaptured
+https://developer.apple.com/documentation/uikit/uiapplication/userdidtakescreenshotnotification
+https://github.com/TelegramMessenger/Telegram-iOS/blob/master/submodules/UIKitRuntimeUtils/Source/UIKitRuntimeUtils/UIKitUtils.m
+
+CẬP NHẬT
+
+Git push, đợi CI, tắt overlay cũ và cài TIPA mới. Cài lại adapter và mở lại game
+để đồng bộ build/generation. Thử lần lượt bố cục ngang/dọc, kéo lưu minimap,
+HP đã biết/chưa biết và công tắc tự ẩn ON/OFF với ảnh chụp/quay thực tế.

@@ -18,6 +18,9 @@ struct OverlayState: Codable {
     let reports: FeatureCheckStatus?
     let displayLimitHz: Int?
     let overlayDrawFPS: Double?
+    var hiddenForCapture: Bool? = nil
+    var captureLayerConfigured: Bool? = nil
+    var captureScope: String? = nil
     var captureProtected: Bool? = nil
     var secureHostAvailable: Bool? = nil
     var screenCaptured: Bool? = nil

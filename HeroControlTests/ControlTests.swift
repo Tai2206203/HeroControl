@@ -2,6 +2,34 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    @MainActor
+    func testSavedEspChoicesAndMinimapSurviveRestartAndCombinedStart() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = ControlStore(directory: folder)
+        store.setFlag("DoroCheat.Reference.R1.Icon", true)
+        store.setFlag("DoroCheat.Reference.R1.Box", false)
+        store.setFlag("DoroCheat.Reference.R1.Unseen", true)
+        store.setFlag("DoroCheat.Reference.R1.HP", true)
+        store.setMinimap("x", 0.91)
+        store.setMinimap("y", 0.83)
+        store.setMinimap("size", 180)
+        store.setCaptureProtected(false)
+        XCTAssertNil(store.persistenceError)
+        let restored = ControlStore(directory: folder)
+        XCTAssertEqual(restored.settings, store.settings)
+        restored.prepareCombinedCheck()
+        XCTAssertEqual(restored.settings.flags["DoroCheat.Reference.R1.Icon"], true)
+        XCTAssertEqual(restored.settings.flags["DoroCheat.Reference.R1.Box"], false)
+        XCTAssertEqual(restored.settings.flags["DoroCheat.Reference.R1.Unseen"], true)
+        XCTAssertEqual(restored.settings.minimapX, 0.91)
+        XCTAssertEqual(restored.settings.minimapY, 0.83)
+        XCTAssertEqual(restored.settings.minimapSize, 180)
+        XCTAssertEqual(restored.settings.espCaptureProtected, false)
+        XCTAssertEqual(ControlStore(directory: folder).settings, restored.settings)
+    }
+
     func testMinimapAndCaptureOptionsSurviveProfileRoundTripAndNormalize() throws {
         var settings = ControlSettings()
         settings.espCaptureProtected = false

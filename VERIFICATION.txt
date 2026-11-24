@@ -1,3 +1,18 @@
+HERO CONTROL 0.11.1 — BUILD 25
+
+- 15 unittest Python qua; 130 ảnh offline vẫn đúng hash/catalog.
+- 8 fixture C qua, -std=c11 -Wall -Wextra -Werror. Fixture visual mới kiểm tra
+  màu xanh/vàng/đỏ theo HP, HP chưa biết/sai, badge không tràn box theo nhiều
+  kích thước, kéo minimap bị chặn ở cạnh, và chính sách bật/tắt auto-hide/lock.
+- Lua smoke và payload verification qua; không gọi máy chủ game.
+- Thêm XCTest mở lại ControlStore từ ổ đĩa: giữ Icon/HP/Unseen, Box đã tắt,
+  vị trí minimap >0,8, kích thước, công tắc capture và nút khởi động chung.
+- Project/plist, parser 9 Swift/3 Objective-C-header, shell/Python syntax qua.
+- Chưa chạy XCTest/Xcode tại Windows. Chưa thử menu/drag/HP trên iPhone.
+- Capture policy C chỉ kiểm tra logic ẩn toàn overlay. secure host và mask
+  compositor thực phải thử ảnh chụp, bản quay ON/OFF trên máy thật. Không
+  đánh đồng captureLayerConfigured với chặn capture đã được xác minh.
+
 HERO CONTROL 0.11.0 — BUILD 24
 
 - 15 unittest Python qua, gồm đủ 130 ảnh/ID duy nhất, tên, magic bytes,
