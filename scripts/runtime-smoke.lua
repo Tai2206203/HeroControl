@@ -43,7 +43,7 @@ assert(reply:find('"recordsTruncated":true',1,true),reply)
 assert(reply:find('receipt:2050',1,true),reply)
 assert(not reply:find('"id":"receipt:1"',1,true),reply)
 assert(not reply:find('"records":{}',1,true),reply)
-assert(prefs['DoroCheat.Reference.R2.CameraScale']==1.75)
+assert(prefs['DoroCheat.Reference.R2.CameraScale']==1) -- HUD owns camera, even when enabled.
 assert(prefs['DoroCheat.Reference.R1.Icon']==0)
 assert(prefs['DoroCheat.Reference.R1.Map']==0)
 assert(prefs['DoroCheat.Style.SelectedSkin.123']==nil)

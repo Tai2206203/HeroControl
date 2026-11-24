@@ -5,6 +5,7 @@ struct ContentView: View {
     @ObservedObject var store: ControlStore
     @ObservedObject var overlay: OverlayController
     @Environment(\.scenePhase) private var scenePhase
+    @State private var reportCopyMessage: String?
     @State private var showHeroIDs = false
     @State private var heroExportURL: URL?
     @State private var heroSearch = ""
@@ -16,7 +17,8 @@ struct ContentView: View {
     private static let appBackdrop: UIImage? = Bundle.main.url(forResource: "app-background", withExtension: "jpg", subdirectory: "Theme").flatMap { UIImage(contentsOfFile: $0.path) }
     private let accent = Color(red: 0.39, green: 0.88, blue: 0.78)
     private var reportStatus: FeatureCheckStatus? {
-        store.snapshot?.runtime?.reports ?? store.snapshot?.runtime?.historicalReports ?? overlay.state?.reports
+        if overlay.running, let reports = overlay.state?.reports { return reports }
+        return store.snapshot?.runtime?.reports ?? store.snapshot?.runtime?.historicalReports ?? overlay.state?.reports
     }
 
     var body: some View {
@@ -142,7 +144,7 @@ struct ContentView: View {
     private var runtimeCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("CHỨC NĂNG GAME GỐC", systemImage: "puzzlepiece.extension").font(.headline)
-            Text("Ảnh tướng và minimap dùng lớp ESP riêng với 130 ảnh đi kèm. Camera và truy vấn tố cáo vẫn dùng adapter game.")
+            Text("Camera và ESP chạy qua nút nổi độc lập. Adapter chỉ cần cho truy vấn lịch sử tố cáo từ máy chủ.")
             Text(store.snapshot?.runtime?.message ?? "Cài adapter khi game đang mở và khớp phiên bản. Sau đó đóng hoàn toàn, mở lại game rồi quay về đây kiểm tra.")
                 .foregroundStyle(.secondary)
             if let phase = store.snapshot?.runtime?.phase { Text("Trạng thái: \(phase)").font(.caption.monospaced()) }
@@ -350,7 +352,6 @@ struct ContentView: View {
     private var cameraControls: some View {
         VStack(alignment: .leading, spacing: 18) {
             Toggle("Bật camera xa", isOn: Binding(get: { store.settings.cameraEnabled == true }, set: { store.setCameraEnabled($0) }))
-                .disabled(!overlay.running && store.settings.gameRuntimeEnabled != true)
             HStack {
                 Text("CAMERA SCALE").font(.headline)
                 Spacer()
@@ -360,7 +361,7 @@ struct ContentView: View {
                 .accessibilityLabel("Hệ số camera")
             HStack { Text("1.00×"); Spacer(); Text("2.30×") }.font(.caption).foregroundStyle(.secondary)
             Button("Đặt lại camera 1.00×") { store.setCamera(1) }.buttonStyle(.bordered)
-            Text(overlay.state?.camera?.message ?? "Mở nút nổi, bật camera xa rồi vào trận tập để thử.")
+            Text(overlay.state?.camera?.message ?? "Mở nút nổi, bật camera xa rồi vào trận tập để thử. Camera không cần adapter.")
                 .font(.footnote).foregroundStyle(.secondary)
             if let report = overlay.state?.camera {
                 Text(report.code).font(.caption.monospaced())
@@ -380,8 +381,8 @@ struct ContentView: View {
                     .font(.footnote).foregroundStyle(.orange)
             }
             Text(reportStatus?.message ?? "Cài adapter và bật truy vấn lịch sử tố cáo.")
-            if store.snapshot?.runtime?.historicalReports != nil {
-                Text("Dữ liệu lần cuối: \(store.snapshot?.runtime?.timestamp ?? "chưa rõ"). Adapter hiện không phản hồi trực tiếp; đây là lịch sử đã lưu.")
+            if reportStatus?.runtimeResponding == false || (!overlay.running && store.snapshot?.runtime?.historicalReports != nil) {
+                Text("Dữ liệu lần cuối: \(reportStatus?.timestamp ?? store.snapshot?.runtime?.timestamp ?? "chưa rõ"). Adapter hiện không phản hồi trực tiếp; đây là lịch sử đã lưu.")
                     .font(.caption).foregroundStyle(.orange)
             }
             if let stage = overlay.state?.reports?.stage { Text("Bước đọc: \(stage)/9").font(.caption.monospaced()) }
@@ -396,7 +397,18 @@ struct ContentView: View {
             Picker("Thời gian bản ghi (UTC+7)", selection: Binding(get: { store.settings.reportsPeriod ?? "all" }, set: { store.setReportsPeriod($0) })) {
                 Text("Tất cả").tag("all");Text("Tuần này").tag("week");Text("Tháng này").tag("month")
             }.pickerStyle(.segmented)
-            Button("Truy vấn lại") { store.refreshReports() }
+            HStack {
+                Button("Truy vấn lại") { store.refreshReports() }
+                Button("Sao chép log tố cáo", systemImage: "doc.on.doc") {
+                    do {
+                        UIPasteboard.general.string = try store.reportDiagnosticsText(overlayState: overlay.state)
+                        reportCopyMessage = "Đã sao chép log tố cáo. Bạn có thể dán và gửi."
+                    } catch { reportCopyMessage = "Không tạo được log: \(error.localizedDescription)" }
+                }
+            }
+            if let reportCopyMessage { Text(reportCopyMessage).font(.caption).foregroundStyle(accent) }
+            if let error = reportStatus?.queryError, !error.isEmpty { Text("Lỗi truy vấn: \(error)").font(.caption) }
+            if let error = reportStatus?.mailError, !error.isEmpty { Text("Lỗi hộp thư: \(error)").font(.caption) }
             let reports = ReportHistory.filter(reportStatus?.records ?? [], period: store.settings.reportsPeriod ?? "all", now: (reportStatus?.serverTime).map { Date(timeIntervalSince1970: $0) } ?? Date())
             if !reports.isEmpty {
                 ForEach(reports) { report in

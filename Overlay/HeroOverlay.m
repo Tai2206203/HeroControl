@@ -126,7 +126,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.12.1", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.12.2", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -159,6 +159,8 @@ static void HCStop(NSString *message, BOOL failed) {
 @property(nonatomic) CGPoint startPoint;
 @property(nonatomic) CGPoint startBubble;
 @property(nonatomic) BOOL dragged;
+@property(nonatomic, copy) NSString *reportCopyMessage;
+@property(nonatomic) NSTimeInterval reportCopyUntil;
 - (void)reloadSettings;
 - (void)drawEsp;
 - (void)refreshEspSurface;
@@ -541,8 +543,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             [self target:@"flag:reports.enabled" rect:row];
             NSString *reportMessage=[HCReportsStatus[@"querySupported"] isEqual:@YES] ? HCReportsStatus[@"message"] : @"CHƯA TRUY VẤN MÁY CHỦ. Kích hoạt adapter trong app; cache rỗng không có nghĩa không bị tố cáo.";
             HCText(reportMessage ?: @"CHƯA XÁC ĐỊNH",CGRectMake(c.origin.x,c.origin.y+32,c.size.width,43),10,UIColor.blackColor,NO);
-            CGRect refresh=CGRectMake(c.origin.x,c.origin.y+77,c.size.width,22);
+            CGRect refresh=CGRectMake(c.origin.x,c.origin.y+77,c.size.width*0.45,22);
             HCText(@"TRUY VẤN LẠI",refresh,11,HCMenuAccent(),YES);[self target:@"reports-refresh" rect:refresh];
+            CGRect copy=CGRectMake(c.origin.x+c.size.width*0.48,c.origin.y+77,c.size.width*0.52,22);
+            HCText(self.reportCopyUntil>NSProcessInfo.processInfo.systemUptime ? self.reportCopyMessage : @"COPY LOG TỐ CÁO",copy,10,HCMenuAccent(),YES);
+            [self target:@"reports-copy" rect:copy];
             NSArray *periods=@[@"all",@"week",@"month"],*titles=@[@"TẤT CẢ",@"TUẦN NÀY",@"THÁNG NÀY"];
             NSString *period=self.settings[@"reportsPeriod"] ?: @"all";
             for(NSInteger i=0;i<3;i++) {
@@ -761,6 +766,25 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if ([target isEqual:@"camera"]) { [self cameraAt:point]; [self saveSettings]; return; }
         if (self.dragged || ![[self targetAt:point] isEqual:target]) return;
         if ([target isEqual:@"bubble"] || [target isEqual:@"close"]) [self toggleMenu];
+        else if ([target isEqual:@"reports-copy"]) {
+            NSDictionary *log=@{@"schemaVersion":@1,@"appVersion":@"0.12.2",@"appBuild":@29,
+                @"exportedAt":@([NSDate date].timeIntervalSince1970),@"generation":@HC_RUNTIME_GENERATION,
+                @"reportsEnabled":self.settings[@"flags"][@"reports.enabled"] ?: @NO,
+                @"runtimeEnabled":self.settings[@"gameRuntimeEnabled"] ?: @NO,
+                @"refreshID":self.settings[@"reportsRefreshID"] ?: @"",
+                @"reports":HCReportsStatus ?: @{},@"camera":HCCameraStatus ?: @{}};
+            NSData *data=[NSJSONSerialization dataWithJSONObject:log options:NSJSONWritingPrettyPrinted|NSJSONWritingSortedKeys error:NULL];
+            NSString *text=data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : nil;
+            self.reportCopyMessage=@"LỖI COPY — DÙNG APP";
+            @try {
+                if(text) {
+                    UIPasteboard.generalPasteboard.string=text;
+                    if([UIPasteboard.generalPasteboard.string isEqual:text]) self.reportCopyMessage=@"ĐÃ COPY LOG";
+                }
+            } @catch(NSException *exception) { (void)exception; }
+            self.reportCopyUntil=NSProcessInfo.processInfo.systemUptime+4;
+            [self setNeedsDisplay];
+        }
         else if ([target isEqual:@"cal-prev"] || [target isEqual:@"cal-next"]) {
             _calibrationPage+= [target isEqual:@"cal-next"] ? 1 : -1;[self setNeedsDisplay];
         }

@@ -119,7 +119,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         if ([previous[@"enabled"] isEqual:@YES] && ![previous[@"revision"] isEqual:_profileRevision]) {
             NSError *error=nil;
             if (!HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"enabled":@YES,@"revision":_profileRevision,@"settings":settings},path,&error)) {
-                [self emit:@"runtime_sync_failed" message:error.localizedDescription ?: @"Không đồng bộ được cấu hình vào container game." extra:nil];
+                [self emitReports:@{@"code":@"runtime_sync_failed",@"message":error.localizedDescription ?: @"Không đồng bộ được cấu hình vào container game.",@"records":@[],@"querySupported":@NO}];
                 return;
             }
         }
@@ -130,10 +130,20 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     _minimapProjectionUptime=[state[@"heartbeat"] doubleValue];_minimapProjectionPID=[state[@"pid"] intValue];
     NSString *message=state[@"message"] ?: @"Chưa có adapter game phản hồi. Cài adapter trong Hero Control rồi khởi động lại game.";
     if (!responding && [state[@"phase"] isEqual:@"active"]) message=@"Phản hồi adapter đã cũ. Không sử dụng mẫu này làm trạng thái hiện tại.";
-    [self emit:responding ? @"camera_game_runtime" : @"runtime_unavailable" message:message extra:nil];
-    [self emitEsp:@{@"code":responding ? @"esp_game_runtime" : @"runtime_unavailable",@"message":message,@"targets":@[]}];
-    NSDictionary *reports=responding && [state[@"reports"] isKindOfClass:NSDictionary.class] ? state[@"reports"] : nil;
-    [self emitReports:reports ?: @{@"code":@"runtime_unavailable",@"message":message,@"records":@[],@"querySupported":@NO}];
+    NSDictionary *lastReports=[state[@"reports"] isKindOfClass:NSDictionary.class] ? state[@"reports"] : nil;
+    NSMutableDictionary *reports=lastReports ? [lastReports mutableCopy] :
+        [@{@"code":@"runtime_unavailable",@"message":message,@"records":@[],@"querySupported":@NO} mutableCopy];
+    if(!responding && lastReports) {
+        reports[@"code"]=@"runtime_stale_reports";
+        reports[@"message"]=[NSString stringWithFormat:@"Dữ liệu tố cáo lần cuối (adapter hiện không phản hồi): %@",lastReports[@"message"] ?: @""];
+    }
+    reports[@"runtimeResponding"]=@(responding);
+    reports[@"runtimePhase"]=state[@"phase"] ?: @"missing";
+    reports[@"runtimeCode"]=state[@"code"] ?: @"runtime_missing";
+    reports[@"runtimeMessage"]=message;
+    for(NSString *key in @[@"runtimeBuild",@"generation",@"pid",@"sessionID",@"timestamp"])
+        if(state[key]) reports[key]=state[key];
+    [self emitReports:reports];
 }
 - (void)restore {
     [self restoreCamera]; [self releaseTarget];
@@ -290,15 +300,8 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             return;
         }
         BOOL runtimeMode=[settings[@"gameRuntimeEnabled"] isEqual:@YES];
-        if (runtimeMode) {
-            [self restoreCamera];
-            [self syncRuntime:settings now:now];
-            if (![flags[@"__ifxEnemyEspEnabledV1"] isEqual:@YES]) {
-                [self releaseTarget];
-                if (_timerHz!=10) { _timerHz=10;dispatch_source_set_timer(_timer,DISPATCH_TIME_NOW,100*NSEC_PER_MSEC,10*NSEC_PER_MSEC); }
-                return;
-            }
-        }
+        // Runtime is a report transport, never the owner of external camera/ESP.
+        if (runtimeMode) [self syncRuntime:settings now:now];
         if(!runtimeMode && now>=_nextRuntimeSync) {
             _nextRuntimeSync=now+1;
             NSString *directory=HCRuntimeFindDirectory();
@@ -308,7 +311,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         }
         id espFlag = [flags isKindOfClass:NSDictionary.class] ? flags[@"__ifxEnemyEspEnabledV1"] : nil;
         BOOL espEnabled = [espFlag isKindOfClass:NSNumber.class] && [espFlag doubleValue] == 1;
-        BOOL cameraEnabled = !runtimeMode && [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;
+        BOOL cameraEnabled = [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;
         BOOL reportsEnabled = !runtimeMode && [flags[@"reports.enabled"] isEqual:@YES];
         if (!reportsEnabled && _reportsActive) [self emitReports:@{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO}];
         _reportsActive = reportsEnabled;
@@ -326,7 +329,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         _espActive = espEnabled;
         if (!cameraEnabled) {
             BOOL wasActive = _hasWritten; [self restoreCamera];
-            if (!runtimeMode && !wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"] && ![_lastReport[@"code"] isEqual:@"camera_disabled"])
+            if (!wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"] && ![_lastReport[@"code"] isEqual:@"camera_disabled"])
                 [self emit:@"camera_disabled" message:@"Camera xa đang tắt." extra:nil];
             if (!espEnabled && !reportsEnabled) { [self releaseTarget]; _nextDiscovery = 0; return; }
         }

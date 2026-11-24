@@ -1,0 +1,7 @@
+Hero Control 0.12.2 — build 29
+
+Camera: khôi phục worker đọc/ghi và đọc lại camera độc lập trong nút nổi, kể cả khi chế độ adapter bật và ESP tắt. Adapter không còn điều khiển camera, không ghi đè thông báo camera bằng trạng thái adapter.
+Tố cáo: đối chiếu lại 217.lua gốc. Truy vấn lịch sử chạy riêng trước bước đọc hộp thư; lỗi khởi tạo/đọc mail không còn chặn truy vấn. Giữ kiểm tra đúng tài khoản, FIFO, timeout và chống trùng.
+Copy log: trong app → Tố cáo → Sao chép log tố cáo; trong menu nổi → Reports → COPY LOG TỐ CÁO. Log có lỗi monitor/mail/query/capture, nhịp truy vấn, số người chơi, gửi/nhận, tài khoản, phiên/build và camera. Không kèm toàn bộ danh mục tướng. Nếu clipboard của tiến trình HUD bị từ chối, dùng nút trong app.
+Cần cập nhật adapter và đóng hoàn toàn/mở lại game để nạp monitor 24 trong build 29. Camera độc lập chỉ cần nút nổi chạy.
+Chưa có thiết bị/Xcode SDK tại máy này để xác nhận hiệu ứng camera hoặc phản hồi máy chủ thật. Test host kiểm tra hồi quy chặn truy vấn do lỗi mail, không chứng minh máy chủ có trả lịch sử.

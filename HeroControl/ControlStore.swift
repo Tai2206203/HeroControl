@@ -257,6 +257,37 @@ final class ControlStore: ObservableObject {
         confirmedRevision = nil
         message = error.localizedDescription
     }
+    func reportDiagnosticsText(overlayState: OverlayState? = nil) throws -> String {
+        struct ReportDiagnostics: Encodable {
+            let schemaVersion = 1
+            let exportedAt: Date
+            let appVersion: String
+            let appBuild: String
+            let revision: String
+            let reportsEnabled: Bool
+            let runtimeEnabled: Bool
+            let refreshID: String?
+            let period: String
+            let runtime: GameRuntimeStatus?
+            let overlayReports: FeatureCheckStatus?
+            let camera: CameraStatus?
+            let backendMessage: String
+            let runtimeOperationMessage: String?
+        }
+        let value = ReportDiagnostics(exportedAt: Date(),
+            appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+            appBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",
+            revision: revision, reportsEnabled: settings.flags["reports.enabled"] == true,
+            runtimeEnabled: settings.gameRuntimeEnabled == true, refreshID: settings.reportsRefreshID,
+            period: settings.reportsPeriod ?? "all", runtime: snapshot?.runtime,
+            overlayReports: overlayState?.reports, camera: overlayState?.camera,
+            backendMessage: message, runtimeOperationMessage: runtimeOperationMessage)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return String(decoding: try encoder.encode(value), as: UTF8.self)
+    }
+
     func exportDiagnostics(overlayState: OverlayState? = nil) throws -> URL {
         struct Diagnostics: Encodable {
             let schemaVersion: Int

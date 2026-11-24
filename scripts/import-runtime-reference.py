@@ -15,6 +15,37 @@ def seven_bit(value):
     return bytes(result)
 
 
+def upgrade_complaint_script(script):
+    script = script.replace("if f[1]=='I' or (f[1]=='B' and not freshMatch) then", "if f[1]=='I' then")
+    script = script.replace('existing.version == 22', 'existing.version == 24').replace('version=22,', 'version=24,')
+    old_tick = """    m.mailReady=m.installMail()
+    m.scan('poll')
+    m.queryPulse()
+    m.notify()"""
+    new_tick = """    -- Mail is optional: a broken/unready mailbox must not block history queries.
+    m.queryPulse()
+    local mailOK,mailError=pcall(function()
+      m.mailReady=m.installMail()
+      m.scan('poll')
+    end)
+    m.mailError=mailOK and '' or clean(mailError)
+    m.notify()"""
+    assert script.count(old_tick) == 1
+    script = script.replace(old_tick, new_tick)
+    script = script.replace("      m.mailReady=m.installMail();m.scan('cached')", """      local mailOK,mailError=pcall(function() m.mailReady=m.installMail();m.scan('cached') end)
+      m.mailError=mailOK and '' or clean(mailError)""")
+    script = script.replace('  function m.queryPulse()\n', """  function m.queryPulse()
+    m.queryPulseCount=(m.queryPulseCount or 0)+1
+""")
+    script = script.replace('      local status=pollDonor()', """      local status=pollDonor()
+      m.lastQueryStatus=clean(status)
+      m.queryError=''""")
+    script = script.replace("    if not ok then m.queryStatus='Bộ theo dõi máy chủ chưa sẵn sàng: '..clean(err) end", "    if not ok then m.queryError=clean(err);m.queryStatus='Bộ theo dõi máy chủ chưa sẵn sàng: '..clean(err) end")
+    script = script.replace('        -- Stage a complete snapshot', '        pollingState.rosterPlayerCount=playerCount\n        -- Stage a complete snapshot')
+    script = script.replace('        pollingState.captureSequence = pollingState.captureSequence + 1', '        pollingState.rosterEligibleCount=#capturedPlayers\n        pollingState.captureSequence = pollingState.captureSequence + 1')
+    return script
+
+
 def import_reference(source, destination):
     analysis = source / 'analysis_heroskin/modified'
     destination.mkdir(parents=True, exist_ok=True)
@@ -32,13 +63,12 @@ def import_reference(source, destination):
             old = script.encode('utf8')
             condition = "if f[1]=='I' or (f[1]=='B' and not freshMatch) then"
             assert script.count(condition) == 1
-            updated = script.replace(condition, "if f[1]=='I' then")
-            updated = updated.replace('existing.version == 22', 'existing.version == 23').replace('version=22,', 'version=23,')
+            updated = upgrade_complaint_script(script)
             before = seven_bit(len(old)) + old
             after = updated.encode('utf8')
             assert payload.count(before) == 1, 'Donor Lua string does not match patch'
             payload = payload.replace(before, seven_bit(len(after)) + after, 1)
-            (destination / 'ComplaintHistory.lua').write_text(updated, encoding='utf8')
+            (destination / 'ComplaintHistory.lua').write_text(updated, encoding='utf8', newline='\n')
         filename = name + '.patch'
         (destination / filename).write_bytes(payload)
         entries.append({'file': filename, 'sourceSHA256': original,
@@ -47,7 +77,7 @@ def import_reference(source, destination):
     manifest = {'schemaVersion': 1, 'unityUUID': '298E718A-DA06-33B8-8253-910447B649E3',
                 'patches': entries, 'historyScope': 'server_available_per_known_player',
                 'allServerHistoryGuaranteed': False}
-    (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf8')
+    (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf8', newline='\n')
     print('Imported both decoded patches; original reference files unchanged.')
 
 

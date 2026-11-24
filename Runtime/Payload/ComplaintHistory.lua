@@ -1,9 +1,9 @@
 -- Local receipt ledger and Chap_To server-history monitoring for this account.
 local globalKey = 'DoroCheatCheckToR9'
 local existing = rawget(_G, globalKey)
-if type(existing) == 'table' and existing.version == 23 then return 'OK' end
+if type(existing) == 'table' and existing.version == 24 then return 'OK' end
 
-local m = {version=23, records={}, seen={}, pending=0, error='', account=nil,staleMail=setmetatable({},{__mode='k'})}
+local m = {version=24, records={}, seen={}, pending=0, error='', account=nil,staleMail=setmetatable({},{__mode='k'})}
 local floor = math.floor
 local function clean(v)
   return tostring(v or ''):gsub('[\t\r\n%z]', ' '):sub(1, 2000)
@@ -194,9 +194,13 @@ end
 function m.tick()
   local ok,err=pcall(function()
     if not m.refresh() or not m.enabled then return end
-    m.mailReady=m.installMail()
-    m.scan('poll')
+    -- Mail is optional: a broken/unready mailbox must not block history queries.
     m.queryPulse()
+    local mailOK,mailError=pcall(function()
+      m.mailReady=m.installMail()
+      m.scan('poll')
+    end)
+    m.mailError=mailOK and '' or clean(mailError)
     m.notify()
   end)
   if not ok then fail(err) end
@@ -234,7 +238,8 @@ function m.command(command)
       if not now then return 'Chưa đọc được giờ máy chủ; chưa bật theo dõi.' end
       if not m.enabled then m.api.set(key('Since'),now) end
       m.api.set(key('Enabled'),1);m.enabled=true;m.since=m.api.get(key('Since'),now)
-      m.mailReady=m.installMail();m.scan('cached')
+      local mailOK,mailError=pcall(function() m.mailReady=m.installMail();m.scan('cached') end)
+      m.mailError=mailOK and '' or clean(mailError)
       if m.querySetEnabled then m.querySetEnabled(true) end
       m.queryPulse()
       local text='Đã bật theo dõi tố cáo theo Chap_To. Bật trước khi kết thúc trận để lấy mốc cũ; có dữ liệu mới từ máy chủ sẽ báo sau trận. /checkto day để xuất.'
@@ -717,6 +722,7 @@ local function captureCandidates()
         if allPlayers == nil then error('player_list') end
         local playerCount = tonumber(allPlayers.Count)
         if playerCount == nil or playerCount < 0 or playerCount > 32 then error('player_count') end
+        pollingState.rosterPlayerCount=playerCount
         -- Stage a complete snapshot before mutating the cache: game objects can
         -- disappear during loading, and a failed read must not partially append.
         local capturedPlayers, capturedByIdentifier = {}, {}
@@ -739,6 +745,7 @@ local function captureCandidates()
                 end
             end
         end
+        pollingState.rosterEligibleCount=#capturedPlayers
         pollingState.captureSequence = pollingState.captureSequence + 1
         local currentByIdentifier = {}
         for _, captured in ipairs(capturedPlayers) do
@@ -965,6 +972,7 @@ end)()
   end
 
   function m.queryPulse()
+    m.queryPulseCount=(m.queryPulseCount or 0)+1
     local ok,err=pcall(function()
       if m.retired or not m.enabled then return end
       consume()
@@ -993,6 +1001,8 @@ end)()
         ready=true
       end
       local status=pollDonor()
+      m.lastQueryStatus=clean(status)
+      m.queryError=''
       -- pollDonor normally drains records for the native Chap_To UI. Our
       -- callback already consumed them; keep this path for synchronous replies.
       if status:sub(1,2)=='R|' or status:sub(1,2)=='B|' then
@@ -1016,7 +1026,7 @@ end)()
         m.queryStatus=m.api.battle() and 'Game đang chặn truy vấn khi giao tranh; sẽ thử lại sau trận.' or 'Chưa gửi được truy vấn tố cáo.'
       end
     end)
-    if not ok then m.queryStatus='Bộ theo dõi máy chủ chưa sẵn sàng: '..clean(err) end
+    if not ok then m.queryError=clean(err);m.queryStatus='Bộ theo dõi máy chủ chưa sẵn sàng: '..clean(err) end
   end
 
   function m.stopQuery()

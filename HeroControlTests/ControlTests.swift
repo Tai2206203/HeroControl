@@ -158,6 +158,25 @@ final class ControlTests: XCTestCase {
         XCTAssertEqual(store.revision, "native-edit-revision")
         XCTAssertEqual(ControlStore(directory: folder).revision, store.revision)
     }
+    @MainActor
+    func testReportCopyLogRetainsFailureDiagnosticsWithoutHeroCatalog() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = ControlStore(directory: folder)
+        let data = Data(#"{"reports":{"code":"reports_query_error","message":"failed","candidateCaptureError":"player_center","queryError":"network_wrapper_missing","mailError":"mail_list_not_ready","lastQueryStatus":"empty","queryPulseCount":3,"rosterPlayerCount":10,"records":[]}}"#.utf8)
+        let overlay = try JSONDecoder().decode(OverlayState.self, from: data)
+        let text = try store.reportDiagnosticsText(overlayState: overlay)
+        let log = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+        let reports = try XCTUnwrap(log["overlayReports"] as? [String: Any])
+        XCTAssertEqual(reports["queryError"] as? String, "network_wrapper_missing")
+        XCTAssertEqual(reports["mailError"] as? String, "mail_list_not_ready")
+        XCTAssertEqual(reports["candidateCaptureError"] as? String, "player_center")
+        XCTAssertEqual(reports["queryPulseCount"] as? Int, 3)
+        XCTAssertNil(log["heroes"])
+        XCTAssertNotNil(log["exportedAt"])
+    }
+
     func testRuntimeHistoryMetadataDecodesWithoutClaimingCompleteness() throws {
         let data = Data(#"{"phase":"active","responding":true,"runtimeBuild":"20","effectsVerified":false,"reports":{"code":"server_history_monitoring","message":"waiting","querySupported":true,"completeHistoryGuaranteed":false,"sentRequestCount":5,"receivedResponseCount":4,"candidateCount":10,"records":[]}}"#.utf8)
         let state = try JSONDecoder().decode(GameRuntimeStatus.self, from: data)

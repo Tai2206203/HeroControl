@@ -64,7 +64,7 @@ function HeroControlRuntimePulse(config, directory)
         assert(prefs.GetInt(key,-1)==(effective and 1 or 0),'flag_readback:'..key)
       end
     end
-    local scale=settings.cameraEnabled and settings.cameraScale or 1.0
+    local scale=1.0 -- Camera is owned by the independent HUD worker; avoid two writers.
     prefs.SetFloat('DoroCheat.Reference.R2.CameraScale',scale)
     assert(math.abs(prefs.GetFloat('DoroCheat.Reference.R2.CameraScale',0)-scale)<0.0001,'camera_readback')
     -- Retired features are forced off even for a legacy profile.
@@ -125,6 +125,11 @@ function HeroControlRuntimePulse(config, directory)
           reportMessage='Chưa có người chơi để truy vấn. Bật check tố cáo trước khi vào trận có người chơi thật và giữ game mở để thu thập danh sách. Chưa thể kết luận có hoặc không bị tố cáo.'
         end
       end
+      if monitor.queryError and monitor.queryError~='' then
+        reportCode='reports_query_error';reportMessage='Lỗi truy vấn tố cáo: '..tostring(monitor.queryError)
+      end
+      if monitor.error and monitor.error~='' then reportMessage=reportMessage..' Lỗi monitor: '..tostring(monitor.error) end
+      if monitor.mailError and monitor.mailError~='' then reportMessage=reportMessage..' Lỗi hộp thư: '..tostring(monitor.mailError) end
       if transport.transportFault then reportCode='reports_transport_fault' end
     end
     local reports={code=reportCode,
@@ -136,6 +141,11 @@ function HeroControlRuntimePulse(config, directory)
       accountID=monitor.account,sentRequestCount=transport.sentRequestCount or 0,
       receivedResponseCount=transport.receivedResponseCount or 0,
       candidateCaptureError=tostring(polling.captureError or ''),captureSequence=polling.captureSequence or 0,
+      monitorVersion=monitor.version,monitorError=tostring(monitor.error or ''),mailError=tostring(monitor.mailError or ''),
+      queryError=tostring(monitor.queryError or ''),queryStatus=tostring(monitor.queryStatus or ''),
+      queryPulseCount=monitor.queryPulseCount or 0,lastQueryStatus=tostring(monitor.lastQueryStatus or ''),
+      rosterPlayerCount=polling.rosterPlayerCount or 0,rosterEligibleCount=polling.rosterEligibleCount or 0,
+      mailReady=monitor.mailReady or false,monitorEnabled=monitor.enabled or false,
       candidateCount=#(polling.candidates or {}),transportFault=transport.transportFault or false,
       recordsTruncated=#retained>#records,
       retainedRecordCount=#(monitor.records or {}),
