@@ -1,0 +1,20 @@
+HERO CONTROL 0.10.2 — BUILD 22
+
+Bấm “Danh sách ID và tên tướng” trên màn hình chính. Mở game/adapter và bấm
+“Cập nhật danh sách”. Danh sách đọc danh mục game và thêm ID từ mẫu ESP hiện
+tại, sắp theo ID, hỗ trợ tìm ID/tên và sao chép chữ. ID ESP là mẫu hiện tại,
+không phải lịch sử tích lũy mọi trận. Chưa có dữ liệu thì không tạo danh sách giả.
+
+Bấm “Xuất danh sách CSV” để lưu/chia sẻ HeroControl-hero-icons.csv, mở bằng
+Excel UTF-8 (có BOM). Các cột: hero_id, hero_name, image_file. Tên chưa đọc
+được để trống; có thể tự điền. Mỗi ID chỉ xuất một dòng. Chuẩn bị ảnh PNG
+đặt đúng ID, ví dụ 123.png; tên tướng dùng để đối chiếu, không dùng làm khóa.
+Danh mục từ game có thể chưa đầy đủ/chưa có tên hoặc chưa được bản địa hóa.
+
+Phần đọc tên là tùy chọn: thiếu trường tên không làm hỏng danh sách ID/skin.
+Build này bổ sung công cụ lấy danh sách, chưa có chức năng nhập ảnh của bạn
+hoặc thay renderer icon/minimap. Sau khi có bộ ảnh sẽ bổ sung ánh xạ/nạp ảnh.
+
+Sau git push và CI thành công, cài TIPA mới. Để dùng mã đọc tên mới trong game,
+cài lại adapter rồi đóng hẳn và mở lại game. Xem VERIFICATION.txt để biết các
+kiểm tra cục bộ và phần cần CI/iPhone xác nhận.

@@ -138,7 +138,13 @@ function HeroControlRuntimePulse(config, directory)
           assert(heroID and skinID,'catalog_id_unavailable')
           local hero=runtime.byHero[heroID]
           if not hero then
-            hero={id=heroID,name=tostring(entry.szHeroName or ('Hero '..tostring(heroID))),skins={}}
+            local heroName=''
+            -- Optional reflection fields must not discard every known ID.
+            pcall(function()
+              local candidate=entry.szHeroName
+              if candidate then heroName=tostring(candidate) end
+            end)
+            hero={id=heroID,name=heroName,skins={}}
             runtime.byHero[heroID]=hero
           end
           local name='Skin '..tostring(skinID)

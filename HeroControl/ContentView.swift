@@ -5,6 +5,9 @@ struct ContentView: View {
     @ObservedObject var store: ControlStore
     @ObservedObject var overlay: OverlayController
     @Environment(\.scenePhase) private var scenePhase
+    @State private var showHeroIDs = false
+    @State private var heroExportURL: URL?
+    @State private var heroSearch = ""
     @State private var showReset = false
     @State private var showConnection = false
     @State private var showKernelCheck = false
@@ -23,6 +26,8 @@ struct ContentView: View {
                     runtimeCard
                     combinedCheck
                     statusCard
+                    Button("Danh sách ID và tên tướng", systemImage: "list.number") { showHeroIDs = true }
+                        .buttonStyle(.bordered)
                     groupPicker
                     controls
                     if let error = store.persistenceError { Text(error).foregroundStyle(.orange).font(.footnote) }
@@ -60,6 +65,9 @@ struct ContentView: View {
             .confirmationDialog("Đặt lại tất cả lựa chọn trên ứng dụng?", isPresented: $showReset, titleVisibility: .visible) {
                 Button("Đặt lại", role: .destructive) { store.reset() }
             } message: { Text("Muốn đưa game về cấu hình này, cần bấm Áp dụng sau khi kết nối backend.") }
+            .sheet(isPresented: $showHeroIDs, onDismiss: {
+                if let url = heroExportURL { shareItem = ShareItem(url: url); heroExportURL = nil }
+            }) { heroIDSheet }
             .sheet(isPresented: $showConnection) { connectionDetails }
             .sheet(isPresented: $showKernelCheck) { KernelDiagnosticsView(store: store, overlay: overlay) }
             .sheet(item: $shareItem) { ActivitySheet(items: [$0.url]) }
@@ -73,6 +81,51 @@ struct ContentView: View {
                 }
             }
         }.tint(accent)
+    }
+
+    private var heroIconEntries: [HeroIconEntry] {
+        HeroIconEntry.collect(heroes: store.snapshot?.heroes ?? [],
+            observedIDs: (overlay.state?.esp?.targets ?? []).map { $0.heroID })
+    }
+    private var heroIDSheet: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("Danh mục đọc từ game và ID trong mẫu ESP hiện tại. Tên trống nghĩa là chưa đọc được tên; danh sách có thể chưa đầy đủ.")
+                        .font(.footnote)
+                    Text("Chuẩn bị ảnh dạng ID.png, ví dụ 123.png. Bước này xuất danh sách; bộ nạp ảnh sẽ được bổ sung sau khi bạn chuẩn bị ảnh.")
+                        .font(.footnote)
+                    Button("Cập nhật danh sách") { Task { await store.refresh(); await overlay.refresh() } }
+                        .disabled(store.busy)
+                    if let error = store.snapshot?.runtime?.catalogError {
+                        Text("Lỗi đọc danh mục: \(error)").foregroundStyle(.orange)
+                    }
+                    Button("Xuất danh sách CSV (ID, tên, tên ảnh)") {
+                        do {
+                            let url = FileManager.default.temporaryDirectory.appendingPathComponent("HeroControl-hero-icons.csv")
+                            try Data(HeroIconEntry.csv(heroIconEntries).utf8).write(to: url, options: .atomic)
+                            heroExportURL = url
+                            showHeroIDs = false
+                            exportError = nil
+                        } catch { exportError = error.localizedDescription }
+                    }.disabled(heroIconEntries.isEmpty)
+                }
+                Section("\(heroIconEntries.count) ID đã đọc") {
+                    if heroIconEntries.isEmpty {
+                        Text("Mở game và adapter, chờ đọc danh mục rồi cập nhật. Nếu adapter chưa có dữ liệu, mở nút nổi vào trận để lấy ID từ ESP.")
+                    }
+                    ForEach(heroIconEntries.filter { heroSearch.isEmpty || String($0.id).contains(heroSearch) || $0.name.localizedCaseInsensitiveContains(heroSearch) }) { hero in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(hero.id) — \(hero.name.isEmpty ? "Chưa đọc được tên" : hero.name)")
+                            Text(hero.imageFile).font(.caption.monospaced()).foregroundStyle(.secondary)
+                        }.textSelection(.enabled)
+                    }
+                }
+            }
+            .searchable(text: $heroSearch, prompt: "Tìm ID hoặc tên tướng")
+            .navigationTitle("ID và tên tướng")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Đóng") { showHeroIDs = false } } }
+        }
     }
 
     private var runtimeCard: some View {

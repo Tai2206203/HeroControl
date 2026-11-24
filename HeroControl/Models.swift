@@ -266,3 +266,24 @@ struct BackendExchangeTrace: Codable {
     var responsePrefixHex: String?
     var decodingError: String?
 }
+
+// A missing name stays explicit; IDs remain usable as future image filenames.
+struct HeroIconEntry: Identifiable {
+    let id: UInt32
+    let name: String
+    var imageFile: String { "\(id).png" }
+    static func collect(heroes: [HeroChoice], observedIDs: [Int]) -> [HeroIconEntry] {
+        var values: [UInt32: String] = [:]
+        for hero in heroes where hero.id > 0 { values[hero.id] = hero.name }
+        for number in observedIDs {
+            if let id = UInt32(exactly: number), id > 0, values[id] == nil { values[id] = "" }
+        }
+        return values.keys.sorted().map { HeroIconEntry(id: $0, name: values[$0] ?? "") }
+    }
+    static func csv(_ entries: [HeroIconEntry]) -> String {
+        func quote(_ value: String) -> String { "\"" + value.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }
+        return "\u{FEFF}hero_id,hero_name,image_file\r\n" + entries.map {
+            "\($0.id),\(quote($0.name)),\(quote($0.imageFile))\r\n"
+        }.joined()
+    }
+}

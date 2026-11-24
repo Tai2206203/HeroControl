@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define HC_RUNTIME_BUILD "21"
+#define HC_RUNTIME_BUILD "22"
 #ifndef HC_RUNTIME_GENERATION
 #define HC_RUNTIME_GENERATION "development"
 #endif

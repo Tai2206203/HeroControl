@@ -1,3 +1,13 @@
+HERO CONTROL 0.10.2 — BUILD 22: DANH SÁCH ID/TÊN TƯỚNG
+
+- 14 unittest Python, validate-project và payload verification qua.
+- Lua 5.3 smoke test qua, thêm tình huống trường tên tướng không tồn tại:
+  vẫn thu được ID 599, không lỗi toàn bộ catalog và không bịa tên.
+- Kiểm tra cú pháp Swift qua. Thêm XCTest hợp nhất/khử ID trùng, bỏ ID sai,
+  giữ tên chưa biết trống, tên ảnh theo ID và CSV UTF-8 có escape dấu ngoặc kép.
+- Chưa chạy XCTest/Xcode hoặc thử giao diện/xuất CSV trên iPhone tại Windows.
+  Cần CI và thiết bị xác nhận. Build chưa có nạp bộ ảnh icon do người dùng cung cấp.
+
 BỔ SUNG SAU LOG CI BUILD 21
 
 - Log Xcode 16.4 đã biên dịch Swift và chạy 24 XCTest; 23 test qua,

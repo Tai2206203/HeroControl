@@ -49,6 +49,21 @@ assert(prefs['DoroCheat.Style.SelectedSkin.123']==nil)
 assert(prefs['DoroCheat.Reference.R2.CameraScale']==1)
 assert(not monitor.enabled)
 assert(reply:find('"records":[]',1,true),reply)
+-- An absent reflected hero-name field must preserve usable numeric IDs.
+HeroControlNativeRuntime.catalogReady=false
+HeroControlNativeRuntime.catalog={}
+local previousEnumerator=bin.GetEnumerator
+function bin:GetEnumerator()
+  local e=previousEnumerator(self)
+  e.Current.Value=setmetatable({dwHeroID=599,dwSkinID=1,szSkinName='Skin'},
+    {__index=function(_,key) error('missing reflected field: '..key) end})
+  return e
+end
+reply=HeroControlRuntimePulse(config,'/fixture')
+assert(not HeroControlNativeRuntime.catalogError,reply)
+assert(#HeroControlNativeRuntime.catalog==1,reply)
+assert(HeroControlNativeRuntime.catalog[1].id==599)
+assert(HeroControlNativeRuntime.catalog[1].name=='')
 config.settings=nil
 reply=HeroControlRuntimePulse(config,'/fixture')
 assert(reply:find('"phase":"failed"',1,true),reply)

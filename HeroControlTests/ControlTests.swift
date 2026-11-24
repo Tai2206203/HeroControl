@@ -2,6 +2,18 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    func testHeroIconDirectoryMergesUnknownIDsAndEscapesCSV() {
+        let entries = HeroIconEntry.collect(heroes: [HeroChoice(id: 123, name: "Tên, \"tướng\"", skins: [])],
+                                           observedIDs: [123, 599, 599, -1, 0])
+        XCTAssertEqual(entries.map { $0.id }, [123, 599])
+        XCTAssertEqual(entries[1].name, "")
+        XCTAssertEqual(entries[1].imageFile, "599.png")
+        let csv = HeroIconEntry.csv(entries)
+        XCTAssertTrue(csv.hasPrefix("\u{FEFF}hero_id,hero_name,image_file\r\n"))
+        XCTAssertTrue(csv.contains("123,\"Tên, \"\"tướng\"\"\",\"123.png\"\r\n"))
+        XCTAssertTrue(csv.contains("599,\"\",\"599.png\"\r\n"))
+    }
+
     @MainActor
     func testRejectedInstallPreservesRuntimeDiagnostics() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
