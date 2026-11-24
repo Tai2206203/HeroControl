@@ -1,3 +1,14 @@
+HERO CONTROL 0.7.1 — BUILD 17
+
+Regression auto-view +0x512, projection dirty +0x510 và ma trận thay đổi
+giữa hai lần đọc qua trên fixture C biên dịch -Wall -Wextra -Werror.
+Remote CString qua trang, trang kế không đọc được, chuỗi quá dài và tràn
+địa chỉ đều qua. Camera fixture và 11 kiểm thử Python qua.
+Xem CAP_NHAT_0.7.1.txt. Xcode/iPhone SDK/XCTest chờ GitHub Actions.
+Chưa kiểm chứng ESP bản sửa trên iPhone; camera build 16 do người dùng xác nhận.
+
+LỊCH SỬ:
+
 HERO CONTROL 0.7.0 — BUILD 16
 
 Camera + ESP portable C đã biên dịch/thực thi bằng Zig 0.15.2/Clang

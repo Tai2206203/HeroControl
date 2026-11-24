@@ -14,6 +14,8 @@ typedef struct {
     uint64_t framework, manager, nativeCamera;
     float hostX, hostZ;
     bool hasHostPosition, matricesValid;
+    int matrixStage;
+    uint8_t viewMode, projectionDirty;
     HCEspTarget targets[HC_ESP_MAX_TARGETS];
 } HCEspFrame;
 enum { HC_ESP_OK, HC_ESP_NOT_READY, HC_ESP_BAD_LAYOUT, HC_ESP_READ_FAILED, HC_ESP_MATRICES_PENDING };
@@ -26,25 +28,41 @@ static inline bool HCEspProject(const float view[16], const float projection[16]
     *outX = (clip[0]/clip[3]+1)*0.5f; *outY = (1-clip[1]/clip[3])*0.5f;
     return isfinite(*outX) && isfinite(*outY) && *outX > -0.5f && *outX < 1.5f && *outY > -0.5f && *outY < 1.5f;
 }
-static inline bool HCEspMatrices(HCCameraMemory m, uint64_t base, uint64_t *nativeCamera, float view[16], float projection[16]) {
+static inline bool HCEspMatrices(HCCameraMemory m, uint64_t base, HCEspFrame *frame, float view[16], float projection[16]) {
     uint64_t klass=0,parent=0,fields=0,camera=0,main=0,mainClass=0,native=0;
-    uint8_t dirtyView=1,dirtyProjection=1,afterView=1,afterProjection=1;
+    uint8_t viewMode=255,dirtyProjection=255,afterView=255,afterProjection=255;
+    frame->matrixStage=1;frame->viewMode=255;frame->projectionDirty=255;
     if (!m.read(m.context,base+HC_CAMERA_TYPE_RVA,&klass,8) || !HCCameraName(m,klass,"CameraSystem") ||
         !m.read(m.context,klass+0x58,&parent,8) || !HCCameraName(m,parent,"MonoSingleton`1") ||
         !m.read(m.context,parent+0xB8,&fields,8) || !HCCameraPointer(fields) ||
-        !m.read(m.context,fields,&camera,8) || !HCCameraPointer(camera) ||
-        !m.read(m.context,camera+0x108,&main,8) || !HCCameraPointer(main) ||
-        !m.read(m.context,main,&mainClass,8) || !HCCameraName(m,mainClass,"Camera") ||
-        !m.read(m.context,main+8,&native,8) || !HCCameraPointer(native)) return false;
-    *nativeCamera=native;
+        !m.read(m.context,fields,&camera,8) || !HCCameraPointer(camera)) return false;
+    frame->matrixStage=2;
+    if (!m.read(m.context,camera+0x108,&main,8) || !HCCameraPointer(main) ||
+        !m.read(m.context,main,&mainClass,8) || !HCCameraName(m,mainClass,"Camera")) return false;
+    frame->matrixStage=3;
+    if (!m.read(m.context,main+8,&native,8) || !HCCameraPointer(native)) return false;
+    frame->nativeCamera=native;
     // Native getters in this exact module return Camera+0x80 / +0xC0 after
-    // refreshing their caches. Never invoke Unity functions from our process.
-    if (!m.read(m.context,native+0x512,&dirtyView,1) || !m.read(m.context,native+0x510,&dirtyProjection,1) || dirtyView || dirtyProjection ||
+    // refreshing their caches. +0x512 is AUTO-VIEW MODE, not a dirty flag:
+    // 0xAAC0ACC recomputes when it is 1, without clearing it on return.
+    // +0x510 is projection dirty (0xAABE2DC explicitly clears it).
+    // Accept either view mode; double-read the matrices to reject torn samples.
+    frame->matrixStage=4;
+    if (!m.read(m.context,native+0x512,&viewMode,1) || !m.read(m.context,native+0x510,&dirtyProjection,1)) return false;
+    frame->viewMode=viewMode;frame->projectionDirty=dirtyProjection;
+    if (viewMode>1 || dirtyProjection) return false;
+    frame->matrixStage=5;
+    float viewAgain[16], projectionAgain[16];
+    if (
         !m.read(m.context,native+0x80,view,64) || !m.read(m.context,native+0xC0,projection,64) ||
-        !m.read(m.context,native+0x512,&afterView,1) || !m.read(m.context,native+0x510,&afterProjection,1) || afterView || afterProjection) return false;
+        !m.read(m.context,native+0x80,viewAgain,64) || !m.read(m.context,native+0xC0,projectionAgain,64) ||
+        !m.read(m.context,native+0x512,&afterView,1) || !m.read(m.context,native+0x510,&afterProjection,1) ||
+        afterView!=viewMode || afterProjection || memcmp(view,viewAgain,64) || memcmp(projection,projectionAgain,64)) return false;
+    frame->matrixStage=6;
     for(int i=0;i<16;i++) if(!isfinite(view[i]) || !isfinite(projection[i]) || fabsf(view[i])>1e7f || fabsf(projection[i])>1e7f) return false;
-    return fabsf(view[15]-1)<0.05f && fabsf(view[3])<0.01f && fabsf(view[7])<0.01f && fabsf(view[11])<0.01f &&
-        fabsf(projection[0])>0.001f && fabsf(projection[5])>0.001f;
+    if (!(fabsf(view[15]-1)<0.05f && fabsf(view[3])<0.01f && fabsf(view[7])<0.01f && fabsf(view[11])<0.01f &&
+        fabsf(projection[0])>0.001f && fabsf(projection[5])>0.001f)) return false;
+    frame->matrixStage=7;return true;
 }
 static inline void HCEspCooldowns(HCCameraMemory m, uint64_t actor, int values[3]) {
     // Visual SkillSlot.getCurSkillCD constructs a CrypticInt32 from this plain
@@ -65,6 +83,7 @@ static inline void HCEspCooldowns(HCCameraMemory m, uint64_t actor, int values[3
 }
 static inline int HCEspRead(HCCameraMemory m,uint64_t base,bool unseenOnly,HCEspFrame *frame) {
     *frame=(HCEspFrame){0};
+    frame->viewMode=frame->projectionDirty=255;
     uint64_t klass=0,parent=0,fields=0,root=0,manager=0,host=0,player=0,list=0,array=0,length=0;
     int32_t size=0;
     if(!m.read || !base || base>UINT64_MAX-HC_KYRIOS_TYPE_RVA) return frame->status=HC_ESP_BAD_LAYOUT;
@@ -92,7 +111,7 @@ static inline int HCEspRead(HCCameraMemory m,uint64_t base,bool unseenOnly,HCEsp
        !m.read(m.context,array+0x10,&length,8) || length<(uint64_t)size || length>256) return frame->status=HC_ESP_READ_FAILED;
     frame->listCount=size;
     float view[16]={0},projection[16]={0};
-    frame->matricesValid=HCEspMatrices(m,base,&frame->nativeCamera,view,projection);
+    frame->matricesValid=HCEspMatrices(m,base,frame,view,projection);
     for(int i=0;i<size && frame->count<HC_ESP_MAX_TARGETS;i++) {
         uint64_t actor=0,value=0;uint8_t visible=0;HCEspTarget t={0};int32_t position[3]={0};
         if(!m.read(m.context,array+0x18+i*16+8,&actor,8) || !HCCameraPointer(actor) || !m.read(m.context,actor,&klass,8) ||

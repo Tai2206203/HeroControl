@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 typedef struct { uint64_t address; unsigned char bytes[2048]; } EspRegion;
-typedef struct { EspRegion regions[30]; int reads, sizeReads; bool mutate; } EspFixture;
+typedef struct { EspRegion regions[30]; int reads, sizeReads, viewReads; bool mutate, mutateView; } EspFixture;
 static bool readEspMemory(void *ctx,uint64_t address,void *out,size_t size) {
     EspFixture *f=ctx; f->reads++;
     for(int i=0;i<30;i++) {
@@ -11,6 +11,7 @@ static bool readEspMemory(void *ctx,uint64_t address,void *out,size_t size) {
         if(address>=r->address && address-r->address<=sizeof(r->bytes) && size<=sizeof(r->bytes)-(address-r->address)) {
             memcpy(out,r->bytes+(address-r->address),size);
             if(address==0x15010 && ++f->sizeReads>1 && f->mutate) { int32_t bad=63;memcpy(out,&bad,4); }
+            if(address==0x26080 && ++f->viewReads>1 && f->mutateView) { float changed=2;memcpy(out,&changed,4); }
             return true;
         }
     }
@@ -67,13 +68,20 @@ int main(void) {
     f.regions[10].bytes[0x1DD]=0;
     assert(HCEspRead(bus,0x10000000,true,&frame)==HC_ESP_OK && frame.count==1);
     f.regions[22].bytes[0x512]=1;
-    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_MATRICES_PENDING && frame.projected==0);
-    f.regions[22].bytes[0x512]=0;n(&f,14,0x40,1001);
+    // Normal auto-view cameras keep +0x512 set, even after updating the cache.
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK && frame.projected==1 && frame.viewMode==1);
+    assert(frame.matrixStage==7);
+    f.regions[22].bytes[0x510]=1;
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_MATRICES_PENDING && frame.projected==0 && frame.matrixStage==4);
+    f.regions[22].bytes[0x510]=0;
+    f.viewReads=0;f.mutateView=true;
+    assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_MATRICES_PENDING && frame.projected==0 && frame.matrixStage==5);
+    f.mutateView=false;n(&f,14,0x40,1001);
     assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_OK && frame.count==0);
     n(&f,5,0x10,65);
     assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_READ_FAILED);
     f=fixture();f.mutate=true;
     assert(HCEspRead(bus,0x10000000,false,&frame)==HC_ESP_READ_FAILED && frame.count==0);
-    puts("ESP fixture passed: projection, native header, team/unseen filter, HP validation, dirty matrices, bounded lists, concurrent list change; no device memory accessed.");
+    puts("ESP fixture passed: auto/custom view, dirty projection, torn matrix rejection, projection, native header, filters, HP/cooldowns, bounded lists; no device memory accessed.");
     return 0;
 }

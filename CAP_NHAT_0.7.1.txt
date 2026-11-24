@@ -1,0 +1,48 @@
+HERO CONTROL 0.7.1 — BUILD 17
+
+SỬA ESP CHỈ CÓ RADAR
+
+Bạn đã xác nhận camera xa hoạt động ở build 16. Bản này giữ đường ghi
+camera hiện tại, sửa bộ đọc ma trận dùng cho Box/HP/mã tướng/cooldown.
+
+Lỗi đã tìm thấy trong mã 0.7.0:
+- Camera native+0x512 là chế độ tự tính world-to-camera matrix.
+  Native getter tại RVA 0xAAC0ACC tính ma trận khi byte này bằng 1 và
+  không xóa nó trước khi trả về. Setter ma trận tùy chỉnh mới đặt byte về 0.
+- Bộ đọc cũ coi byte này là dirty và chỉ nhận 0, nên có thể loại camera
+  đang hoạt động bình thường. Radar không dùng ma trận nên vẫn có thể hiện.
+- Bản sửa nhận mode 0 hoặc 1. Projection+0x510 vẫn phải sạch vì getter
+  projection tại 0xAABE2DC thật sự xóa dirty sau khi tính xong.
+- Đọc hai lần toàn bộ ma trận và so sánh, kiểm tra mode trước/sau để
+  bỏ mẫu bị thay đổi giữa lúc đọc. Không gọi hàm Unity trong tiến trình game.
+
+Cải thiện chẩn đoán:
+- overlay.esp có matrixStage (0..7), viewMode, projectionDirty, nativeCamera.
+  Stage 1: singleton; 2: managed camera; 3: native camera; 4: chế độ/dirty;
+  5: đọc ổn định; 6: kiểm tra số học; 7: ma trận được chấp nhận.
+  255 nghĩa là chưa đọc được byte mode/dirty, không phải giá trị hợp lệ.
+- overlay.espLastSample giữ mẫu cuối có danh sách tướng khi đang trong trận,
+  kèm PID và timestamp. Đây là dữ liệu LỊCH SỬ để xuất báo cáo, không dùng
+  vẽ lên màn hình sau khi đã mất quyền truy cập/game không còn quan sát được.
+- Đường dẫn module có thể đi qua ranh giới trang nhớ. Bộ đọc mới tiếp tục
+  sang trang kế tiếp trong giới hạn 512 byte thay vì bỏ đường dẫn thiếu NUL.
+  Thêm imageCount/imagePathReadFailures/unityPathCount vào raw game inspection.
+
+CÁCH CẬP NHẬT VÀ THỬ
+1. Trong C:\Users\Admin\Downloads\HeroControl chạy:
+   git push
+2. Chờ Actions xanh rồi cài HeroControl.tipa mới. Kiểm tra 0.7.1 build 17.
+3. Tắt/bật lại nút nổi nếu tiến trình overlay cũ còn chạy.
+4. Bật camera + các lớp ESP bằng nút thử chung, vào trận tập có tướng địch.
+   Thu menu, di chuyển camera và tướng; đối chiếu box, HP, mã tướng/cooldown.
+5. Nếu chưa hiện: quay lại Hero Control và bấm “Xuất kết quả chung”.
+   Gửi JSON có overlay.espLastSample cùng mô tả radar có chấm địch hay
+   chỉ có khung radar. Mẫu cũ được đánh dấu thời gian để tránh nhầm với trạng thái hiện tại.
+
+GIỚI HẠN VÀ KIỂM THỬ
+Radar vẫn là tương đối ±60m, icon vẫn là mã tướng. Theo dõi tố cáo chưa hỗ trợ.
+Đã biên dịch/thực thi kiểm thử C trên Windows cho auto/custom view, projection
+dirty, ma trận thay đổi giữa hai lần đọc, đường dẫn qua trang và lỗi đọc.
+Kiểm thử camera cũ và 11 kiểm thử Python cũng qua. Thêm XCTest xuất/đọc mẫu
+ESP lịch sử. Xcode/XCTest phải chạy trong Actions; chưa kiểm chứng ESP sửa
+mới trên iPhone. Camera hoạt động là xác nhận của bạn từ build 16.

@@ -8,6 +8,7 @@
 #include <mach-o/loader.h>
 #include <string.h>
 #include <unistd.h>
+#include "RemoteCString.h"
 
 // Target identity comes from Apple's lookup for app 1150288115 (VN).
 // UUID comes from LC_UUID of the supplied UnityFramework, not an ASLR address.
@@ -19,6 +20,11 @@ static BOOL HCGameRead(HCRemoteRead read, mach_port_t task, uint64_t address, vo
     if (!read || !address || !size || size > 65536 || address > UINT64_MAX - size) return NO;
     mach_vm_size_t copied = 0;
     return read(task, address, size, (mach_vm_address_t)(uintptr_t)buffer, &copied) == KERN_SUCCESS && copied == size;
+}
+typedef struct { HCRemoteRead read; mach_port_t task; } HCGameStringContext;
+static inline bool HCGameStringRead(void *context,uint64_t address,void *buffer,size_t size) {
+    HCGameStringContext *value=context;
+    return HCGameRead(value->read,value->task,address,buffer,size);
 }
 
 static NSDictionary *HCGameInspection(void) {
@@ -95,12 +101,14 @@ static NSDictionary *HCGameInspection(void) {
             } else {
                 result[@"code"] = @"unity_module_not_observed"; result[@"message"] = @"Chưa đọc được UnityFramework của game.";
                 const struct HCImage *entries = images.bytes;
+                HCGameStringContext stringContext = {read,task};
+                NSUInteger pathFailures = 0, unityPaths = 0;
                 for (uint32_t i = 0; i < prefix.count; i++) {
                     char imagePath[512] = {0};
-                    size_t pathSize = MIN(sizeof(imagePath) - 1, 4096 - (entries[i].path & 4095));
-                    if (!HCGameRead(read, task, entries[i].path, imagePath, pathSize) || !memchr(imagePath, 0, pathSize)) continue;
+                    if (!HCReadCString(&stringContext, HCGameStringRead, entries[i].path, imagePath, sizeof(imagePath))) { pathFailures++; continue; }
                     NSString *image = [NSString stringWithUTF8String:imagePath];
                     if (![image.lastPathComponent isEqual:@"UnityFramework"]) continue;
+                    unityPaths++;
                     struct mach_header_64 header = {0};
                     if (!HCGameRead(read, task, entries[i].base, &header, sizeof(header)) || header.magic != MH_MAGIC_64 ||
                         header.cputype != CPU_TYPE_ARM64 || header.sizeofcmds > 65536 || header.ncmds > 4096) continue;
@@ -125,6 +133,8 @@ static NSDictionary *HCGameInspection(void) {
                     result[@"message"] = [uuid isEqual:HCExpectedUnityUUID] ? @"Module game khớp dump. Camera và ESP do nút nổi xử lý; xem kết quả kiểm chứng riêng. Tố cáo chưa hỗ trợ." : @"Đã đọc game nhưng UUID không khớp dump; không dùng các offset từ bộ dump này.";
                     break;
                 }
+                result[@"imageCount"] = @(prefix.count); result[@"imagePathReadFailures"] = @(pathFailures);
+                result[@"unityPathCount"] = @(unityPaths);
             }
         }
     } @finally { mach_port_deallocate(mach_task_self(), task); }

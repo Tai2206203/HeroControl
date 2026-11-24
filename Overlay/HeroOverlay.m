@@ -74,6 +74,7 @@ static NSString *HCSettingsError;
 static HCCameraEngine *HCCamera;
 static NSDictionary *HCCameraStatus;
 static NSDictionary *HCEspStatus;
+static NSDictionary *HCEspLastSample;
 static NSString *HCStartupStage = @"entry";
 
 static void HCState(void) {
@@ -85,8 +86,9 @@ static void HCState(void) {
         @"inputBackend": HCInputBackend,
         @"settingsOnly": @NO, @"camera": HCCameraStatus ?: @{@"code": @"camera_disabled", @"message": @"Camera xa đang tắt."},
         @"esp": HCEspStatus ?: @{@"code": @"esp_disabled", @"message": @"ESP đang tắt."},
+        @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"reports": @{@"code": @"unsupported", @"message": @"Chưa có nguồn dữ liệu tố cáo."},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.7.0", @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.7.1", @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:NSJSONWritingPrettyPrinted error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -479,6 +481,9 @@ static void HCUpdateLock(void) {
         [HCCanvas setNeedsDisplay];
     } espReport:^(NSDictionary *report) {
         HCEspStatus = report;
+        // Preserve the last actor sample for export after switching away from
+        // the game. It is historical evidence, never a frame to draw now.
+        if ([report[@"listCount"] integerValue] > 0) HCEspLastSample = report;
         [HCCanvas setNeedsDisplay];
     }];
     [HCCamera start];

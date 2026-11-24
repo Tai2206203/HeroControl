@@ -13,6 +13,7 @@ struct OverlayState: Codable {
     let settingsError: String?
     let camera: CameraStatus?
     let esp: EspStatus?
+    let espLastSample: EspStatus?
     let reports: FeatureCheckStatus?
 }
 
@@ -29,6 +30,10 @@ struct EspStatus: Codable {
     let projectedCount: Int?
     let listCount: Int?
     let matricesValid: Bool?
+    let matrixStage: Int?
+    let viewMode: Int?
+    let projectionDirty: Int?
+    let nativeCamera: String?
     let pid: Int?
     let timestamp: String?
     let hasHostPosition: Bool?

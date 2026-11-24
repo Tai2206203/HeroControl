@@ -89,6 +89,8 @@ static bool HCEngineWrite(void *context, uint64_t address, const void *buffer, s
     [self emitEsp:@{@"code": code, @"message": status == HC_ESP_OK ? @"Đã đọc khung ESP; cần đối chiếu hình vẽ trong trận." : @"Đang chờ đối tượng hoặc ma trận camera hợp lệ trong trận.",
         @"memoryStatus": @(status), @"pid": @(_pid), @"targetCount": @(frame.count), @"projectedCount": @(frame.projected),
         @"listCount": @(frame.listCount), @"matricesValid": frame.matricesValid ? @YES : @NO,
+        @"matrixStage": @(frame.matrixStage), @"viewMode": @(frame.viewMode), @"projectionDirty": @(frame.projectionDirty),
+        @"nativeCamera": [NSString stringWithFormat:@"0x%llx", (unsigned long long)frame.nativeCamera],
         @"hostX": @(frame.hostX), @"hostZ": @(frame.hostZ), @"hasHostPosition": frame.hasHostPosition ? @YES : @NO,
         @"targets": targets, @"timestamp": [[[NSISO8601DateFormatter alloc] init] stringFromDate:NSDate.date]}];
 }

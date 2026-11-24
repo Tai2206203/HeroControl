@@ -2,6 +2,18 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    func testHistoricalEspSampleIsExportedSeparatelyFromLiveFailure() throws {
+        let payload = Data(#"{"phase":"visible","esp":{"code":"esp_access_unavailable","message":"no live game","targets":[]},"espLastSample":{"code":"esp_matrices_pending","message":"waiting","pid":7832,"timestamp":"2026-11-24T02:58:00Z","listCount":10,"targetCount":3,"projectedCount":0,"matrixStage":4,"viewMode":1,"projectionDirty":0,"targets":[]}}"#.utf8)
+        let state = try JSONDecoder().decode(OverlayState.self, from: payload)
+        XCTAssertEqual(state.esp?.code, "esp_access_unavailable")
+        XCTAssertEqual(state.espLastSample?.targetCount, 3)
+        XCTAssertEqual(state.espLastSample?.viewMode, 1)
+        let exported = try JSONDecoder().decode(OverlayState.self, from: JSONEncoder().encode(state))
+        XCTAssertEqual(exported.espLastSample?.pid, 7832)
+        XCTAssertEqual(exported.esp?.targets?.count, 0)
+        let empty = try JSONDecoder().decode(OverlayState.self, from: Data(#"{"espLastSample":null}"#.utf8))
+        XCTAssertNil(empty.espLastSample)
+    }
     func testLegacyNumericProfileFlagsAreRepairedWithoutWeakeningWireTypes() throws {
         let old = Data(#"{"schemaVersion":1,"settings":{"flags":{"__ifxEnemyEspEnabledV1":1,"DoroCheat.Reference.R1.HP":0},"cameraScale":1.6,"cameraEnabled":1,"selectedSkins":{}}}"#.utf8)
         let (profile, migrated) = try ProfileCodec.decode(old)

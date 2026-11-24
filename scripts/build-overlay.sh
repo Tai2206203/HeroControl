@@ -29,4 +29,7 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/esp-memory-check.c" -o "$OUTPUT/esp-memory-check"
 "$OUTPUT/esp-memory-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/remote-cstring-check.c" -o "$OUTPUT/remote-cstring-check"
+"$OUTPUT/remote-cstring-check"
 printf 'Built independent Hero Control overlay: %s\n' "$OUTPUT"

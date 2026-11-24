@@ -76,6 +76,13 @@ struct ContentView: View {
             Label("KIỂM CHỨNG ĐỒNG THỜI", systemImage: "checklist").font(.headline)
             Text("Camera: \(overlay.state?.camera?.code ?? "chưa chạy") • lần ghi: \(overlay.state?.camera?.writeCount ?? 0)")
             Text("ESP: \(overlay.state?.esp?.code ?? "chưa chạy") • chiếu được: \(overlay.state?.esp?.projectedCount ?? 0)/\(overlay.state?.esp?.targetCount ?? 0)")
+            if let esp = overlay.state?.esp, let stage = esp.matrixStage {
+                Text("Ma trận: bước \(stage)/7 • chế độ view: \(esp.viewMode ?? -1) • projection dirty: \(esp.projectionDirty ?? -1)")
+            }
+            if let sample = overlay.state?.espLastSample {
+                Text("Mẫu trong trận gần nhất: \(sample.projectedCount ?? 0)/\(sample.targetCount ?? 0) • \(sample.timestamp ?? "")")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Text("Tố cáo: chưa hỗ trợ — chưa có nguồn dữ liệu.").foregroundStyle(.orange)
             if let error = overlay.state?.settingsError, !error.isEmpty { Text(error).foregroundStyle(.orange) }
             Button("Bật thử camera 1.50× + toàn bộ lớp ESP") {
