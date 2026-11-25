@@ -11,8 +11,18 @@ struct ContentView: View {
         Color.clear.ignoresSafeArea()
             .overlay {
                 if failed {
-                    Button("DORO-CHEAT • Chạm để thử lại") { Task { await launch() } }
-                        .font(.headline.bold()).buttonStyle(.borderedProminent)
+                    VStack(spacing: 16) {
+                        Text("Không khởi động được nút nổi").font(.headline.bold())
+                        ScrollView {
+                            Text(store.persistenceError ?? overlay.failure ?? overlay.message)
+                                .font(.system(.footnote, design: .monospaced))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        Button("DORO-CHEAT • Chạm để thử lại") { Task { await launch() } }
+                            .font(.headline.bold()).buttonStyle(.borderedProminent)
+                    }
+                    .padding().frame(maxWidth: 600, maxHeight: 420)
+                    .background(Color.white).foregroundColor(.black).cornerRadius(16).padding()
                 }
             }
             .task(id: scenePhase) {

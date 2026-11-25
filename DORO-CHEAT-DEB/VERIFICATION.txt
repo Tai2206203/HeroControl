@@ -10,3 +10,7 @@ unverified on a device. RootHide needs its jbroot/uicache tools; no respring/aut
 Telegram DEB delivery tested with mocked responses only: multipart payload, destination
 confirmation, malformed package rejection, secret redaction and missing-secret skip.
 No real message sent locally; CI uses repository secrets after artifact upload.
+
+0.18.0-2: RootHide-only CI; launcher creates missing profile parent directory and
+shows startup failure detail. Added XCTest for first launch without Documents.
+XCTest/iPhone startup cannot run on Windows; 31 portable tests passed locally.

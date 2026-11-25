@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scheme: [roothide, rootless, rootful]
+        scheme: [roothide]
     defaults:
       run:
         working-directory: .
@@ -27,6 +27,8 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Test protected native constants
         run: bash scripts/test-protection.sh
+      - name: Test Swift settings and first launch on Simulator
+        run: bash scripts/test-simulator.sh
       - name: Build independent DEB
         run: bash scripts/build-deb.sh ${{ matrix.scheme }}
       - uses: actions/upload-artifact@v4

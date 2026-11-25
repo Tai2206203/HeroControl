@@ -2,6 +2,18 @@ import XCTest
 @testable import HeroControl
 
 final class ControlTests: XCTestCase {
+    @MainActor
+    func testFirstLaunchCreatesMissingDebProfileDirectory() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let folder = home.appendingPathComponent("Documents", isDirectory: true)
+        let store = ControlStore(directory: folder)
+        let profile = try XCTUnwrap(store.prepareOverlayProfile())
+        XCTAssertNil(store.persistenceError)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: profile.path))
+        XCTAssertTrue(store.settings.isReadMemoryOnly)
+    }
+
     func testRetiredSkinSettingsMigrateWithoutLosingEspFlags() throws {
         let data = Data(#"{"schemaVersion":1,"settings":{"flags":{"DoroCheat.Style.Skin":1,"DoroCheat.Style.Buttons":true,"DoroCheat.Reference.R1.Icon":true},"cameraScale":1.5,"selectedSkins":{"123":7}}}"#.utf8)
         let (saved, migrated) = try ProfileCodec.decode(data)

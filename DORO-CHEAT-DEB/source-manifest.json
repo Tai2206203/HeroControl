@@ -6,8 +6,8 @@
   },
   {
     "path": ".github/workflows/build.yml",
-    "bytes": 1707,
-    "sha256": "31b47ba6b4b511d74cd540e582430fd5dba98ac5b508121dcd4b2684bbf4731e"
+    "bytes": 1796,
+    "sha256": "04fb9b757183ef0555d0354f227048f684c666a0ad8241b34e27d182bbce5286"
   },
   {
     "path": ".gitignore",
@@ -832,7 +832,7 @@
   {
     "path": "Debian/package.json",
     "bytes": 269,
-    "sha256": "b7d1b858a7b6dc75c7a72f9a34578806124194085b6b72440f325b41929d5610"
+    "sha256": "0983dffbd68c0a128c05c925df08148090c3338430b2a5fdb9d2bc9bb3b34943"
   },
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
@@ -896,13 +896,13 @@
   },
   {
     "path": "HeroControl/ContentView.swift",
-    "bytes": 1337,
-    "sha256": "d551bbfadf0de37fcc810c0d27d343175eb31b38b61c6de8cda1c83678eff751"
+    "bytes": 1988,
+    "sha256": "67b1dec74a016549b10ec5558a17aebe6ce5fcc1b42f2f1e1f98aa3b741511ad"
   },
   {
     "path": "HeroControl/ControlStore.swift",
-    "bytes": 15419,
-    "sha256": "ff3f7aec8bb88166e347f55d424a72e6c91f2f182c9cd9a1395d9857130b061d"
+    "bytes": 15687,
+    "sha256": "ea5f8009c1bbb62138a9654af044cc599a390850be6929e97a801bae1bf18988"
   },
   {
     "path": "HeroControl/HeroControlApp.swift",
@@ -926,13 +926,13 @@
   },
   {
     "path": "HeroControl/OverlayController.swift",
-    "bytes": 6744,
-    "sha256": "6b424b8c0c4e46c9392b2d21b4aba57b1d807b2fc0c143b8ed2434336980d7ca"
+    "bytes": 6932,
+    "sha256": "6a013bcfee13c6a3bb8304911d0d7fe9b8874fb2118fbfcc410cbb253fb113bb"
   },
   {
     "path": "HeroControlTests/ControlTests.swift",
-    "bytes": 33966,
-    "sha256": "1b5bf758301e6b5d61e68291072a00417dcb57fbf950997f6f9ae849de73c23e"
+    "bytes": 34597,
+    "sha256": "d480c49b8cc64a5196388d600b6c75c9cafb7ffaa10d940b6c084dd72b11cd2e"
   },
   {
     "path": "Makefile",
@@ -1051,8 +1051,8 @@
   },
   {
     "path": "README.txt",
-    "bytes": 3963,
-    "sha256": "337651fc1219b2d1ebabf9533cfabb35a9c4dc45e97428cdb2f54bfc83d37ed6"
+    "bytes": 4377,
+    "sha256": "9da7fe61378d80423fa7e83782fa8621394f93824cf11e42358ddfe67adae487"
   },
   {
     "path": "Runtime/DoroCheatDebRuntime.plist",
@@ -1156,8 +1156,8 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 986,
-    "sha256": "218bad20e68b8e65ca2daeb94d9d9b506d6feda3036f922cf419f95388e4a3fe"
+    "bytes": 1227,
+    "sha256": "1c9105ff21f6707920b3a9530df2b3d3d893f3a1c45ef8533783b7eddf3e9402"
   },
   {
     "path": "scripts/build-deb.sh",

@@ -26,6 +26,12 @@ final class ControlStore: ObservableObject {
         self.backend = backend
         let folder = directory ?? URL(fileURLWithPath: "/var/mobile/Library/Application Support/DORO-CHEAT-DEB/Documents", isDirectory: true)
         profileURL = folder.appendingPathComponent("HeroControl.profile.json")
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        } catch {
+            persistenceError = "Không tạo được thư mục setting DEB: \(error.localizedDescription)"
+            return
+        }
         transaction {}
         do {
             if FileManager.default.fileExists(atPath: profileURL.path) {

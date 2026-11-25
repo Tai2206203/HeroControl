@@ -37,8 +37,8 @@ Kết quả
   dist/doro-cheat-deb_0.18.0-1_<architecture>.deb
   dist/*.deb.sha256
   dist/DORO-CHEAT-DEB-source.zip
-Build-DEB workflow của repo cha tạo ba biến thể riêng. Nếu tách thành repo riêng,
-workflow nằm trong .github/workflows/build.yml cũng build độc lập.
+Build-DEB workflow hiện chỉ build/gửi Telegram bản RootHide theo yêu cầu. Nếu tách thành repo riêng,
+workflow nằm trong .github/workflows/build.yml cũng chỉ build RootHide độc lập.
 
 Cài/gỡ
 Cài bằng Sileo/Zebra phù hợp jailbreak, sau đó mở icon DORO-CHEAT DEB. Postinst chỉ
@@ -63,3 +63,8 @@ Workflow gui tung file .deb sau khi luu Artifacts, dung Actions secrets TELEGRAM
 va TELEGRAM_CHAT_ID cua repository. Khong dua token vao source. Neu tach repo rieng,
 can khai bao lai hai secrets trong repo moi. Thieu secrets: bo qua gui, van giu Artifacts.
 Loi gui: bao do buoc Telegram, file da build van nam trong Artifacts; khong tu retry.
+
+Bản 0.18.0-2: tự tạo thư mục Documents khi mở app, không phụ thuộc postinst để tạo
+profile lần đầu. Nếu HUD không chạy, launcher hiện lỗi và startup log thay vì màn
+hình trống/nút thử lại không có lý do. Chưa xác nhận nguyên nhân trên iPhone; cần
+đọc lỗi hiển thị nếu bản này vẫn không có nút nổi.

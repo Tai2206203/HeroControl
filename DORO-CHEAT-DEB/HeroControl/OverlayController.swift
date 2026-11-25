@@ -101,6 +101,7 @@ private struct OverlayReply: Decodable {
     let ok: Bool
     let message: String
     let state: OverlayState
+    let startupLog: String?
 }
 
 // Independent of the kernel/game backend. A persistent HUD must never be
@@ -136,7 +137,9 @@ private actor OverlayClient {
         guard length <= 4 * 1024 * 1024 else { throw BackendError.unavailable("Báo cáo nút nổi vượt giới hạn 4 MiB.") }
         let response = Data(bytes: result, count: length)
         let reply = try JSONDecoder().decode(OverlayReply.self, from: response)
-        return (reply.state, reply.message, String(decoding: response, as: UTF8.self), reply.ok)
+        let message = !reply.ok && !(reply.startupLog?.isEmpty ?? true)
+            ? reply.message + "\n\n" + String(reply.startupLog!.prefix(8192)) : reply.message
+        return (reply.state, message, String(decoding: response, as: UTF8.self), reply.ok)
     }
 }
 
