@@ -6,8 +6,8 @@
   },
   {
     "path": ".github/workflows/build-deb.yml",
-    "bytes": 1368,
-    "sha256": "f750c6b846e3fbcfc220953d1b1cb5b4b21fbf822de82323f26808eabfed3849"
+    "bytes": 1863,
+    "sha256": "89e579086cba716f213698ef139fd0c00a3bff47c8895ed44dd039435a445ffd"
   },
   {
     "path": ".github/workflows/build.yml",

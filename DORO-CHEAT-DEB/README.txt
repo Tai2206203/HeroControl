@@ -57,3 +57,9 @@ https://theos.dev/docs/rootless
 https://github.com/roothide/Developer
 https://github.com/roothide/Procursus-roothide/blob/main/Makefile
 https://www.debian.org/doc/debian-policy/ch-controlfields.html
+
+Telegram
+Workflow gui tung file .deb sau khi luu Artifacts, dung Actions secrets TELEGRAM_BOT_TOKEN
+va TELEGRAM_CHAT_ID cua repository. Khong dua token vao source. Neu tach repo rieng,
+can khai bao lai hai secrets trong repo moi. Thieu secrets: bo qua gui, van giu Artifacts.
+Loi gui: bao do buoc Telegram, file da build van nam trong Artifacts; khong tu retry.

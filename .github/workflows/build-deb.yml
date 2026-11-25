@@ -40,3 +40,15 @@ jobs:
             DORO-CHEAT-DEB/dist/DORO-CHEAT-DEB-source.zip.sha256
             DORO-CHEAT-DEB/dist/signing-report-*.json
           if-no-files-found: error
+      - name: Send successful DEB to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          packages=(dist/*.deb)
+          if [ "${#packages[@]}" -ne 1 ] || [ ! -f "${packages[0]}" ]; then
+            echo "Expected exactly one DEB artifact for this build."
+            exit 1
+          fi
+          python3 scripts/send-telegram.py "${packages[0]}"

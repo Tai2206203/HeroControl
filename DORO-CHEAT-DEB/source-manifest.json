@@ -6,8 +6,8 @@
   },
   {
     "path": ".github/workflows/build.yml",
-    "bytes": 1212,
-    "sha256": "ba088976b594898754fe91572d0f8a6ace5c2660902fa5b8fefe98743037223d"
+    "bytes": 1707,
+    "sha256": "31b47ba6b4b511d74cd540e582430fd5dba98ac5b508121dcd4b2684bbf4731e"
   },
   {
     "path": ".gitignore",
@@ -1051,8 +1051,8 @@
   },
   {
     "path": "README.txt",
-    "bytes": 3600,
-    "sha256": "31d9cda804d3d3ae3ccc0d52e885bae82cd5d6042f3d81a70b674ec3988de45a"
+    "bytes": 3963,
+    "sha256": "337651fc1219b2d1ebabf9533cfabb35a9c4dc45e97428cdb2f54bfc83d37ed6"
   },
   {
     "path": "Runtime/DoroCheatDebRuntime.plist",
@@ -1156,8 +1156,8 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 732,
-    "sha256": "979579ec11eab1c19af26d913daada23be231c21bea648001adeab15f4e4aa61"
+    "bytes": 986,
+    "sha256": "218bad20e68b8e65ca2daeb94d9d9b506d6feda3036f922cf419f95388e4a3fe"
   },
   {
     "path": "scripts/build-deb.sh",
@@ -1355,6 +1355,11 @@
     "sha256": "0c98517e86026f13eb8dbd49847539669ba03ca616475e75ddbe58d3258280ae"
   },
   {
+    "path": "scripts/send-telegram.py",
+    "bytes": 7328,
+    "sha256": "d612581f670ad9c9952279d1c868f3116e8b5d058632ecfd019a9505bf2ed68e"
+  },
+  {
     "path": "scripts/settings-store-check.m",
     "bytes": 2436,
     "sha256": "4303059ce6add242c40b26908b126a6d814f18f186205413cd0c5eed7c26ef64"
@@ -1428,6 +1433,11 @@
     "path": "tests/test_signing.py",
     "bytes": 1851,
     "sha256": "8abab6f5f50d40c47b3e60c67b28c7aa553b5d35093d4552aac6bb19ee256fee"
+  },
+  {
+    "path": "tests/test_telegram.py",
+    "bytes": 4704,
+    "sha256": "194d605d53287940baf4bc87b6957765d4e8f28bccce706e1a9a3a2665be76bb"
   },
   {
     "path": "tests/test_theme_assets.py",

@@ -1,8 +1,12 @@
 Independent DEB source fork of TIPA 0.18.0 build 38 (76f345e).
 Own app/bundle/state/notification/adapter paths; rootless, rootful and RootHide package layouts.
-Local Windows verification: 22 Python tests including Debian ar/USTAR layout, ownership/modes,
+Local Windows verification: 31 Python tests including Debian ar/USTAR layout, ownership/modes,
 maintainer script presence, foreign-TIPA rejection, wrong Mach-O platform rejection and minimum
 OS checks. Source/project/protection/payload checks and extracted-source independence passed.
 Generated fixture DEB is only for format tests, not a runnable iOS app. Real signed binaries
 and installable DEBs require macOS Xcode CI. Actual jailbreak install/launch/uninstall remains
 unverified on a device. RootHide needs its jbroot/uicache tools; no respring/autostart on install.
+
+Telegram DEB delivery tested with mocked responses only: multipart payload, destination
+confirmation, malformed package rejection, secret redaction and missing-secret skip.
+No real message sent locally; CI uses repository secrets after artifact upload.
