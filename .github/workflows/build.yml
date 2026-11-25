@@ -15,6 +15,7 @@ jobs:
         run: |
           python3 scripts/validate-project.py
           python3 scripts/verify-runtime-payload.py
+          python3 scripts/verify-protection.py
           python3 scripts/source-manifest.py
       - name: Test game adapter Lua with controlled interfaces
         run: |
@@ -24,6 +25,8 @@ jobs:
           lua scripts/report-reasons-smoke.lua
       - name: Test Telegram delivery without network
         run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Test native string protection
+        run: bash scripts/test-protection.sh
       - name: Build and package iPhone app
         run: bash scripts/build-tipa.sh
       - name: Build ABI example

@@ -15,3 +15,8 @@
 *.entitlements text eol=lf
 .gitattributes text eol=lf
 .gitignore text eol=lf
+
+*.cpp text eol=lf
+*.def text eol=lf
+# Preserve pinned upstream bytes and provenance hashes.
+ThirdParty/oxorany/* -text -whitespace

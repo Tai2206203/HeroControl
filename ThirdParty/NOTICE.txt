@@ -19,3 +19,10 @@ Runtime/Payload/manifest.json records source and shipped SHA-256 digests.
 The complaint Lua was adapted to retain baseline server history and versioned
 23. VM bodies, field/native mappings and hook entries are preserved.
 No new license grant is asserted for the owner-supplied payloads.
+
+oxorany by llxiaoyuan / Chase (MIT)
+https://github.com/llxiaoyuan/oxorany
+Pinned revision: d2b452a7fe29798a0a76e4b25bba21b8ec2ff5eb
+Unmodified upstream source and license: ThirdParty/oxorany.
+Used by Protection/ProtectedStrings.cpp for selected native constants.
+The MIT license is bundled in the TIPA as ThirdParty/oxorany-LICENSE.txt.

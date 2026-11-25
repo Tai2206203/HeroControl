@@ -1,3 +1,4 @@
+#include "../Protection/ProtectedStrings.h"
 #include "InputCapture.h"
 // Standalone HUD bootstrap/window-hosting approach adapted from TrollSpeed
 // (c) 2023 Lessica, MIT. See ThirdParty/TrollSpeed-LICENSE.txt and NOTICE.txt.
@@ -131,7 +132,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.16.1", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.17.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -1131,8 +1132,8 @@ static void HCRotate(NSInteger orientation) {
 }
 
 static void HCUpdateLock(void) {
-    mach_port_t (*portFunction)(void) = dlsym(RTLD_DEFAULT, "SBSSpringBoardServerPort");
-    void (*statusFunction)(mach_port_t, BOOL *, BOOL *) = dlsym(RTLD_DEFAULT, "SBGetScreenLockStatus");
+    mach_port_t (*portFunction)(void) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSSBSSpringBoardServerPort));
+    void (*statusFunction)(mach_port_t, BOOL *, BOOL *) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSSBGetScreenLockStatus));
     if (!portFunction || !statusFunction) return;
     mach_port_t port = portFunction();
     if (!port) return;
@@ -1184,12 +1185,12 @@ static void HCUpdateLock(void) {
     HCWindow.windowLevel = 10000010.0;
     [HCWindow makeKeyAndVisible];
     HCConfiguredCaptureMode=-1;[HCCanvas refreshEspSurface];
-    HCHost = [NSClassFromString(@"SBSAccessibilityWindowHostingController") new];
+    HCHost = [NSClassFromString(HCProtectedString(HCSHostingClass)) new];
     if (!HCHost || ![HCHost respondsToSelector:@selector(registerWindowWithContextID:atLevel:)] || ![HCWindow _contextId])
         HCStop(@"Không có API đăng ký cửa sổ overlay trên môi trường này.", YES);
     HCStage(@"register_window");
     [HCHost registerWindowWithContextID:[HCWindow _contextId] atLevel:HCWindow.windowLevel];
-    HCOrientationObserver = [NSClassFromString(@"FBSOrientationObserver") new];
+    HCOrientationObserver = [NSClassFromString(HCProtectedString(HCSOrientationClass)) new];
     if (![HCOrientationObserver respondsToSelector:@selector(setHandler:)])
         HCStop(@"Không có API theo dõi hướng màn hình cho menu nổi.", YES);
     if ([HCOrientationObserver respondsToSelector:@selector(setHandler:)]) {
@@ -1258,7 +1259,7 @@ static void HCHIDCallback(void *target, void *refcon, CFTypeRef service, CFTypeR
     @autoreleasepool {
         @try {
             HCHIDCount++;
-            Class<HCAXEventRepresentation> representation = (Class<HCAXEventRepresentation>)NSClassFromString(@"AXEventRepresentation");
+            Class<HCAXEventRepresentation> representation = (Class<HCAXEventRepresentation>)NSClassFromString(HCProtectedString(HCSAXClass));
             id<HCAXEventRepresentation> rep = [representation representationWithHIDEvent:event hidStreamIdentifier:@"UIApplicationEvents"];
             if (!rep) return;
             UITouchPhase phase;
@@ -1295,12 +1296,12 @@ static BOOL HCStartInputMonitor(void) {
     // touches when the hosting window advertises _ignoresHitTest=YES.
     // Client type Monitor=1 follows WebKit's IOKit SPI declarations. We only
     // register an event callback; no filtering, cancellation or injection.
-    void *library = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_NOW | RTLD_GLOBAL);
+    void *library = dlopen(HCProtectedCString(HCSIOKitPath), RTLD_NOW | RTLD_GLOBAL);
     if (!library) return NO;
-    CFTypeRef (*create)(CFAllocatorRef, int, CFDictionaryRef) = dlsym(library, "IOHIDEventSystemClientCreateWithType");
+    CFTypeRef (*create)(CFAllocatorRef, int, CFDictionaryRef) = dlsym(library, HCProtectedCString(HCSIOHIDEventSystemClientCreateWithType));
     void (*registerCallback)(CFTypeRef, void (*)(void *, void *, CFTypeRef, CFTypeRef), void *, void *) =
-        dlsym(library, "IOHIDEventSystemClientRegisterEventCallback");
-    void (*schedule)(CFTypeRef, CFRunLoopRef, CFStringRef) = dlsym(library, "IOHIDEventSystemClientScheduleWithRunLoop");
+        dlsym(library, HCProtectedCString(HCSIOHIDEventSystemClientRegisterEventCallback));
+    void (*schedule)(CFTypeRef, CFRunLoopRef, CFStringRef) = dlsym(library, HCProtectedCString(HCSIOHIDEventSystemClientScheduleWithRunLoop));
     if (!create || !registerCallback || !schedule) return NO;
     HCEventMonitor = create(kCFAllocatorDefault, 1, NULL);
     if (!HCEventMonitor) return NO;
@@ -1354,15 +1355,15 @@ int main(int argc, char **argv) {
         @try {
             for (NSString *framework in @[@"GraphicsServices", @"BackBoardServices", @"SpringBoardServices", @"FrontBoardServices", @"AccessibilityUtilities"])
                 dlopen([[NSString stringWithFormat:@"/System/Library/PrivateFrameworks/%@.framework/%@", framework, framework] fileSystemRepresentation], RTLD_NOW | RTLD_GLOBAL);
-            void (*gsInitialize)(void) = dlsym(RTLD_DEFAULT, "GSInitialize");
-            void (*displayStart)(void) = dlsym(RTLD_DEFAULT, "BKSDisplayServicesStart");
-            void (*appInitialize)(void) = dlsym(RTLD_DEFAULT, "UIApplicationInitialize");
-            void (*instantiate)(Class) = dlsym(RTLD_DEFAULT, "UIApplicationInstantiateSingleton");
-            void *(*registerHID)(void (*)(void *, void *, CFTypeRef, CFTypeRef)) = dlsym(RTLD_DEFAULT, "BKSHIDEventRegisterEventCallback");
-            void (*eventInitialize)(Boolean) = dlsym(RTLD_DEFAULT, "GSEventInitialize");
-            void (*pushMode)(CFStringRef) = dlsym(RTLD_DEFAULT, "GSEventPushRunLoopMode");
+            void (*gsInitialize)(void) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSGSInitialize));
+            void (*displayStart)(void) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSBKSDisplayServicesStart));
+            void (*appInitialize)(void) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSUIApplicationInitialize));
+            void (*instantiate)(Class) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSUIApplicationInstantiateSingleton));
+            void *(*registerHID)(void (*)(void *, void *, CFTypeRef, CFTypeRef)) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSBKSHIDEventRegisterEventCallback));
+            void (*eventInitialize)(Boolean) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSGSEventInitialize));
+            void (*pushMode)(CFStringRef) = dlsym(RTLD_DEFAULT, HCProtectedCString(HCSGSEventPushRunLoopMode));
             if (!gsInitialize || !displayStart || !appInitialize || !instantiate || !registerHID || !eventInitialize || !pushMode ||
-                !NSClassFromString(@"AXEventRepresentation")) HCStop(@"Thiếu API khởi tạo hoặc nhận chạm của overlay.", YES);
+                !NSClassFromString(HCProtectedString(HCSAXClass))) HCStop(@"Thiếu API khởi tạo hoặc nhận chạm của overlay.", YES);
             HCStage(@"frameworks_loaded");
             [UIScreen class]; CFRunLoopGetCurrent();
             HCStage(@"gs_initialize"); gsInitialize();

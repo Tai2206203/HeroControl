@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/llxiaoyuan/oxorany",
+  "revision": "d2b452a7fe29798a0a76e4b25bba21b8ec2ff5eb",
+  "license": "MIT",
+  "files": {
+    "oxorany.h": "c446b10a806ed0223ab083ac0a65b6586a9a62d16fa2b3ffb4dd1ff462e0f448",
+    "LICENSE": "c8c05409b0e8d1d7bb510151ae8f366448789d1f59a50cd493e3893331e26d91",
+    "README.en.md": "78bab0f30f88722eab070b23d0cfe5da9283bd66dcc376e3a06926125857f0db",
+    "oxorany.cpp": "c4db047aa0c8515ed12bd83d7c692a4c296d7d577408864d5b692797c19d6959"
+  }
+}

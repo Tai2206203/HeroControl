@@ -1,3 +1,4 @@
+#include "../Protection/ProtectedStrings.h"
 #import <Foundation/Foundation.h>
 #import <CoreFoundation/CoreFoundation.h>
 #include <dlfcn.h>
@@ -37,8 +38,8 @@ static void HCStage(const char *stage) {
 static NSDictionary *HCEntitlements(void) {
     typedef CFTypeRef (*CreateTask)(CFAllocatorRef);
     typedef CFTypeRef (*CopyEntitlement)(CFTypeRef, CFStringRef, CFErrorRef *);
-    CreateTask create = (CreateTask)dlsym(RTLD_DEFAULT, "SecTaskCreateFromSelf");
-    CopyEntitlement copy = (CopyEntitlement)dlsym(RTLD_DEFAULT, "SecTaskCopyValueForEntitlement");
+    CreateTask create = (CreateTask)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSSecTaskCreateFromSelf));
+    CopyEntitlement copy = (CopyEntitlement)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSSecTaskCopyValueForEntitlement));
     NSMutableDictionary *values = [NSMutableDictionary dictionary];
     if (!create || !copy) return values;
     CFTypeRef task = create(kCFAllocatorDefault);
@@ -71,7 +72,7 @@ static NSArray<NSString *> *HCLibraryPaths(NSMutableDictionary *report) {
     NSMutableOrderedSet<NSString *> *roots = [NSMutableOrderedSet orderedSet];
     NSMutableArray<NSString *> *notes = [NSMutableArray array];
     // Prefer the standardized API when the jailbreak has already injected it.
-    const char *(*prefixFunction)(void) = (const char *(*)(void))dlsym(RTLD_DEFAULT, "libroot_get_jbroot_prefix");
+    const char *(*prefixFunction)(void) = (const char *(*)(void))dlsym(RTLD_DEFAULT, HCProtectedCString(HCSLibrootGetJbrootPrefix));
     if (prefixFunction) {
         const char *prefix = prefixFunction();
         if (prefix && strnlen(prefix, PATH_MAX) < PATH_MAX) {
@@ -122,9 +123,9 @@ static NSArray<NSString *> *HCLibraryPaths(NSMutableDictionary *report) {
     NSMutableOrderedSet<NSString *> *paths = [NSMutableOrderedSet orderedSet];
     NSMutableArray *providers = [NSMutableArray array];
     for (NSString *root in roots) {
-        [paths addObject:[root stringByAppendingPathComponent:@"usr/lib/libkrw.0.dylib"]];
-        [paths addObject:[root stringByAppendingPathComponent:@"usr/lib/libkrw.dylib"]];
-        NSString *provider = [root stringByAppendingPathComponent:@"usr/lib/libkrw/libkrw-dopamine.dylib"];
+        [paths addObject:[root stringByAppendingPathComponent:HCProtectedString(HCSKRWVersioned)]];
+        [paths addObject:[root stringByAppendingPathComponent:HCProtectedString(HCSKRWLibrary)]];
+        NSString *provider = [root stringByAppendingPathComponent:HCProtectedString(HCSKRWProvider)];
         struct stat info = {0};
         errno = 0;
         BOOL visible = stat(provider.fileSystemRepresentation, &info) == 0;
@@ -157,7 +158,7 @@ static NSDictionary *HCReport(BOOL requestRead) {
     HCKernelRead readFunction = HCReadFunction;
     if (library) {
         report[@"loadedLibrary"] = HCLoadedPath;
-        report[@"symbolsFound"] = @[@"kbase", @"kread"];
+        report[@"symbolsFound"] = @[HCProtectedString(HCSKbase), HCProtectedString(HCSKread)];
     }
     for (NSString *path in paths) {
         struct stat info = {0};
@@ -171,13 +172,13 @@ static NSDictionary *HCReport(BOOL requestRead) {
             dlerror();
             void *candidate = dlopen(path.fileSystemRepresentation, RTLD_NOW | RTLD_LOCAL);
             if (candidate) {
-                HCKernelBase base = (HCKernelBase)dlsym(candidate, "kbase");
-                HCKernelRead read = (HCKernelRead)dlsym(candidate, "kread");
+                HCKernelBase base = (HCKernelBase)dlsym(candidate, HCProtectedCString(HCSKbase));
+                HCKernelRead read = (HCKernelRead)dlsym(candidate, HCProtectedCString(HCSKread));
                 if (base && read) {
                     library = candidate; baseFunction = base; readFunction = read;
                     HCLibraryHandle = candidate; HCBaseFunction = base; HCReadFunction = read; HCLoadedPath = path;
                     report[@"loadedLibrary"] = path;
-                    report[@"symbolsFound"] = @[@"kbase", @"kread"];
+                    report[@"symbolsFound"] = @[HCProtectedString(HCSKbase), HCProtectedString(HCSKread)];
                     check[@"loadMessage"] = @"Đã nạp thư viện và tìm thấy ABI đọc.";
                 } else {
                     check[@"loadMessage"] = @"Thư viện thiếu kbase hoặc kread.";
@@ -307,9 +308,9 @@ static NSDictionary *HCDiagnoseMode(BOOL inspectGame, NSString *runtimeCommand, 
     }
     typedef int (*SetPersona)(const posix_spawnattr_t *, uid_t, uint32_t);
     typedef int (*SetIdentity)(const posix_spawnattr_t *, uid_t);
-    SetPersona setPersona = (SetPersona)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_np");
-    SetIdentity setUID = (SetIdentity)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_uid_np");
-    SetIdentity setGID = (SetIdentity)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_gid_np");
+    SetPersona setPersona = (SetPersona)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSPosixSpawnattrSetPersonaNp));
+    SetIdentity setUID = (SetIdentity)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSPosixSpawnattrSetPersonaUidNp));
+    SetIdentity setGID = (SetIdentity)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSPosixSpawnattrSetPersonaGidNp));
     if (!setPersona || !setUID || !setGID) {
         fallback[@"code"] = @"persona_api_unavailable";
         fallback[@"summary"] = @"Môi trường này không cung cấp API khởi chạy helper theo persona.";
@@ -497,7 +498,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
         else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.16.1",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.17.0",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report

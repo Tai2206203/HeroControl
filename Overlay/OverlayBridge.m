@@ -1,3 +1,4 @@
+#include "../Protection/ProtectedStrings.h"
 #import "OverlayCommon.h"
 #include "OverlayLock.h"
 #include <dlfcn.h>
@@ -82,9 +83,9 @@ static NSDictionary *HCOverlayHandle(NSDictionary *request) {
         return HCOverlayReply(NO, @"Gói cài thiếu Tools/HeroOverlay.app/hero-overlay.", state, nil);
     typedef int (*SetPersona)(const posix_spawnattr_t *, uid_t, uint32_t);
     typedef int (*SetID)(const posix_spawnattr_t *, uid_t);
-    SetPersona persona = (SetPersona)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_np");
-    SetID setUID = (SetID)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_uid_np");
-    SetID setGID = (SetID)dlsym(RTLD_DEFAULT, "posix_spawnattr_set_persona_gid_np");
+    SetPersona persona = (SetPersona)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSPosixSpawnattrSetPersonaNp));
+    SetID setUID = (SetID)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSPosixSpawnattrSetPersonaUidNp));
+    SetID setGID = (SetID)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSPosixSpawnattrSetPersonaGidNp));
     if (!persona || !setUID || !setGID)
         return HCOverlayReply(NO, @"Không có API persona để khởi chạy overlay riêng.", state, nil);
     posix_spawnattr_t attr;

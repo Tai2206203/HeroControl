@@ -1,3 +1,4 @@
+#include "../Protection/ProtectedStrings.h"
 // Bundled process adapter. It is loaded by the installed jailbreak's tweak
 // loader on the next game launch; it never writes executable pages remotely.
 #import <Foundation/Foundation.h>
@@ -23,7 +24,7 @@ static dispatch_source_t HCTimer;
 typedef kern_return_t (*HCReadSelfFunction)(mach_port_t, mach_vm_address_t, mach_vm_size_t, mach_vm_address_t, mach_vm_size_t *);
 
 static bool HCReadSelf(uint64_t address, void *output, size_t size) {
-    static HCReadSelfFunction read = (HCReadSelfFunction)dlsym(RTLD_DEFAULT, "mach_vm_read_overwrite");
+    static HCReadSelfFunction read = (HCReadSelfFunction)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSMachRead));
     if (!read || !address || !size || size > 4 * 1024 * 1024 || address > UINT64_MAX-size) return false;
     mach_vm_size_t copied = 0;
     return read(mach_task_self(), address, size, (mach_vm_address_t)(uintptr_t)output, &copied) == KERN_SUCCESS && copied == size;
@@ -155,7 +156,7 @@ static void HCPulse(void) {
                 for (NSString *key in flags.allKeys) flags[key]=@NO;
                 settings[@"flags"]=flags;settings[@"cameraEnabled"]=@NO;settings[@"selectedSkins"]=@{};
                 NSDictionary *disabled=@{@"settings":settings,@"revision":@"adapter-disabled"};
-                HCExecute([NSString stringWithFormat:@"return HeroControlRuntimePulse(%@,%@)",HCLuaValue(disabled),HCLuaString(HCDirectory)]);
+                HCExecute([NSString stringWithFormat:HCProtectedString(HCSPulseCall),HCLuaValue(disabled),HCLuaString(HCDirectory)]);
                 HCDisabledApplied=YES;
             }
             HCState(@{@"phase": @"disabled", @"code": @"runtime_disabled", @"message": @"Adapter đã tắt. Khởi động lại game để gỡ hook khỏi bộ nhớ."}); return;
@@ -179,7 +180,7 @@ static void HCPulse(void) {
             }
             HCBootstrapped=YES;
         }
-        NSString *call = [NSString stringWithFormat:@"return HeroControlRuntimePulse(%@,%@)", HCLuaValue(config), HCLuaString(HCDirectory)];
+        NSString *call = [NSString stringWithFormat:HCProtectedString(HCSPulseCall), HCLuaValue(config), HCLuaString(HCDirectory)];
         NSString *result = HCExecute(call);
         NSData *data = [result dataUsingEncoding:NSUTF8StringEncoding];
         id state = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;

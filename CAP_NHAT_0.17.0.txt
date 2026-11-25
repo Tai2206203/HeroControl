@@ -1,0 +1,11 @@
+DORO-CHEAT 0.17.0 — build 35
+
+- Tích hợp oxorany bản cố định có giấy phép MIT cho 30 chuỗi nội bộ được chọn trong menu, backend/helper và runtime.
+- Lớp C++ riêng giữ nguyên mã Objective-C và giao tiếp cũ; chỉ giải mã lần đầu, cache chuỗi và giữ địa chỉ hợp lệ.
+- Ẩn symbol của lớp bảo vệ, loại bỏ symbol cục bộ khỏi các binary native phát hành; giữ nguyên ABI cần thiết.
+- CI kiểm tra nguồn thư viện, chạy kiểm tra nhiều luồng và quét chuỗi rõ trong object/binary trước khi đóng gói. Lỗi kiểm tra sẽ chặn build.
+- Kèm giấy phép oxorany trong TIPA; không tải thư viện từ mạng khi build.
+
+Đây là bảo vệ có chọn lọc, không mã hóa toàn bộ TIPA. Swift, Lua, ảnh và dữ liệu cấu hình chưa được mã hóa; người phân tích vẫn có thể quan sát dữ liệu lúc ứng dụng chạy. Không có bảo đảm chống dịch ngược bằng MCP/AI.
+
+Kiểm tra tại Windows: 21 unittest Python, ba bài kiểm tra C++ thực thi nhiều luồng, quét ba object không thấy chuỗi rõ đã chọn, biên dịch lớp bảo vệ cho ARM64 Mach-O và quét object. Kiểm tra dự án/payload và cú pháp script/native cũng qua. Chưa có Xcode/iPhone SDK hoặc thử trên iPhone tại đây; CI macOS sẽ kiểm tra đầy đủ bản đóng gói.

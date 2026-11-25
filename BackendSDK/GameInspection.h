@@ -1,3 +1,4 @@
+#include "../Protection/ProtectedStrings.h"
 #import <Foundation/Foundation.h>
 #include <TargetConditionals.h>
 #include <dlfcn.h>
@@ -84,7 +85,7 @@ static NSDictionary *HCGameInspection(void) {
     }
     // Always release the task port, including malformed headers and partial reads.
     @try {
-        HCRemoteRead read = (HCRemoteRead)dlsym(RTLD_DEFAULT, "mach_vm_read_overwrite");
+        HCRemoteRead read = (HCRemoteRead)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSMachRead));
         task_dyld_info_data_t dyld = {0};
         mach_msg_type_number_t size = TASK_DYLD_INFO_COUNT;
         status = task_info(task, TASK_DYLD_INFO, (task_info_t)&dyld, &size);

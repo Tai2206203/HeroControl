@@ -1,3 +1,4 @@
+#include "../Protection/ProtectedStrings.h"
 #import "CameraEngine.h"
 #import "ReportsPreparation.h"
 #import "../BackendSDK/GameInspection.h"
@@ -316,8 +317,8 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     if (status != KERN_SUCCESS || !task) {
         [self emit:@"camera_task_denied" message:@"Chưa lấy được task port cho tiến trình camera." extra:@{@"taskPortStatus": @(status)}]; return NO;
     }
-    _target = (HCCameraTask){task, (HCRemoteRead)dlsym(RTLD_DEFAULT, "mach_vm_read_overwrite"),
-        (HCMachWrite)dlsym(RTLD_DEFAULT, "mach_vm_write")};
+    _target = (HCCameraTask){task, (HCRemoteRead)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSMachRead)),
+        (HCMachWrite)dlsym(RTLD_DEFAULT, HCProtectedCString(HCSMachVmWrite))};
     _base = base; _pid = pid;
     // Also verify the setter's exact instructions, not just the module UUID.
     const unsigned char signature[] = {0x68,0x9a,0x00,0xbd,0x28,0x00,0x80,0x52,0x68,0x72,0x03,0x39};
