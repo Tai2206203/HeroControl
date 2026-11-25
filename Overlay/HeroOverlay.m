@@ -6,6 +6,7 @@
 #import <objc/runtime.h>
 #import "OverlayCommon.h"
 #import "HCFeatures.h"
+#import "SettingsStore.h"
 #include "OverlayLock.h"
 #include "CapturePolicy.h"
 #include "../BackendSDK/EspPresentation.h"
@@ -126,7 +127,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.13.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.14.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -162,6 +163,8 @@ static void HCStop(NSString *message, BOOL failed) {
 @property(nonatomic, copy) NSString *reportCopyMessage;
 @property(nonatomic) NSTimeInterval reportCopyUntil;
 @property(nonatomic) NSTimeInterval cameraLastSave;
+@property(nonatomic) BOOL pendingSettingsSave;
+@property(nonatomic,copy) NSString *settingsNotice;
 - (void)reloadSettings;
 - (void)drawEsp;
 - (void)refreshEspSurface;
@@ -236,7 +239,8 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     NSInteger _calibrationPage, _reportRecordIndex;
     BOOL _editingMinimap;
     CGRect _startMapRect;
-    double _menuOpenedAt, _nextMenuRedraw;
+    double _menuOpenedAt, _nextMenuRedraw, _emptyEspSince;
+    BOOL _imagesPurged;
     HCEspScreenState _screenStates[HC_ESP_MAX_TARGETS];
     NSInteger _screenPID;
     CGSize _screenSize;
@@ -251,7 +255,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         [self reloadSettings];
         _espView=[[HCEspDrawingView alloc] initWithFrame:self.bounds];
         [self addSubview:_espView];
-        _espView.painter=self;_espView.opaque=NO;_espView.backgroundColor=UIColor.clearColor;_espView.userInteractionEnabled=NO;
+        _espView.painter=self;_espView.clearsContextBeforeDrawing=YES;_espView.layer.shouldRasterize=NO;_espView.opaque=NO;_espView.backgroundColor=UIColor.clearColor;_espView.userInteractionEnabled=NO;
         [self refreshEspSurface];
     }
     return self;
@@ -262,7 +266,10 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     self.espView.frame=self.bounds;
     BOOL wasHidden=self.hidden;
     HCRefreshCaptureHost(self,self.espView);
-    if(self.hidden && !wasHidden) [self cancelInteraction];
+    if(self.hidden && !wasHidden) {
+        [self cancelInteraction];HCPurgeHeroImages();HCEspLastSample=nil;
+        memset(_screenStates,0,sizeof(_screenStates));_imagesPurged=YES;
+    }
     self.espView.hidden=HCLocked;
     if(self.hidden) { HCEspDrawFPS=0;HCEspDraws=0;HCEspDrawWindow=0; }
     [self.espView setNeedsDisplay];
@@ -277,6 +284,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     if(editing) [self reloadSettings];
 }
 - (void)reloadSettings {
+    if(self.pendingSettingsSave) { [self saveSettings];if(self.pendingSettingsSave) return; }
     NSData *data = [NSData dataWithContentsOfFile:HCProfile];
     id root = data.length <= 131072 ? [NSJSONSerialization JSONObjectWithData:data ?: NSData.data options:NSJSONReadingMutableContainers error:NULL] : nil;
     id settings = [root isKindOfClass:NSDictionary.class] && [root[@"schemaVersion"] isEqual:@1] ? root[@"settings"] : nil;
@@ -307,8 +315,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     [self setNeedsDisplay];
 }
 - (void)saveSettings {
+    self.pendingSettingsSave=YES;
     if (!self.settings || !HCOverlayPathsValid(HCDirectory, HCProfile)) {
-        HCSettingsError = @"Không lưu được: đường dẫn/cấu hình không hợp lệ."; return;
+        HCSettingsError = @"Không lưu được: đường dẫn/cấu hình không hợp lệ.";self.pendingSettingsSave=NO; return;
     }
     NSString *lockPath=[HCProfile stringByAppendingString:@".edit-lock"];
     int editLock=open(lockPath.fileSystemRepresentation,O_RDWR|O_NOFOLLOW|O_CLOEXEC);
@@ -335,7 +344,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if ([key isEqual:@"flags"]) continue;
         if (![self.settings[key] isEqual:self.baseSettings[key]]) merged[key]=self.settings[key];
     }
-    [mergedFlags removeObjectsForKeys:@[@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange"]];
+    [mergedFlags removeObjectsForKeys:@[@"DoroCheat.Style.Banner",@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange"]];
     merged[@"selectedSkins"]=@{};
     self.settings=merged;
     NSError *error = nil;
@@ -346,7 +355,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     } else {
         chmod(HCProfile.fileSystemRepresentation, 0644);
         chown(HCProfile.fileSystemRepresentation, 501, 501);
-        HCSettingsError = nil;
+        HCSettingsError = nil;self.pendingSettingsSave=NO;
         NSMutableDictionary *baseline=[self.settings mutableCopy];
         baseline[@"flags"]=[self.settings[@"flags"] copy];self.baseSettings=baseline;
     }
@@ -375,6 +384,25 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     HCText(subtitle,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-23,rect.size.width-18,18),8,UIColor.darkGrayColor,NO);
     [self target:action rect:rect];
 }
+- (NSString *)minimapKey:(NSString *)key {
+    if(self.bounds.size.height>self.bounds.size.width) {
+        if([key isEqual:@"minimapX"]) return @"minimapPortraitX";
+        if([key isEqual:@"minimapY"]) return @"minimapPortraitY";
+        if([key isEqual:@"minimapSize"]) return @"minimapPortraitSize";
+    }
+    return key;
+}
+- (void)ensureMinimapLayout {
+    if(self.bounds.size.height<=self.bounds.size.width) return;
+    NSDictionary *defaults=@{@"minimapX":@0.015,@"minimapY":@0.02,@"minimapSize":@150};
+    for(NSString *key in defaults) {
+        NSString *portrait=[self minimapKey:key];
+        if(!self.settings[portrait]) self.settings[portrait]=self.settings[key] ?: defaults[key];
+    }
+}
+- (NSNumber *)minimapValue:(NSString *)key {
+    return self.settings[[self minimapKey:key]] ?: self.settings[key];
+}
 - (CGRect)calibrationTrack:(NSUInteger)index {
     CGRect c=[self contentRect];CGFloat rowHeight=(c.size.height-68)/5;
     return CGRectMake(c.origin.x+c.size.width*0.48,c.origin.y+31+(index%5)*rowHeight,c.size.width*0.5,rowHeight-3);
@@ -382,11 +410,12 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 - (void)calibrationAt:(CGPoint)point {
     NSString *key=[self.activeTarget substringFromIndex:7];
     NSArray *fields=HCCalibrationFields();
-    for(NSUInteger i=0;i<fields.count;i++) if([fields[i][@"key"] isEqual:key]) {
+    for(NSUInteger i=0;i<fields.count;i++) if([[self minimapKey:fields[i][@"key"]] isEqual:key]) {
         NSDictionary *field=fields[i];CGRect track=[self calibrationTrack:i];
         double minimum=[field[@"min"] doubleValue],maximum=[field[@"max"] doubleValue],step=[field[@"step"] doubleValue];
         double fraction=HCClamp((point.x-track.origin.x)/track.size.width,0,1);
         double value=HCClamp(minimum+round((fraction*(maximum-minimum))/step)*step,minimum,maximum);
+        if([key hasPrefix:@"minimapPortrait"]) [self ensureMinimapLayout];
         self.settings[key]=[key isEqual:@"espReadHz"] ? @(lround(value)) : @(value);
         if([key hasPrefix:@"minimap"] && ![key isEqual:@"minimapIconSize"]) self.settings[@"minimapAutoAlign"]=@NO;
         [self refreshEspSurface];[self setNeedsDisplay];break;
@@ -394,9 +423,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 }
 - (CGRect)minimapRect {
     CGFloat w=self.bounds.size.width,h=self.bounds.size.height;
-    CGFloat size=HCClamp([self.settings[@"minimapSize"] doubleValue] ?: 150,80,MIN(240,MIN(w,h)));
-    double x=self.settings[@"minimapX"] ? [self.settings[@"minimapX"] doubleValue] : 0.015;
-    double y=self.settings[@"minimapY"] ? [self.settings[@"minimapY"] doubleValue] : 0.02;
+    CGFloat size=HCClamp([[self minimapValue:@"minimapSize"] doubleValue] ?: 150,80,MIN(240,MIN(w,h)));
+    double x=[self minimapValue:@"minimapX"] ? [[self minimapValue:@"minimapX"] doubleValue] : 0.015;
+    double y=[self minimapValue:@"minimapY"] ? [[self minimapValue:@"minimapY"] doubleValue] : 0.02;
     return CGRectMake(HCClamp(w*x,0,w-size),HCClamp(h*y,0,h-size),size,size);
 }
 - (CGRect)minimapDoneRect {
@@ -413,14 +442,15 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     return CGRectMake(CGRectGetMaxX(map)-22,CGRectGetMaxY(map)-22,28,28);
 }
 - (void)minimapAt:(CGPoint)point {
+    [self ensureMinimapLayout];
     CGFloat w=self.bounds.size.width,h=self.bounds.size.height;
     double dx=point.x-self.startPoint.x,dy=point.y-self.startPoint.y;
     if([self.activeTarget isEqual:@"minimap-move"]) {
-        self.settings[@"minimapX"]=@(HCMinimapDragPosition(_startMapRect.origin.x,dx,w,_startMapRect.size.width));
-        self.settings[@"minimapY"]=@(HCMinimapDragPosition(_startMapRect.origin.y,dy,h,_startMapRect.size.height));
+        self.settings[[self minimapKey:@"minimapX"]]=@(HCMinimapDragPosition(_startMapRect.origin.x,dx,w,_startMapRect.size.width));
+        self.settings[[self minimapKey:@"minimapY"]]=@(HCMinimapDragPosition(_startMapRect.origin.y,dy,h,_startMapRect.size.height));
     } else {
         double limit=MIN(240,MIN(w-_startMapRect.origin.x,h-_startMapRect.origin.y));
-        self.settings[@"minimapSize"]=@(HCClamp(_startMapRect.size.width+(dx+dy)/2,80,limit));
+        self.settings[[self minimapKey:@"minimapSize"]]=@(HCClamp(_startMapRect.size.width+(dx+dy)/2,80,limit));
     }
     [self refreshEspSurface];[self setNeedsDisplay];
 }
@@ -467,7 +497,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         [[UIColor colorWithWhite:0.65 alpha:0.25] setStroke];outline.lineWidth=1;[outline stroke];
         CGRect side=CGRectMake(p.origin.x+10,p.origin.y+10,44,p.size.height-20);
         [[UIColor colorWithWhite:0.95 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:side cornerRadius:25] fill];
-        NSArray *symbols=@[@"house.fill",@"viewfinder",@"camera.fill",@"paintbrush.fill",@"slider.horizontal.3",@"envelope.fill"];
+        NSArray *symbols=@[@"house.fill",@"viewfinder",@"camera.fill",@"gearshape.fill",@"slider.horizontal.3",@"envelope.fill"];
         NSArray *groups=@[@5,@0,@1,@2,@3,@4];
         CGFloat step=MIN(46,(side.size.height-12)/6);
         for(NSInteger i=0;i<6;i++) {
@@ -518,11 +548,18 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             HCText(@"− 0.05",minus,12,HCMenuAccent(),YES);HCText(@"+ 0.05",plus,12,HCMenuAccent(),YES);
             [self target:@"camera-minus" rect:minus];[self target:@"camera-plus" rect:plus];
             HCText(HCCameraStatus[@"message"] ?: @"Bật camera và kiểm tra trong trận.",CGRectMake(c.origin.x,c.origin.y+170,c.size.width,60),12,UIColor.darkGrayColor,NO);
+        } else if(self.group==2) {
+            HCText(@"CẤU HÌNH CỦA BẠN",CGRectMake(c.origin.x,c.origin.y,c.size.width,28),16,HCMenuAccent(),YES);
+            HCText(@"Thay đổi được tự lưu. LƯU tạo một bản riêng; TẢI khôi phục bản đó, gồm cả khung minimap ngang/dọc.",CGRectMake(c.origin.x,c.origin.y+35,c.size.width,44),11,UIColor.darkGrayColor,NO);
+            CGRect save=CGRectMake(c.origin.x,c.origin.y+88,c.size.width*0.46,35),load=CGRectMake(c.origin.x+c.size.width*0.52,c.origin.y+88,c.size.width*0.48,35);
+            HCText(@"LƯU SETTING",save,13,HCMenuAccent(),YES);[self target:@"settings-save" rect:save];
+            HCText(@"TẢI SETTING",load,13,HCMenuAccent(),YES);[self target:@"settings-load" rect:load];
+            HCText(HCSettingsError ?: self.settingsNotice ?: @"Tải chỉ thay đổi cấu hình khi bản lưu hợp lệ.",CGRectMake(c.origin.x,c.origin.y+139,c.size.width,48),11,HCSettingsError ? UIColor.systemRedColor : UIColor.darkGrayColor,NO);
         } else if(self.group==3) {
             NSArray *fields=HCCalibrationFields();NSUInteger pages=(fields.count+4)/5;
             _calibrationPage=MAX(0,MIN((NSInteger)pages-1,_calibrationPage));
             CGRect toggle=CGRectMake(c.origin.x,c.origin.y,c.size.width-76,25);
-            HCText(@"CĂN CHỈNH THỦ CÔNG",toggle,11,HCMenuAccent(),YES);
+            HCText(self.bounds.size.width>self.bounds.size.height ? @"KHUNG NGANG • THỦ CÔNG" : @"KHUNG DỌC • THỦ CÔNG",toggle,11,HCMenuAccent(),YES);
             CGRect prev=CGRectMake(CGRectGetMaxX(c)-68,c.origin.y,30,25),next=CGRectMake(CGRectGetMaxX(c)-32,c.origin.y,30,25);
             HCText(@"‹",prev,20,UIColor.blackColor,YES);HCText(@"›",next,20,UIColor.blackColor,YES);
             [self target:@"cal-prev" rect:prev];[self target:@"cal-next" rect:next];
@@ -530,14 +567,14 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             NSUInteger pageEnd=MIN(fields.count,pageStart+5);
             for(NSUInteger i=pageStart;i<pageEnd;i++) {
                 NSDictionary *field=fields[i];CGRect track=[self calibrationTrack:i];
-                double value=self.settings[field[@"key"]] ? [self.settings[field[@"key"]] doubleValue] : [field[@"default"] doubleValue];
+                double value=[self minimapValue:field[@"key"]] ? [[self minimapValue:field[@"key"]] doubleValue] : [field[@"default"] doubleValue];
                 HCText(field[@"title"],CGRectMake(c.origin.x,track.origin.y,c.size.width*0.46,13),10,UIColor.blackColor,YES);
                 HCText([NSString stringWithFormat:@"%.2f",value],CGRectMake(c.origin.x,track.origin.y+13,c.size.width*0.46,13),9,HCMenuAccent(),NO);
                 [[UIColor colorWithWhite:0.4 alpha:0.8] setFill];UIRectFill(CGRectMake(track.origin.x,CGRectGetMidY(track)-2,track.size.width,4));
                 double fraction=(value-[field[@"min"] doubleValue])/([field[@"max"] doubleValue]-[field[@"min"] doubleValue]);
                 CGFloat knob=track.origin.x+HCClamp(fraction,0,1)*track.size.width;
                 [HCMenuAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-5,CGRectGetMidY(track)-5,10,10)] fill];
-                [self target:[@"adjust:" stringByAppendingString:field[@"key"]] rect:track];
+                [self target:[@"adjust:" stringByAppendingString:[self minimapKey:field[@"key"]]] rect:track];
             }
             CGRect edit=CGRectMake(c.origin.x,CGRectGetMaxY(c)-28,c.size.width*0.55,24);
             HCText(@"KÉO KHUNG MAP",edit,10,HCMenuAccent(),YES);[self target:@"minimap-edit" rect:edit];
@@ -646,10 +683,22 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     } else { HCEspDrawFPS = 0; HCEspDraws = 0; HCEspDrawWindow = 0; }
     NSDictionary *flags = self.settings[@"flags"];
 
-    if (HCLocked || ![flags[@"__ifxEnemyEspEnabledV1"] boolValue]) return;
+    if (HCLocked || ![flags[@"__ifxEnemyEspEnabledV1"] boolValue]) {
+        memset(_screenStates,0,sizeof(_screenStates));
+        if(!_imagesPurged) { HCPurgeHeroImages();_imagesPurged=YES; }
+        return;
+    }
     double now=NSProcessInfo.processInfo.systemUptime;
     double age=now-[HCEspStatus[@"sampleUptime"] doubleValue];
-    if (!HCEspStatus[@"sampleUptime"] || age<0 || age>HC_ESP_HOLD_SECONDS) return;
+    if (!HCEspStatus[@"sampleUptime"] || age<0 || age>HC_ESP_HOLD_SECONDS || ![HCEspStatus[@"targets"] count]) {
+        memset(_screenStates,0,sizeof(_screenStates));
+        if(!_emptyEspSince) _emptyEspSince=now;
+        if(!_imagesPurged && now-_emptyEspSince>1) { HCPurgeHeroImages();_imagesPurged=YES; }
+        return;
+    }
+    _emptyEspSince=0;_imagesPurged=NO;
+    for(int i=0;i<HC_ESP_MAX_TARGETS;i++) if(_screenStates[i].valid && now-_screenStates[i].time>HC_ESP_HOLD_SECONDS)
+        memset(&_screenStates[i],0,sizeof(_screenStates[i]));
     NSInteger pid=[HCEspStatus[@"pid"] integerValue];
     NSString *camera=HCEspStatus[@"nativeCamera"];
     if (pid!=_screenPID || !CGSizeEqualToSize(_screenSize,self.bounds.size) || ![_screenCamera isEqual:camera]) {
@@ -687,8 +736,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 CGFloat px=map.origin.x+u*mapSize;
                 CGFloat py=map.origin.y+v*mapSize;
                 CGRect icon=CGRectMake(px-iconSize/2,py-iconSize/2,iconSize,iconSize);
+                // Keep partial edge icons inside the exact calibration frame.
+                CGContextSaveGState(context);CGContextClipToRect(context,map);
                 HCDrawHeroIcon(mapID,icon);
                 HCDrawHealthRing(target,CGRectInset(icon,-1.5,-1.5),YES,1.2);
+                CGContextRestoreGState(context);
             }
         }
         if (![target[@"onScreen"] boolValue]) continue;
@@ -786,7 +838,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if (self.dragged || ![[self targetAt:point] isEqual:target]) return;
         if ([target isEqual:@"bubble"] || [target isEqual:@"close"]) [self toggleMenu];
         else if ([target isEqual:@"reports-copy"]) {
-            NSDictionary *log=@{@"schemaVersion":@1,@"appVersion":@"0.13.0",@"appBuild":@30,
+            NSDictionary *log=@{@"schemaVersion":@1,@"appVersion":@"0.14.0",@"appBuild":@31,
                 @"exportedAt":@([NSDate date].timeIntervalSince1970),@"generation":@HC_RUNTIME_GENERATION,
                 @"reportsEnabled":self.settings[@"flags"][@"reports.enabled"] ?: @NO,
                 @"runtimeEnabled":self.settings[@"gameRuntimeEnabled"] ?: @NO,
@@ -803,6 +855,16 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             } @catch(NSException *exception) { (void)exception; }
             self.reportCopyUntil=NSProcessInfo.processInfo.systemUptime+4;
             [self setNeedsDisplay];
+        }
+        else if ([target isEqual:@"settings-save"] || [target isEqual:@"settings-load"]) {
+            BOOL saving=[target isEqual:@"settings-save"];
+            if(saving && self.pendingSettingsSave) [self saveSettings];
+            if(!saving || !self.pendingSettingsSave) {
+                NSDictionary *result=HCSettingsSnapshot(HCProfile,saving);
+                self.settingsNotice=result[@"message"];
+                if([result[@"ok"] isEqual:@YES]) { self.pendingSettingsSave=NO;[self reloadSettings];[self refreshEspSurface]; }
+                [self setNeedsDisplay];
+            }
         }
         else if ([target isEqual:@"cal-prev"] || [target isEqual:@"cal-next"]) {
             _calibrationPage+= [target isEqual:@"cal-next"] ? 1 : -1;[self setNeedsDisplay];
@@ -944,7 +1006,7 @@ static void HCUpdateLock(void) {
     HCStage(@"delegate_launch");
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0), ^{
         @autoreleasepool {
-            for(NSString *name in @[@"app-background.jpg",@"violet-sss.png",@"violet-nobara.jpg",@"tulen-gojo.jpg"]) (void)HCThemeImage(name);
+            for(NSString *name in @[@"app-background.jpg"]) (void)HCThemeImage(name);
         }
     });
     HCOverlayController *controller = [HCOverlayController new];
@@ -996,6 +1058,9 @@ static void HCUpdateLock(void) {
     [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationUserDidTakeScreenshotNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
         (void)notification;[HCCanvas cancelInteraction];
     }];
+    [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidReceiveMemoryWarningNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
+        (void)notification;HCPurgeHeroImages();HCEspLastSample=nil;[HCCanvas.espView setNeedsDisplay];
+    }];
     HCUpdateLock(); HCState();
     HCCamera = [[HCCameraEngine alloc] initWithProfile:HCProfile report:^(NSDictionary *report) {
         HCCameraStatus = report;
@@ -1004,7 +1069,9 @@ static void HCUpdateLock(void) {
         HCEspStatus = report;
         // Preserve the last actor sample for export after switching away from
         // the game. It is historical evidence, never a frame to draw now.
-        if ([report[@"listCount"] integerValue] > 0) HCEspLastSample = report;
+        if ([report[@"listCount"] integerValue] > 0) {
+            NSMutableDictionary *metadata=[report mutableCopy];[metadata removeObjectForKey:@"targets"];HCEspLastSample=metadata;
+        } else if(![report[@"targets"] count]) HCEspLastSample=nil;
     } reportsReport:^(NSDictionary *report) {
         HCReportsStatus = report;
         if (HCMenuOpen && HCCanvas.group == 4) [HCCanvas setNeedsDisplay];

@@ -159,6 +159,37 @@ final class ControlTests: XCTestCase {
         XCTAssertEqual(ControlStore(directory: folder).revision, store.revision)
     }
     @MainActor
+    func testSettingSnapshotRoundTripAndCorruptLoadKeepsCurrentProfile() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        var settings = ControlSettings()
+        settings.cameraScale = 1.7;settings.minimapX = 0.08;settings.minimapPortraitX = 0.21
+        settings.minimapPortraitY = 0.12;settings.minimapPortraitSize = 125
+        settings.flags["DoroCheat.Style.Banner"] = true
+        let profileURL = folder.appendingPathComponent("HeroControl.profile.json")
+        try JSONEncoder().encode(SavedProfile(schemaVersion: 1, settings: settings)).write(to: profileURL)
+        let store = ControlStore(directory: folder)
+        XCTAssertNil(store.settings.flags["DoroCheat.Style.Banner"])
+        store.saveSettingSnapshot()
+        store.setCamera(2.1);store.setMinimap("x", 0.4)
+        store.loadSettingSnapshot()
+        XCTAssertEqual(store.settings.cameraScale, 1.7)
+        XCTAssertEqual(store.settings.minimapX, 0.08)
+        XCTAssertEqual(store.settings.minimapPortraitX, 0.21)
+        XCTAssertEqual(store.settings.minimapPortraitSize, 125)
+        let before = store.settings
+        let snapshot = folder.appendingPathComponent("HeroControl.settings.json")
+        try Data("not JSON".utf8).write(to: snapshot, options: .atomic)
+        store.loadSettingSnapshot()
+        XCTAssertEqual(store.settings, before)
+        XCTAssertEqual(ControlStore(directory: folder).settings, before)
+        try Data(repeating: 0, count: 131073).write(to: snapshot, options: .atomic)
+        store.loadSettingSnapshot()
+        XCTAssertEqual(store.settings, before)
+    }
+
+    @MainActor
     func testReportsOnPreparesAllDependenciesWithoutChangingCameraOrESP() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

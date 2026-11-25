@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define HC_RUNTIME_BUILD "30"
+#define HC_RUNTIME_BUILD "31"
 #ifndef HC_RUNTIME_GENERATION
 #define HC_RUNTIME_GENERATION "development"
 #endif
@@ -24,12 +24,12 @@ static inline BOOL HCRuntimeSettingsValid(id settings) {
         !isfinite([scale doubleValue]) || [scale doubleValue]<1 || [scale doubleValue]>2.3) return NO;
     NSArray *keys=@[@"__ifxEnemyEspEnabledV1", @"DoroCheat.Reference.R1.Box", @"DoroCheat.Reference.R1.Icon", @"DoroCheat.Reference.R1.HP",
         @"DoroCheat.Reference.R1.Map", @"DoroCheat.Reference.R1.Unseen", @"DoroCheat.Reference.R1.Check",
-        @"DoroCheat.Style.Banner", @"reports.enabled"];
+        @"reports.enabled"];
     for (NSString *key in keys) {
         id flag=flags[key];
         if (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID()) return NO;
     }
-    NSArray *optional=@[@"HeroControl.ESP.HeroID",@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange"];
+    NSArray *optional=@[@"DoroCheat.Style.Banner",@"HeroControl.ESP.HeroID",@"DoroCheat.Style.Buttons",@"DoroCheat.Style.Skin",@"DoroCheat.Style.BeforeMatch",@"DoroCheat.Style.LiveChange"];
     for(id key in flags) {
         if(![keys containsObject:key] && ![optional containsObject:key]) return NO;
         id flag=flags[key];if(![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID()) return NO;
@@ -44,7 +44,7 @@ static inline BOOL HCRuntimeSettingsValid(id settings) {
         id flag=settings[key];
         if (flag && (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID())) return NO;
     }
-    NSDictionary *ranges=@{@"minimapX":@[@0,@1],@"minimapY":@[@0,@1],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200],@"minimapIconSize":@[@8,@40],@"espBoxWidthScale":@[@0.5,@3],@"espBoxHeightScale":@[@0.5,@3],@"espIconSize":@[@12,@64],@"minimapCenterX":@[@-200,@200],@"minimapCenterZ":@[@-200,@200],@"minimapAngle":@[@-180,@180]};
+    NSDictionary *ranges=@{@"minimapPortraitX":@[@0,@1],@"minimapPortraitY":@[@0,@1],@"minimapPortraitSize":@[@80,@240],@"minimapX":@[@0,@1],@"minimapY":@[@0,@1],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200],@"minimapIconSize":@[@8,@40],@"espBoxWidthScale":@[@0.5,@3],@"espBoxHeightScale":@[@0.5,@3],@"espIconSize":@[@12,@64],@"minimapCenterX":@[@-200,@200],@"minimapCenterZ":@[@-200,@200],@"minimapAngle":@[@-180,@180]};
     for (NSString *key in ranges) {
         id value=settings[key];NSArray *range=ranges[key];
         if (value && (![value isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)value)==CFBooleanGetTypeID() ||

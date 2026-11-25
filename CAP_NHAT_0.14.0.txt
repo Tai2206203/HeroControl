@@ -1,0 +1,9 @@
+Hero Control 0.14.0 — build 31
+
+Tố cáo: log build 30 đã nhận một thư trực tiếp (source live); chưa có truy vấn theo người chơi. ChgCreditType 1 đối chiếu dump là COM_CHGCREDIT_COMPLAINT_GUAJI: Rớt mạng/AFK. Bản mới đổi mã thành tên khi hiển thị/xuất, gồm bản ghi cũ, giữ reasonCode để chẩn đoán. Mã không biết được ghi rõ, không bịa mô tả.
+Điều khiển qua menu bằng setEnabled, bỏ command và chuỗi /checkto khỏi payload. Giữ thư/nhật ký theo tài khoản. Kill/skill banner bị bỏ khỏi menu/cấu hình và preference ép OFF.
+Cấu hình: menu bánh răng → LƯU SETTING / TẢI SETTING. Thay đổi vẫn tự lưu; LƯU tạo bản riêng HeroControl.settings.json. TẢI chỉ thay thế khi bản lưu hợp lệ, ghi nguyên tử và cấp revision mới. Bản lỗi không ghi đè cấu hình hiện tại; autosave bận khóa sẽ thử lại. Có thao tác tương đương trong app.
+Minimap: khung dọc/ngang tách biệt; căn khi game ở đúng chiều đang chơi. Vị trí ngang đã có giữ nguyên. Icon mép được cắt đúng biên khung thay vì vẽ tràn. Các tham số phạm vi/tâm/góc vẫn chỉnh thủ công.
+ESP: mỗi lần vẽ xóa nội dung cũ, mẫu cũ chỉ giữ tối đa 120ms; quá hạn xóa bộ đệm và trạng thái làm mượt. Ảnh tướng giải mã một frame tĩnh tối đa 128px, cache 24 ảnh/2MiB, giải phóng khi không còn mục tiêu hoặc thiếu bộ nhớ. Không giữ bản sao nguyên khung targets trong log lịch sử. Không xóa nhật ký tố cáo hay file ảnh đi kèm.
+
+Cập nhật game adapter sẽ được chuẩn bị khi ON; đóng/mở lại game một lần để nạp build 31. Kiểm tra host không thay thế thử cảm ứng/ảnh ESP/phản hồi máy chủ trên iPhone.

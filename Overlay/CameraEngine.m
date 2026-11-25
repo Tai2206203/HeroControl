@@ -283,7 +283,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             @"cooldowns": @[@(t.cooldowns[0]), @(t.cooldowns[1]), @(t.cooldowns[2])]}];
     }
     NSString *code = presentation.retained ? @"esp_frame_retained" : status == HC_ESP_OK ? @"esp_frame_read" : status == HC_ESP_MATRICES_PENDING ? @"esp_matrices_pending" : @"esp_waiting";
-    NSString *message=presentation.retained ? @"Đang dùng mẫu đã xác minh trong cửa sổ tối đa 0,6 giây để tránh nháy." :
+    NSString *message=presentation.retained ? @"Đang dùng mẫu đã xác minh trong cửa sổ tối đa 0,12 giây để tránh nháy." :
         status == HC_ESP_OK ? @"Đã đọc khung ESP; cần đối chiếu hình vẽ trong trận." : @"Đang chờ đối tượng hoặc ma trận camera hợp lệ trong trận.";
     [self emitEsp:@{@"code": code, @"message": message,
         @"memoryStatus": @(status), @"pid": @(_pid), @"targetCount": @(frame.count), @"projectedCount": @(frame.projected),

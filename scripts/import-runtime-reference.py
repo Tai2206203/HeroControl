@@ -43,6 +43,47 @@ def upgrade_complaint_script(script):
     script = script.replace("    if not ok then m.queryStatus='Bộ theo dõi máy chủ chưa sẵn sàng: '..clean(err) end", "    if not ok then m.queryError=clean(err);m.queryStatus='Bộ theo dõi máy chủ chưa sẵn sàng: '..clean(err) end")
     script = script.replace('        -- Stage a complete snapshot', '        pollingState.rosterPlayerCount=playerCount\n        -- Stage a complete snapshot')
     script = script.replace('        pollingState.captureSequence = pollingState.captureSequence + 1', '        pollingState.rosterEligibleCount=#capturedPlayers\n        pollingState.captureSequence = pollingState.captureSequence + 1')
+    script=script.replace('existing.version == 24','existing.version == 25').replace('version=24,','version=25,')
+    # The credit-change enum in the supplied dump names code 1 GUAJI (AFK).
+    reasons="""function m.describeReason(value)
+  if value==nil or tostring(value)=='' then return 'Máy chủ chưa cung cấp lý do chi tiết' end
+  local code=tonumber(value)
+  if not code then return clean(value) end
+  local titles={[1]='Rớt mạng/AFK',[2]='Cố ý bị hạ',[3]='Chơi tiêu cực',[4]='Chửi bới/lăng mạ',
+    [5]='Dàn xếp trận đấu',[6]='Dùng phần mềm gian lận',[7]='Rớt mạng/AFK',[14]='Chửi bới/lăng mạ',
+    [20]='Trình độ chơi không phù hợp',[21]='Rời trận'}
+  return titles[code] or ('Máy chủ trả mã lý do '..tostring(code)..'; chưa có mô tả chi tiết')
+end
+"""
+    script=script.replace('local function number(v)',reasons+'\nlocal function number(v)',1)
+    start=script.index('function m.command(command)')
+    finish=script.index('-- Retire the older observer',start)
+    script=script[:start]+"""function m.setEnabled(value)
+  local ok,result=pcall(function()
+    if not m.refresh() then return 'Chờ đăng nhập game.' end
+    if value then
+      local now=number(m.api.now())
+      if not now then return 'Chưa đọc được giờ máy chủ.' end
+      if not m.enabled then m.api.set(key('Since'),now) end
+      m.api.set(key('Enabled'),1);m.enabled=true;m.since=m.api.get(key('Since'),now)
+      if m.querySetEnabled then m.querySetEnabled(true) end
+      m.queryPulse()
+      local mailOK,mailError=pcall(function() m.mailReady=m.installMail();m.scan('cached') end)
+      m.mailError=mailOK and '' or clean(mailError)
+    else
+      m.api.set(key('Enabled'),0);m.enabled=false;m.pending=0
+      if m.querySetEnabled then m.querySetEnabled(false) end
+      m.api.set(key('Pending'),0)
+    end
+    return m.status()
+  end)
+  if not ok then fail(result);return 'Lỗi bật/tắt theo dõi: '..m.error end
+  return result
+end
+
+"""+script[finish:]
+    script=script.replace(' /checkto day để xuất danh sách.',' Xem lịch sử trong menu Hero Control.')
+    assert '/checkto' not in script
     return script
 
 
@@ -68,6 +109,13 @@ def import_reference(source, destination):
             after = updated.encode('utf8')
             assert payload.count(before) == 1, 'Donor Lua string does not match patch'
             payload = payload.replace(before, seven_bit(len(after)) + after, 1)
+            # Replace donor menu callbacks too; no chat-command entry points remain.
+            for index, enabled in [(224, 'true'), (225, 'false')]:
+                old_callback=metadata['strings'][index].encode('utf8')
+                callback=("return rawget(_G,'DoroCheatCheckToR9').setEnabled("+enabled+")").encode('utf8')
+                encoded=seven_bit(len(old_callback))+old_callback
+                assert payload.count(encoded)==1
+                payload=payload.replace(encoded,seven_bit(len(callback))+callback,1)
             (destination / 'ComplaintHistory.lua').write_text(updated, encoding='utf8', newline='\n')
         filename = name + '.patch'
         (destination / filename).write_bytes(payload)

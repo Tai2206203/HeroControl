@@ -8,6 +8,7 @@ final class ControlStore: ObservableObject {
     @Published private(set) var snapshot: BackendSnapshot?
     @Published private(set) var busy = false
     @Published private(set) var message = "Chưa kết nối backend."
+    @Published private(set) var settingOperationMessage: String?
     @Published private(set) var persistenceError: String?
     @Published private(set) var confirmedRevision: String?
     @Published private(set) var revision = UUID().uuidString
@@ -28,7 +29,7 @@ final class ControlStore: ObservableObject {
         transaction {}
         do {
             if FileManager.default.fileExists(atPath: profileURL.path) {
-                let (saved, migrated) = try ProfileCodec.decode(Data(contentsOf: profileURL))
+                let (saved, migrated) = try ProfileCodec.decode(ProfileCodec.read(profileURL))
                 guard saved.schemaVersion == 1 else { throw BackendError.unavailable("Phiên bản cấu hình không hỗ trợ.") }
                 settings = saved.settings
                 settings.normalize()
@@ -95,6 +96,34 @@ final class ControlStore: ObservableObject {
             settings.flags["reports.enabled"] = true
         }
     }
+    func saveSettingSnapshot() {
+        transaction {
+            reloadProfileUnlocked()
+            guard persistenceError == nil else { return }
+            do {
+                let data = try JSONEncoder().encode(SavedProfile(schemaVersion: 1, settings: settings))
+                try data.write(to: profileURL.deletingLastPathComponent().appendingPathComponent("HeroControl.settings.json"), options: .atomic)
+                settingOperationMessage = "Đã lưu cấu hình riêng."
+            } catch { settingOperationMessage = "Không lưu được: \(error.localizedDescription)" }
+        }
+    }
+    func loadSettingSnapshot() {
+        transaction {
+            let previous = settings, previousRevision = revision
+            do {
+                let data = try ProfileCodec.read(profileURL.deletingLastPathComponent().appendingPathComponent("HeroControl.settings.json"))
+                let (profile, _) = try ProfileCodec.decode(data)
+                guard profile.schemaVersion == 1 else { throw CocoaError(.fileReadCorruptFile) }
+                var loaded = profile.settings;loaded.normalize()
+                // Keep the transport alive long enough to deliver OFF to an already loaded monitor.
+                if settings.gameRuntimeEnabled == true { loaded.gameRuntimeEnabled = true }
+                if loaded.flags["reports.enabled"] == true { loaded.reportsRefreshID = UUID().uuidString;loaded.gameRuntimeEnabled = true }
+                settings = loaded;changed()
+                if persistenceError != nil { settings = previous;revision = previousRevision;settingOperationMessage = persistenceError }
+                else { settingOperationMessage = "Đã tải cấu hình đã lưu." }
+            } catch { settingOperationMessage = "Bản lưu thiếu hoặc không hợp lệ; giữ cấu hình hiện tại." }
+        }
+    }
     func reset() {
         transaction {
             let runtime = settings.gameRuntimeEnabled
@@ -131,7 +160,7 @@ final class ControlStore: ObservableObject {
     private func reloadProfileUnlocked() {
         guard FileManager.default.fileExists(atPath: profileURL.path) else { persistenceError = nil; return }
         do {
-            let data = try Data(contentsOf: profileURL)
+            let data = try ProfileCodec.read(profileURL)
             guard data.count <= 131072 else { throw BackendError.unavailable("Cấu hình quá lớn.") }
             let (saved, migrated) = try ProfileCodec.decode(data)
             guard saved.schemaVersion == 1 else { throw BackendError.unavailable("Phiên bản cấu hình không hỗ trợ.") }

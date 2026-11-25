@@ -16,32 +16,41 @@ static NSDictionary *HCHeroCatalog(void) {
     });
     return entries;
 }
+static NSCache *HCHeroImageCache(void) {
+    static NSCache *cache;static dispatch_once_t once;
+    dispatch_once(&once,^{ cache=[NSCache new];cache.countLimit=24;cache.totalCostLimit=2*1024*1024; });
+    return cache;
+}
+static void HCPurgeHeroImages(void) { [HCHeroImageCache() removeAllObjects]; }
 static UIImage *HCHeroIcon(int32_t heroID) {
-    static NSCache *cache;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{ cache=[NSCache new];cache.countLimit=64; });
     NSString *key=[NSString stringWithFormat:@"%d",heroID];
-    UIImage *image=[cache objectForKey:key];
-    if (image) return image;
-    NSDictionary *entry=HCHeroCatalog()[key];
-    if (!entry) return nil;
-    // Filenames are fixed from the integer ID, never paths supplied by game memory.
-    NSString *path=[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:
-        [NSString stringWithFormat:@"HeroIcons/%d.img",heroID]];
-    image=[UIImage imageWithContentsOfFile:path];
-    if (image) [cache setObject:image forKey:key];
+    UIImage *image=[HCHeroImageCache() objectForKey:key];
+    if(image) return image;
+    if(!HCHeroCatalog()[key]) return nil;
+    NSString *path=[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:[NSString stringWithFormat:@"HeroIcons/%d.img",heroID]];
+    CGImageSourceRef source=CGImageSourceCreateWithURL((__bridge CFURLRef)[NSURL fileURLWithPath:path],NULL);
+    if(source) {
+        NSDictionary *options=@{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,
+            (__bridge id)kCGImageSourceThumbnailMaxPixelSize:@128,(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,
+            (__bridge id)kCGImageSourceShouldCacheImmediately:@YES};
+        // Decode one static frame, including GIF sources; never retain animation frames.
+        CGImageRef frame=CGImageSourceCreateThumbnailAtIndex(source,0,(__bridge CFDictionaryRef)options);
+        if(frame) { image=[UIImage imageWithCGImage:frame];NSUInteger cost=CGImageGetBytesPerRow(frame)*CGImageGetHeight(frame);
+            [HCHeroImageCache() setObject:image forKey:key cost:cost];CGImageRelease(frame); }
+        CFRelease(source);
+    }
     return image;
 }
 static UIImage *HCThemeImage(NSString *name) {
     static NSCache *cache;static dispatch_once_t once;
-    dispatch_once(&once,^{ cache=[NSCache new];cache.countLimit=4; });
+    dispatch_once(&once,^{ cache=[NSCache new];cache.countLimit=1;cache.totalCostLimit=1024*1024; });
     UIImage *image=[cache objectForKey:name];
     if(!image) {
         NSURL *url=[NSURL fileURLWithPath:[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:[@"Theme/" stringByAppendingString:name]]];
         CGImageSourceRef source=CGImageSourceCreateWithURL((__bridge CFURLRef)url,NULL);
         if(source) {
             NSDictionary *options=@{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,
-                (__bridge id)kCGImageSourceThumbnailMaxPixelSize:@1024,(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,
+                (__bridge id)kCGImageSourceThumbnailMaxPixelSize:@256,(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,
                 (__bridge id)kCGImageSourceShouldCacheImmediately:@YES};
             CGImageRef thumbnail=CGImageSourceCreateThumbnailAtIndex(source,0,(__bridge CFDictionaryRef)options);
             if(thumbnail) { image=[UIImage imageWithCGImage:thumbnail];CGImageRelease(thumbnail); }
@@ -113,7 +122,12 @@ static void HCFillGradient(CGRect rect,UIColor *first,UIColor *last) {
 @property(nonatomic,weak) id<HCEspPainting> painter;
 @end
 @implementation HCEspDrawingView
-- (void)drawRect:(CGRect)rect { (void)rect;[self.painter drawEsp]; }
+- (void)drawRect:(CGRect)rect {
+    (void)rect;
+    CGContextRef context=UIGraphicsGetCurrentContext();
+    CGContextClearRect(context,self.bounds);
+    [self.painter drawEsp];
+}
 @end
 
 // UIKit does not document a general screenshot exclusion API. The secure text

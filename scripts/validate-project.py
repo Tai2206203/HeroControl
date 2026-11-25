@@ -24,11 +24,11 @@ for ref in scheme.findall('.//BuildableReference'):
     assert ref.attrib['BlueprintIdentifier'] in definitions
 models = (root / 'HeroControl/Models.swift').read_text('utf8')
 keys = re.findall(r'\.init\(key: "([^"]+)"', models)
-assert len(keys) == 10 and len(set(keys)) == 10
+assert len(keys) == 9 and len(set(keys)) == 9
 expected = [
     '__ifxEnemyEspEnabledV1', 'HeroControl.ESP.HeroID', 'DoroCheat.Reference.R1.Box', 'DoroCheat.Reference.R1.Icon',
     'DoroCheat.Reference.R1.HP', 'DoroCheat.Reference.R1.Map', 'DoroCheat.Reference.R1.Unseen',
-    'DoroCheat.Reference.R1.Check', 'DoroCheat.Style.Banner',
+    'DoroCheat.Reference.R1.Check',
     'reports.enabled'
 ]
 assert keys == expected

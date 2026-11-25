@@ -1,10 +1,12 @@
 -- Host-only contract test. All Unity/network interfaces are controlled stubs.
-assert(loadfile('Runtime/Payload/ComplaintHistory.lua'))
+assert(dofile('Runtime/Payload/ComplaintHistory.lua')=='OK')
+local describeReason=DoroCheatCheckToR9.describeReason
 local prefs,loads,saves={},0,0
 local monitor={enabled=false,records={},queryStatus='waiting_for_server',account='9007199254740993_1'}
+monitor.describeReason=describeReason
 monitor.formatTime=function(v) return tostring(v) end
 monitor.status=function() return 'status' end
-monitor.command=function(cmd) monitor.enabled=cmd=='/checkto on' end
+monitor.setEnabled=function(value) monitor.enabled=value end
 monitor.tick=function() end
 for i=1,2050 do monitor.records[i]={id='receipt:'..i,event=i,subject='notice',reason='reason',source='server_history'} end
 _G.DoroCheatCheckToR9=monitor
@@ -91,3 +93,8 @@ assert(reply:find('"candidateCaptureError":"player_center"',1,true),reply)
 ComplaintMonitorPolling.captureError=''
 reply=HeroControlRuntimePulse(config,'/fixture')
 assert(reply:find('"code":"reports_waiting_roster"',1,true),reply)
+
+monitor.records={{id='numeric-mail',event=1795580587,subject='Lịch sử bị tố cáo',reason='1',source='live'}}
+reply=HeroControlRuntimePulse(config,'/fixture')
+assert(reply:find('"reason":"Rớt mạng/AFK"',1,true),reply)
+assert(reply:find('"reasonCode":1',1,true),reply)

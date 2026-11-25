@@ -24,6 +24,8 @@ def verify(root=ROOT):
     assert lua.encode('utf8') in patch, 'Shipped Lua differs from embedded donor'
     assert "if f[1]=='I' then" in lua
     assert "if f[1]=='I' or (f[1]=='B' and not freshMatch) then" not in lua
+    assert b'/checkto' not in patch and 'function m.command(' not in lua
+    assert 'function m.setEnabled(value)' in lua
     assert 'CSID_CMD_COMPLAINT_RECORD_REQ' in lua and 'syncPendingRequest' in lua
     filter_ = plistlib.loads((root / 'Runtime/HeroControlRuntime.plist').read_bytes())
     assert filter_ == {'Filter': {'Bundles': ['com.garena.game.kgvn']}}

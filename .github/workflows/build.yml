@@ -21,6 +21,7 @@ jobs:
           if ! command -v lua >/dev/null; then brew install lua; fi
           lua scripts/runtime-smoke.lua
           lua scripts/report-monitor-smoke.lua
+          lua scripts/report-reasons-smoke.lua
       - name: Test Telegram delivery without network
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Build and package iPhone app

@@ -35,7 +35,7 @@ struct ContentView: View {
                     controls
                     if let error = store.persistenceError { Text(error).foregroundStyle(.orange).font(.footnote) }
                     if let error = exportError { Text(error).foregroundStyle(.orange).font(.footnote) }
-                    if store.settings.gameRuntimeEnabled == true || store.selectedGroup == .style {
+                    if store.settings.gameRuntimeEnabled == true {
                       Button { Task { await store.apply() } } label: {
                         HStack {
                             if store.busy { ProgressView().tint(.black) }
@@ -347,8 +347,13 @@ struct ContentView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Text("Toàn bộ căn chỉnh nằm trong menu nổi → CĂN CHỈNH. Minimap thủ công dùng khung đã lưu; bạn có thể sửa vị trí, kích thước, tâm, góc và phạm vi ngay, không chờ phép chiếu game.").font(.footnote)
             case .style:
-                Text("Lựa chọn này cần backend áp dụng vào tài nguyên và hành vi game lúc chạy.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                Text("Thay đổi được tự lưu. Bạn có thể giữ một bản riêng để tải lại.").font(.footnote)
+                HStack {
+                    Button("Lưu setting") { store.saveSettingSnapshot() }
+                    Button("Tải setting") { store.loadSettingSnapshot() }
+                }.buttonStyle(.bordered)
+                if let message = store.settingOperationMessage { Text(message).font(.footnote) }
+
             }
         }.padding(18).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 20))
     }

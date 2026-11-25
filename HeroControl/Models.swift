@@ -4,13 +4,22 @@ import CoreFoundation
 // Repair only the known profile-writing bug from the old native toggle. Wire
 // replies still use strict Bool decoding (numeric `ok` remains invalid).
 enum ProfileCodec {
+    static func read(_ url: URL) throws -> Data {
+        let values = try url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey])
+        guard values.isRegularFile == true, values.isSymbolicLink != true, let size = values.fileSize, size <= 131072 else {
+            throw CocoaError(.fileReadTooLarge)
+        }
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        guard data.count <= 131072 else { throw CocoaError(.fileReadTooLarge) }
+        return data
+    }
     static func decode(_ data: Data) throws -> (SavedProfile, Bool) {
         guard data.count <= 131072 else { throw CocoaError(.fileReadTooLarge) }
         var changed = false
         var payload = data
         if var root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
            var settings = root["settings"] as? [String: Any], var flags = settings["flags"] as? [String: Any] {
-            for key in ["DoroCheat.Style.Buttons", "DoroCheat.Style.Skin", "DoroCheat.Style.BeforeMatch", "DoroCheat.Style.LiveChange"] {
+            for key in ["DoroCheat.Style.Banner", "DoroCheat.Style.Buttons", "DoroCheat.Style.Skin", "DoroCheat.Style.BeforeMatch", "DoroCheat.Style.LiveChange"] {
                 if flags.removeValue(forKey: key) != nil { changed = true }
             }
             if let oldSkins = settings["selectedSkins"] as? [String: Any], !oldSkins.isEmpty {
@@ -34,13 +43,13 @@ enum ProfileCodec {
 }
 
 enum FeatureGroup: String, CaseIterable, Identifiable {
-    case esp = "ESP", camera = "Camera", style = "Style", calibration = "Căn chỉnh", reports = "Reports"
+    case esp = "ESP", camera = "Camera", style = "Cấu hình", calibration = "Căn chỉnh", reports = "Reports"
     var id: String { rawValue }
     var symbol: String {
         switch self {
         case .esp: return "viewfinder"
         case .camera: return "camera"
-        case .style: return "paintbrush"
+        case .style: return "gearshape"
         case .calibration: return "slider.horizontal.3"
         case .reports: return "list.bullet.rectangle"
         }
@@ -61,7 +70,6 @@ struct Feature: Identifiable {
         .init(key: "DoroCheat.Reference.R1.Map", title: "ESP Minimap", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Unseen", title: "Unseen only", group: .esp),
         .init(key: "DoroCheat.Reference.R1.Check", title: "ESP Check / kỹ năng", group: .esp),
-        .init(key: "DoroCheat.Style.Banner", title: "Kill Banner", group: .style),
         .init(key: "reports.enabled", title: "Truy vấn lịch sử tố cáo", group: .reports)
     ]
     static let cameraKey = "DoroCheat.Reference.R2.CameraScale"
@@ -79,6 +87,9 @@ struct ControlSettings: Codable, Equatable {
     var minimapY: Double? = nil
     var minimapSize: Double? = nil
     var minimapIconSize: Double? = nil
+    var minimapPortraitX: Double? = nil
+    var minimapPortraitY: Double? = nil
+    var minimapPortraitSize: Double? = nil
     var espBoxWidthScale: Double? = nil
     var espBoxHeightScale: Double? = nil
     var espIconSize: Double? = nil
@@ -98,6 +109,9 @@ struct ControlSettings: Codable, Equatable {
         if let v = minimapX { minimapX = v.isFinite ? min(1, max(0, v)) : 0.015 }
         if let v = minimapY { minimapY = v.isFinite ? min(1, max(0, v)) : 0.02 }
         if let v = minimapSize { minimapSize = v.isFinite ? min(240, max(80, v)) : 150 }
+        if let v = minimapPortraitX { minimapPortraitX = v.isFinite ? min(1, max(0, v)) : 0.015 }
+        if let v = minimapPortraitY { minimapPortraitY = v.isFinite ? min(1, max(0, v)) : 0.02 }
+        if let v = minimapPortraitSize { minimapPortraitSize = v.isFinite ? min(240, max(80, v)) : 150 }
         if let v = minimapIconSize { minimapIconSize = v.isFinite ? min(40, max(8, v)) : 20 }
         if let v = espBoxWidthScale { espBoxWidthScale = v.isFinite ? min(3, max(0.5, v)) : 1 }
         if let v = espBoxHeightScale { espBoxHeightScale = v.isFinite ? min(3, max(0.5, v)) : 1 }
@@ -132,6 +146,7 @@ struct ReportRecord: Codable, Identifiable {
     let time: String
     let information: String
     let reason: String
+    var reasonCode: Int? = nil
     var eventTime: TimeInterval? = nil
     var source: String? = nil
 }

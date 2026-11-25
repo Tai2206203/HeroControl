@@ -58,7 +58,7 @@ function HeroControlRuntimePulse(config, directory)
         -- ESP now belongs to the independent capture-protected HUD. Leave
         -- donor skins/camera/report hooks active without duplicate game ESP.
         local isEsp=key=='__ifxEnemyEspEnabledV1' or key:match('^DoroCheat%.Reference%.R1%.')
-        local retired=key=='DoroCheat.Style.Buttons' or key=='DoroCheat.Style.Skin' or key=='DoroCheat.Style.BeforeMatch' or key=='DoroCheat.Style.LiveChange'
+        local retired=key=='DoroCheat.Style.Banner' or key=='DoroCheat.Style.Buttons' or key=='DoroCheat.Style.Skin' or key=='DoroCheat.Style.BeforeMatch' or key=='DoroCheat.Style.LiveChange'
         local effective=not isEsp and not retired and value
         prefs.SetInt(key,effective and 1 or 0)
         assert(prefs.GetInt(key,-1)==(effective and 1 or 0),'flag_readback:'..key)
@@ -68,7 +68,7 @@ function HeroControlRuntimePulse(config, directory)
     prefs.SetFloat('DoroCheat.Reference.R2.CameraScale',scale)
     assert(math.abs(prefs.GetFloat('DoroCheat.Reference.R2.CameraScale',0)-scale)<0.0001,'camera_readback')
     -- Retired features are forced off even for a legacy profile.
-    for _,key in ipairs({'Buttons','Skin','BeforeMatch','LiveChange'}) do prefs.SetInt('DoroCheat.Style.'..key,0) end
+    for _,key in ipairs({'Banner','Buttons','Skin','BeforeMatch','LiveChange'}) do prefs.SetInt('DoroCheat.Style.'..key,0) end
     for hero in pairs(settings.selectedSkins or {}) do
       prefs.DeleteKey('DoroCheat.Style.SelectedSkin.'..hero)
       prefs.DeleteKey('DoroCheat.Style.VerifiedSkin.'..hero)
@@ -82,8 +82,8 @@ function HeroControlRuntimePulse(config, directory)
       assert(chunk,err);assert(chunk()=='OK','complaint_bootstrap')
       monitor=assert(rawget(_G,'DoroCheatCheckToR9'),'complaint_missing')
     end
-    if settings.flags['reports.enabled'] and not monitor.enabled then monitor.command('/checkto on') end
-    if not settings.flags['reports.enabled'] and monitor.enabled then monitor.command('/checkto off') end
+    if settings.flags['reports.enabled'] and not monitor.enabled then monitor.setEnabled(true) end
+    if not settings.flags['reports.enabled'] and monitor.enabled then monitor.setEnabled(false) end
     if settings.flags['reports.enabled'] then
       if settings.reportsRefreshID and runtime.lastReportsRefresh~=settings.reportsRefreshID then
         local polling=rawget(_G,'ComplaintMonitorPolling')
@@ -100,7 +100,7 @@ function HeroControlRuntimePulse(config, directory)
     for index=#retained,math.max(1,#retained-2047),-1 do
       local r=retained[index]
       local record={id=tostring(r.id),time=monitor.formatTime(r.event),eventTime=tonumber(r.event),
-        information=tostring(r.subject or ''),reason=tostring(r.reason or ''),source=r.source}
+        information=tostring(r.subject or ''),reason=monitor.describeReason and monitor.describeReason(r.reason) or tostring(r.reason or ''),reasonCode=tonumber(r.reason),source=r.source}
       local size=#json(record)
       if recordBytes+size>1024*1024 then break end
       recordBytes=recordBytes+size

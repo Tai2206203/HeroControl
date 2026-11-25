@@ -25,6 +25,10 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -Wall -Wextra -Werror=implicit-function-declaration -framework Foundation \
     "$ROOT/scripts/reports-preparation-check.m" -o "$OUTPUT/reports-preparation-check"
 "$OUTPUT/reports-preparation-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -I"$OUTPUT" -framework Foundation \
+    "$ROOT/scripts/settings-store-check.m" -o "$OUTPUT/settings-store-check"
+"$OUTPUT/settings-store-check"
 # Also exercise invalid input/unsupported-host responses of the actual ABI.
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -dynamiclib -fvisibility=hidden -framework Foundation \

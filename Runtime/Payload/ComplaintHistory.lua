@@ -1,13 +1,23 @@
 -- Local receipt ledger and Chap_To server-history monitoring for this account.
 local globalKey = 'DoroCheatCheckToR9'
 local existing = rawget(_G, globalKey)
-if type(existing) == 'table' and existing.version == 24 then return 'OK' end
+if type(existing) == 'table' and existing.version == 25 then return 'OK' end
 
-local m = {version=24, records={}, seen={}, pending=0, error='', account=nil,staleMail=setmetatable({},{__mode='k'})}
+local m = {version=25, records={}, seen={}, pending=0, error='', account=nil,staleMail=setmetatable({},{__mode='k'})}
 local floor = math.floor
 local function clean(v)
   return tostring(v or ''):gsub('[\t\r\n%z]', ' '):sub(1, 2000)
 end
+function m.describeReason(value)
+  if value==nil or tostring(value)=='' then return 'Máy chủ chưa cung cấp lý do chi tiết' end
+  local code=tonumber(value)
+  if not code then return clean(value) end
+  local titles={[1]='Rớt mạng/AFK',[2]='Cố ý bị hạ',[3]='Chơi tiêu cực',[4]='Chửi bới/lăng mạ',
+    [5]='Dàn xếp trận đấu',[6]='Dùng phần mềm gian lận',[7]='Rớt mạng/AFK',[14]='Chửi bới/lăng mạ',
+    [20]='Trình độ chơi không phù hợp',[21]='Rời trận'}
+  return titles[code] or ('Máy chủ trả mã lý do '..tostring(code)..'; chưa có mô tả chi tiết')
+end
+
 local function number(v)
   local n = tonumber(v)
   if not n or n ~= n or n < 0 or n > 4294967295 then return nil end
@@ -183,7 +193,7 @@ function m.notify()
     if not m.refresh() or not m.enabled or m.api.battle() then return end
     m.notifying=true
     local count=m.pending
-    if m.api.tip('ĐÃ NHẬN THÔNG BÁO BỊ TỐ CÁO: '..integer(count)..' bản ghi mới từ game. /checkto day để xuất danh sách.')~=false then
+    if m.api.tip('ĐÃ NHẬN THÔNG BÁO BỊ TỐ CÁO: '..integer(count)..' bản ghi mới từ game. Xem lịch sử trong menu Hero Control.')~=false then
       m.pending=0;m.api.set(key('Pending'),0)
     end
   end)
@@ -229,31 +239,26 @@ function m.status()
   return text
 end
 
-function m.command(command)
-  if command~='/checkto on' and command~='/checkto off' and command~='/checkto status' and command~='/checkto day' then return 'Dùng /checkto on, off, status, day.' end
+function m.setEnabled(value)
   local ok,result=pcall(function()
-    if not m.refresh() then return 'Hãy đăng nhập rồi nhập lại /checkto on.' end
-    if command=='/checkto on' then
+    if not m.refresh() then return 'Chờ đăng nhập game.' end
+    if value then
       local now=number(m.api.now())
-      if not now then return 'Chưa đọc được giờ máy chủ; chưa bật theo dõi.' end
+      if not now then return 'Chưa đọc được giờ máy chủ.' end
       if not m.enabled then m.api.set(key('Since'),now) end
       m.api.set(key('Enabled'),1);m.enabled=true;m.since=m.api.get(key('Since'),now)
-      local mailOK,mailError=pcall(function() m.mailReady=m.installMail();m.scan('cached') end)
-      m.mailError=mailOK and '' or clean(mailError)
       if m.querySetEnabled then m.querySetEnabled(true) end
       m.queryPulse()
-      local text='Đã bật theo dõi tố cáo theo Chap_To. Bật trước khi kết thúc trận để lấy mốc cũ; có dữ liệu mới từ máy chủ sẽ báo sau trận. /checkto day để xuất.'
-      if not m.mailReady then text=text..' Đang chờ hệ thống thư.' end
-      return text
-    elseif command=='/checkto off' then
+      local mailOK,mailError=pcall(function() m.mailReady=m.installMail();m.scan('cached') end)
+      m.mailError=mailOK and '' or clean(mailError)
+    else
       m.api.set(key('Enabled'),0);m.enabled=false;m.pending=0
       if m.querySetEnabled then m.querySetEnabled(false) end
       m.api.set(key('Pending'),0)
-      return 'Đã tắt theo dõi tố cáo; giữ nhật ký đã ghi.'
     end
     return m.status()
   end)
-  if not ok then fail(result);return 'Check tố chưa thực hiện được: '..m.error end
+  if not ok then fail(result);return 'Lỗi bật/tắt theo dõi: '..m.error end
   return result
 end
 

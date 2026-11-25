@@ -3,8 +3,8 @@
 #include "EspMemory.h"
 
 // Hold independently verified actor/matrix samples through short read failures.
-// No sleeps and no queued 600-ms backlog: every fresh sample replaces the cache.
-#define HC_ESP_HOLD_SECONDS 0.6
+// No sleeps and no queued 120-ms backlog: every fresh sample replaces the cache.
+#define HC_ESP_HOLD_SECONDS 0.12
 typedef struct {
     HCEspFrame actors, matrices;
     double actorsTime, matricesTime;
@@ -45,7 +45,7 @@ static inline HCEspPresentation HCEspPresent(HCEspSampleBuffer *buffer,HCEspFram
     if(actorsValid) { buffer->actors=*input;buffer->actorsTime=now;buffer->hasActors=true; }
     if(!buffer->hasActors || !buffer->hasMatrices || now-buffer->actorsTime>HC_ESP_HOLD_SECONDS ||
        now-buffer->matricesTime>HC_ESP_HOLD_SECONDS) {
-        input->count=input->projected=0;input->matricesValid=false;return result;
+        HCEspSampleReset(buffer);input->count=input->projected=0;input->matricesValid=false;return result;
     }
     HCEspFrame frame=buffer->actors;
     frame.status=status;
@@ -75,7 +75,7 @@ static inline bool HCEspSmooth(HCEspScreenState *state,uint32_t objectID,int32_t
         fabsf(x-state->x)>0.35f || fabsf(headY-state->headY)>0.35f;
     if(reset) { state->x=x;state->headY=headY;state->feetY=feetY; }
     else {
-        float alpha=(float)(1.0-exp(-elapsed/0.06));
+        float alpha=(float)(1.0-exp(-elapsed/0.025));
         state->x+=(x-state->x)*alpha;
         state->headY+=(headY-state->headY)*alpha;
         state->feetY+=(feetY-state->feetY)*alpha;
