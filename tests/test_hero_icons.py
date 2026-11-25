@@ -11,7 +11,7 @@ class HeroIconAssetsTests(unittest.TestCase):
         theme = ROOT.parent / 'Theme'
         manifest = json.loads((theme / 'manifest.json').read_text('utf8'))
         entries = [manifest['userImage']] + manifest['skins']
-        self.assertEqual(len(manifest['skins']), 9)
+        self.assertGreaterEqual(len(manifest['skins']), 14)
         for entry in entries:
             data = (theme / entry['file']).read_bytes()
             self.assertEqual(hashlib.sha256(data).hexdigest(), entry['sha256'])

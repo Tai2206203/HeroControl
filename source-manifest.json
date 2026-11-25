@@ -685,6 +685,11 @@
     "sha256": "db6c136b37bc07ccc5cfdb97d1f64ac113d0cf7fa42a1e58c432836eca758e27"
   },
   {
+    "path": "Assets/Theme/butterfly-phoenix-sss.jpg",
+    "bytes": 367279,
+    "sha256": "607f4142c1ff69fa2323e490c030fe0d38e1552361924345771f35657c840ebe"
+  },
+  {
     "path": "Assets/Theme/diaochan-celestial.jpg",
     "bytes": 151757,
     "sha256": "f3f3469e4a50b1cf85c20894dadc95df44685e39fee8c82376287ae91e26c66a"
@@ -700,14 +705,34 @@
     "sha256": "5c3481ab53a8fe3a859dac2fc3247cf74c1785b002939f632900620acd0900c4"
   },
   {
+    "path": "Assets/Theme/liliana-magic-sss.jpg",
+    "bytes": 150931,
+    "sha256": "6288e4f1af2d4db148f1fac87d8e629ada4cf8d9ba0d4a5c91f3bf42a1f3a38d"
+  },
+  {
     "path": "Assets/Theme/manifest.json",
-    "bytes": 3519,
-    "sha256": "92db7cdcacb9302c19f468b327a9783b890c55a1257b0b0274e002fa15140a0d"
+    "bytes": 5620,
+    "sha256": "d90bed841b7221717fce6db01974c2e435ebb427e446a16df81afa6b6e06bf70"
   },
   {
     "path": "Assets/Theme/sephera-nova.jpg",
     "bytes": 141889,
     "sha256": "2e7ccf08bdb61a840a5da0af0b5ef56104dd004c868886ff6d3461d19d2352c4"
+  },
+  {
+    "path": "Assets/Theme/telannas-dimension-sss.jpg",
+    "bytes": 481937,
+    "sha256": "8f303369dd5c8a54f34d9583a5e6b10c413d8e93de46c4e3daf7e2831534933a"
+  },
+  {
+    "path": "Assets/Theme/telannas-fee-sss.jpg",
+    "bytes": 247965,
+    "sha256": "fe6ea6da318fb789678fcdbc1b7ac0da7f1fbfb7d3eba28b7d6fcab1c8257dea"
+  },
+  {
+    "path": "Assets/Theme/telannas-newyear-sss.jpg",
+    "bytes": 279838,
+    "sha256": "2bde03b3be0f3c26710396bd101ba7408f89c91d4d49d5690b4bad27ec3f3eac"
   },
   {
     "path": "Assets/Theme/veres-dragon.jpg",
@@ -742,7 +767,7 @@
   {
     "path": "BackendSDK/DiagnosticBackend.m",
     "bytes": 41144,
-    "sha256": "3bc46a612c0f263e1a537eccc4a25fc4d1ba07055c23566b666173ab7d560270"
+    "sha256": "657073097ef86d8fc6f5886ceadb5d09208d7e7f4dcfdb87db7ea09f51ca990f"
   },
   {
     "path": "BackendSDK/EspMemory.h",
@@ -885,6 +910,11 @@
     "sha256": "75d53cba0c39f908d50ac5499772ea7f78475086d67821a24b1bbac9dd5eb75a"
   },
   {
+    "path": "CAP_NHAT_0.17.2.txt",
+    "bytes": 1323,
+    "sha256": "d025b76c570d6cf5ef317d66599b3aa7c5e807a4a0c35b68c4bc4553e7db4641"
+  },
+  {
     "path": "CAP_NHAT_0.2.1.txt",
     "bytes": 1705,
     "sha256": "20fe5279920a0e6f260f0e9e146774fbe3220f32aa5b727d2849a2217df66b56"
@@ -982,7 +1012,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9825,
-    "sha256": "c485428f249ead13f03764fd28522b51b6453144e36c474c197311d0625f858a"
+    "sha256": "68522e5288071582bbfb9d375894c307cae5cef6a63bbc36660c85038fc3f82e"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -1057,7 +1087,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1049,
-    "sha256": "2a616f753e12642c57cfa440afa2d8fbf62954547f88408da47b82c3d4eb007d"
+    "sha256": "6f3a4ea1867bf3ef6a341d80f5914d1265589d5856fd456c1422d9e6820d1443"
   },
   {
     "path": "HeroControl/Models.swift",
@@ -1080,14 +1110,19 @@
     "sha256": "392c6674a75af5b2501c5b41b0f04ae01ba67d42f6f6784ce65c445170352e01"
   },
   {
+    "path": "KIEM_TRA_CAN_THIEP_GAME.txt",
+    "bytes": 3879,
+    "sha256": "8d6727ffbedd82bf2656a97589d15856994c18b4f02f766cfddd5f26b101f77b"
+  },
+  {
     "path": "Overlay/CameraEngine.h",
     "bytes": 308,
     "sha256": "260e9901cb1e0374a7ab397a16b8a88cc792cbb71cbe86534ccd4d574bdc6f11"
   },
   {
     "path": "Overlay/CameraEngine.m",
-    "bytes": 30193,
-    "sha256": "ab84484f5dd1d750d5b9558692ea612cb100956a42a87513eccb1ad9132bc40f"
+    "bytes": 30227,
+    "sha256": "84bf69e4e9eaa877746f5abc0ea98c6f39d03d22df75babbc458a9b86e4e195a"
   },
   {
     "path": "Overlay/CapturePolicy.h",
@@ -1101,18 +1136,18 @@
   },
   {
     "path": "Overlay/HeroAssets.h",
-    "bytes": 11188,
-    "sha256": "ca106a3e88e8aa692c2d9b4ea16041a72cddd0807939ec0fe5dc39b73c0a5ca0"
+    "bytes": 11302,
+    "sha256": "e5d8e89270a87bca8175309eead787012667bdc6b0bff612e441206f790a59de"
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 95552,
-    "sha256": "c01f58d9d1d31bf4b338fdc5ac395be6eb23640727ddf083f5b632868bf7d65d"
+    "bytes": 95643,
+    "sha256": "b57ea1a5a2544b257bcfcf0c78fafe9f9435f2c1a82a3d20ba65f72a7e183bcc"
   },
   {
     "path": "Overlay/Info.plist",
     "bytes": 830,
-    "sha256": "09f949043051cd421f1f003f20ad883c97b175372f021e1b54a553f606757c21"
+    "sha256": "7808c9b6afdda231f35d12365a3dc8ac34752b2a8375991f357a7eecab2e834c"
   },
   {
     "path": "Overlay/InputCapture.h",
@@ -1227,7 +1262,7 @@
   {
     "path": "Runtime/RuntimeShared.h",
     "bytes": 7595,
-    "sha256": "78dbe1e4486336b0dbd8386efa46cb5baefaeda2c82d19177702c1ec42b2a9ac"
+    "sha256": "2d87665373106afba49b9e284f8c72a37f57a48b0964298485da514ee9c8a9f5"
   },
   {
     "path": "Signing/App.entitlements",
@@ -1291,8 +1326,8 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 26016,
-    "sha256": "6a17b5dad743fef22f69ee6ec6fdf72cce4f6af4d8f41c5650b9970bc97e6828"
+    "bytes": 26743,
+    "sha256": "6ad19599905d0d3118dc6d561f1b43360621db0608d5910c8377bde84d94fe2e"
   },
   {
     "path": "scripts/build-diagnostics.sh",
@@ -1377,7 +1412,7 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 9387,
-    "sha256": "b79c486471a9e586e243d3c2e95d8b399b5673a3429e16b04a1ad6c2b60c9120"
+    "sha256": "1593d749202cea3be0d37f058187d221415016c4ba4af9700f5cac5428df7305"
   },
   {
     "path": "scripts/import-runtime-reference.py",
@@ -1471,8 +1506,8 @@
   },
   {
     "path": "scripts/send-telegram.py",
-    "bytes": 5737,
-    "sha256": "16c97378a8f4c1b74275a4a4533aad90b7703044c16c398aa28b9e0b865591a3"
+    "bytes": 5715,
+    "sha256": "51e52cb8a040862ae739000d7cde8c82bea6b92f6d53d87b19a3f14fb6410075"
   },
   {
     "path": "scripts/settings-store-check.m",
@@ -1496,8 +1531,8 @@
   },
   {
     "path": "scripts/theme-assets-check.m",
-    "bytes": 1297,
-    "sha256": "b5a9b902c1713871cfe048b6126bc1b1403af69daa7a5703a5ff5e6989cfdea8"
+    "bytes": 1433,
+    "sha256": "3bf894fb3ff6d9080baeac1fbe1f0893fe631c52130e5b65d5b24a99888a68fd"
   },
   {
     "path": "scripts/validate-project.py",
@@ -1521,8 +1556,8 @@
   },
   {
     "path": "tests/test_hero_icons.py",
-    "bytes": 2521,
-    "sha256": "1a8b865cacf45d76eb5bc1acf0347537e92b33a9b2d2e140ea41ad25a0854d0d"
+    "bytes": 2529,
+    "sha256": "a975ad48083d37c0f6e20d7a7957a0de0425431eb8c77c1f1b1241a39fbd2e72"
   },
   {
     "path": "tests/test_protection.py",
@@ -1546,7 +1581,7 @@
   },
   {
     "path": "tests/test_theme_assets.py",
-    "bytes": 1198,
-    "sha256": "bfc54ef4e0ef8ec4a5eae6184e0eb1bd386f3e262e48f774e8e715507891e9ad"
+    "bytes": 2369,
+    "sha256": "ef5a26f4898f33e241d02fd42ef15a5ebca7867c2dc0ccbacb089e7fb8803b5c"
   }
 ]

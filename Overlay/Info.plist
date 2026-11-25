@@ -7,8 +7,8 @@
     <key>CFBundleDisplayName</key><string>DORO-CHEAT</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-    <key>CFBundleVersion</key><string>36</string>
-    <key>CFBundleShortVersionString</key><string>0.17.1</string>
+    <key>CFBundleVersion</key><string>37</string>
+    <key>CFBundleShortVersionString</key><string>0.17.2</string>
     <key>LSRequiresIPhoneOS</key><true/>
     <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
 </dict></plist>

@@ -1,0 +1,50 @@
+RÀ SOÁT ĐỌC / GHI GAME — DORO-CHEAT
+
+Phạm vi: mã nguồn hiện tại. Đây không phải khẳng định mọi chức năng đều chỉ đọc.
+
+1. ESP / minimap / box / icon / thanh máu: đọc rồi vẽ bên ngoài game.
+Overlay/CameraEngine.m: readEsp dùng HCEspRead / HCLogicRead; readReports đọc
+cache bằng HCReadReceiptCache. Các luồng này được cấp HCCameraMemory với callback
+write=NULL. Không yêu cầu tìm thấy mach_vm_write để khám phá phiên đọc game.
+Dữ liệu được đưa sang HCEspDrawingView trong tiến trình HUD để vẽ; chỉnh vị trí,
+cỡ khung và kích thước icon chỉ đổi cấu hình/HUD. Cache/mail chỉ đọc được dữ liệu
+game đã tải; không bảo đảm có toàn bộ lịch sử trên máy chủ.
+
+2. Cam xa: có ghi trực tiếp vào bộ nhớ game.
+Overlay/CameraEngine.m: HCEngineWrite gọi mach_vm_write; tick gọi HCCameraApply.
+BackendSDK/CameraMemory.h: ghi float zoom tại moba+0x98, byte dirty tại moba+0xDC.
+Khi OFF hoặc đóng worker, HCCameraRestore có thể ghi giá trị khôi phục nếu vẫn
+khớp phiên/đối tượng. Vì vậy OFF không có nghĩa chưa từng ghi. Không thể làm cam
+xa của game hiện tại chỉ bằng đọc bộ nhớ; cần tắt/bỏ chức năng ghi nếu bắt buộc
+chỉ đọc. Thu phóng phần vẽ HUD không thay được góc nhìn thật của camera game.
+
+3. Check tố cáo tự động hiện tại: không chỉ đọc bộ nhớ.
+Overlay/CameraEngine.m: prepareReports/syncRuntime có thể chuẩn bị và bật adapter.
+Runtime/RuntimeInstaller.h chép thư viện + filter vào thư mục loader jailbreak.
+Runtime/GameRuntime.mm: HCExecute gọi hàm trong game để cấp phát chuỗi và chạy
+Lua; adapter được nạp vào tiến trình game. Runtime/Runtime.lua gọi PatchManager.Load
+để nạp IFix, ghi PlayerPrefs (SetInt/SetFloat/Save/DeleteKey), kể cả để ép tính năng
+cũ về OFF. ComplaintHistory.lua thay callback mail/network và chủ động gửi yêu
+cầu lấy lịch sử. Chỉ đọc trạng thái từ file của adapter không biến nguồn đó thành
+một luồng không can thiệp.
+Tắt reports.enabled riêng lẻ chưa chắc dừng runtime: gameRuntimeEnabled còn ON
+cũng khiến syncRuntime tiếp tục chạy. Filter đã cài còn có thể nạp adapter ở lần
+mở game tiếp theo ngay cả khi HUD không được mở.
+Popup OpenTips cũ đã được gỡ ở build 36; việc đó không gỡ adapter/hook/truy vấn.
+
+4. Skin/banner: không còn chức năng bật skin/banner trong UI, nhưng đường runtime
+vẫn có thao tác ép preference cũ về OFF và xóa khóa skin. Đó vẫn là ghi trạng thái
+trong game. Các ảnh SSS ở menu chỉ là tài nguyên HUD, không mở khóa skin của game.
+
+5. Để chuyển toàn bộ app sang chỉ đọc/vẽ:
+- Bỏ writer camera, không gọi Apply/Restore và không trình bày cam xa là khả dụng.
+- Không chuẩn bị/nạp adapter, chạy Lua/IFix hay gửi truy vấn lịch sử tố cáo.
+- Chỉ giữ đọc ESP và cache thư đã có; nêu rõ giới hạn dữ liệu tố cáo thụ động.
+- Gỡ filter/thư viện adapter do app đã cài bằng đường removeRuntime hiện có, giữ
+  dữ liệu lịch sử; đóng hẳn rồi mở lại game để bỏ hook đã nằm trong bộ nhớ.
+- Không thể bảo đảm không còn adapter đang chạy chỉ bằng đổi toggle trong HUD.
+
+Trạng thái bản thay đổi này:
+Đã gia cố callback đọc ESP/mail thành không có writer và bổ sung ảnh/menu.
+Chưa vô hiệu hóa cam xa hoặc đường truy vấn tố cáo đang dùng; cần lựa chọn giữa
+mục tiêu chỉ đọc nghiêm ngặt và giữ hai chức năng vốn yêu cầu can thiệp.

@@ -134,7 +134,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.17.1", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.17.2", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -458,13 +458,13 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 - (CGRect)bubbleRect { return CGRectMake(self.bubble.x - 26, self.bubble.y - 26, 52, 52); }
 - (CGRect)panelRect {
     BOOL landscape=self.bounds.size.width>self.bounds.size.height;
-    CGFloat width=landscape ? MIN(640,self.bounds.size.width*0.76) : MIN(360,self.bounds.size.width-32);
-    CGFloat height=landscape ? MIN(330,self.bounds.size.height*0.80) : MIN(440,self.bounds.size.height*0.72);
+    CGFloat width=landscape ? MIN(680,self.bounds.size.width*0.80) : MIN(376,self.bounds.size.width-32);
+    CGFloat height=landscape ? MIN(350,self.bounds.size.height*0.84) : MIN(460,self.bounds.size.height*0.74);
     return CGRectMake((self.bounds.size.width-width)/2,(self.bounds.size.height-height)/2,width,height);
 }
 - (CGRect)contentRect {
     CGRect p=[self panelRect];BOOL function=self.group>=1 && self.group<=3;
-    CGFloat reserve=function && p.size.width>500 ? 174 : 0;
+    CGFloat reserve=function && p.size.width>500 ? 194 : 0;
     CGFloat banner=function && p.size.width<=500 && p.size.height>=400 ? 100 : 0;
     return CGRectMake(p.origin.x+66,p.origin.y+62+banner,p.size.width-82-reserve,p.size.height-104-banner);
 }
@@ -543,7 +543,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     CGContextRestoreGState(context);[self target:@"reports-scroll" rect:_reportViewport];
 }
 - (void)tile:(CGRect)rect title:(NSString *)title subtitle:(NSString *)subtitle image:(int32_t)hero action:(NSString *)action {
-    NSString *cover=hero==130 ? @"violet-sss.png" : hero==156 || hero==537 ? @"lauriel-sss.jpg" : @"airi-sss.jpg";
+    NSString *cover=hero==130 ? @"violet-sss.png" : hero==156 ? @"butterfly-phoenix-sss.jpg" : hero==537 ? @"liliana-magic-sss.jpg" : hero==118 ? @"telannas-newyear-sss.jpg" : @"telannas-dimension-sss.jpg";
     HCDrawSkinCard(rect,cover);
     NSString *glyph=hero==130 || hero==156 ? @"viewfinder" : hero==118 ? @"slider.horizontal.3" : hero==537 ? @"camera.fill" : @"envelope.fill";
     UIImage *symbol=[[UIImage systemImageNamed:glyph] imageWithTintColor:[HCMenuAccent() colorWithAlphaComponent:0.22] renderingMode:UIImageRenderingModeAlwaysOriginal];
@@ -701,7 +701,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             [[UIColor colorWithWhite:1 alpha:1] setFill];
             [[UIBezierPath bezierPathWithRoundedRect:CGRectInset(c,-7,-5) cornerRadius:14] fill];
             if(self.group>=1 && self.group<=3 && p.size.width>500) {
-                CGRect portrait=CGRectMake(CGRectGetMaxX(p)-166,p.origin.y+62,148,p.size.height-104);
+                CGRect portrait=CGRectMake(CGRectGetMaxX(p)-184,p.origin.y+54,166,p.size.height-88);
                 CGContextSaveGState(ctx);[[UIBezierPath bezierPathWithRoundedRect:portrait cornerRadius:16] addClip];
                 HCDrawImageFill(HCThemeImage(HCMenuArt(self.group)),portrait,1,1);CGContextRestoreGState(ctx);
             } else if(self.group>=1 && self.group<=3 && p.size.height>=400) {
@@ -712,7 +712,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         }
         if(self.group==5) {
             BOOL wide=c.size.width>460;
-            CGFloat leftWidth=wide ? c.size.width*0.54 : c.size.width;
+            CGFloat leftWidth=wide ? c.size.width*0.50 : c.size.width;
             CGRect banner=CGRectMake(c.origin.x,c.origin.y,leftWidth,wide ? MIN(88,c.size.height*0.38) : 56);
             [self tile:banner title:@"SẴN SÀNG" subtitle:@"TỰ ĐỘNG LƯU CẤU HÌNH" image:130 action:@"tab:0"];
             CGFloat rowY=CGRectGetMaxY(banner)+12;

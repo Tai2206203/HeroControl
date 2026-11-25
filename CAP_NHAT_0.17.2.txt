@@ -1,0 +1,8 @@
+DORO-CHEAT 0.17.2 — build 37
+
+- Thêm 5 ảnh SSS nữ khổ lớn từ Garena: Tel’Annas Thần sứ F.E.E-X1, Thứ nguyên vệ thần, Tân niên vệ thần; Butterfly Phượng Cửu Thiên; Liliana Ma Pháp Tối Thượng. Bộ ảnh dùng trong menu tăng từ 3 lên 8, không dùng thumbnail 120 px.
+- Mở rộng nhẹ panel; cột ô bên phải trang chính rộng hơn, cao hơn. Khung ảnh bên phải các trang chức năng tăng từ 148 lên 166 px, thêm 16 px chiều cao so với cùng kích thước panel.
+- ESP/logic ESP nhận callback write=NULL; đọc game không còn yêu cầu tìm thấy symbol ghi bộ nhớ. Luồng đọc cache thư đã dùng writer=NULL từ trước.
+- Kết quả rà soát nằm trong KIEM_TRA_CAN_THIEP_GAME.txt: cam xa vẫn ghi zoom/dirty và có ghi khôi phục; check tố cáo hiện nạp runtime/IFix, ghi preference, hook callback và gửi truy vấn. App chưa chuyển toàn bộ sang chỉ đọc. Hai luồng này được giữ nguyên trong lúc chờ chọn hướng xử lý vì chế độ chỉ đọc sẽ làm chúng mất chức năng hiện tại.
+
+Kiểm tra Python, tài nguyên ảnh và cú pháp/native portable fixtures được chạy tại Windows. SDK Apple và thử trực tiếp trên thiết bị vẫn cần CI/iPhone.

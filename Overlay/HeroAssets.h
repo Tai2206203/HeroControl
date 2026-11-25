@@ -48,12 +48,12 @@ static NSCache *HCThemeCache(void) {
     return cache;
 }
 static NSArray<NSString *> *HCMenuArtFiles(void) {
-    return @[@"violet-sss.png",@"lauriel-sss.jpg",@"airi-sss.jpg"];
+    return @[@"violet-sss.png",@"lauriel-sss.jpg",@"airi-sss.jpg",@"telannas-fee-sss.jpg",@"telannas-dimension-sss.jpg",@"telannas-newyear-sss.jpg",@"butterfly-phoenix-sss.jpg",@"liliana-magic-sss.jpg"];
 }
 static NSString *HCMenuArt(NSInteger group) {
-    switch(group) { case 0:case 3:return @"lauriel-sss.jpg";
-        case 1:case 4:return @"airi-sss.jpg";
-        default:return @"violet-sss.png"; }
+    NSArray *files=HCMenuArtFiles();
+    NSUInteger index=group>=0 ? (NSUInteger)group%files.count : 0;
+    return files[index];
 }
 // Drawing only reads the cache. Decode photos on a serial worker, once per name.
 static UIImage *HCThemeImage(NSString *name) {

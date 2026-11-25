@@ -73,6 +73,51 @@
       "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/sephera/",
       "sha256": "2e7ccf08bdb61a840a5da0af0b5ef56104dd004c868886ff6d3461d19d2352c4",
       "bytes": 141889
+    },
+    {
+      "file": "telannas-fee-sss.jpg",
+      "name": "Tel'Annas Thần sứ F.E.E-X1",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/acd939e7bd203ceebe66450431292e5a5cd114a5b51f11.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/telannas/",
+      "sha256": "fe6ea6da318fb789678fcdbc1b7ac0da7f1fbfb7d3eba28b7d6fcab1c8257dea",
+      "bytes": 247965
+    },
+    {
+      "file": "telannas-dimension-sss.jpg",
+      "name": "Tel'Annas Thứ nguyên vệ thần",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/a8711ec71b74022f658d35c1c8f4f63b5fbb7a7bc5ba51.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/telannas/",
+      "sha256": "8f303369dd5c8a54f34d9583a5e6b10c413d8e93de46c4e3daf7e2831534933a",
+      "bytes": 481937
+    },
+    {
+      "file": "telannas-newyear-sss.jpg",
+      "name": "Tel'Annas Tân niên vệ thần",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/700a2b1db620403126bb04ff26dace86659653e9112c71.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/telannas/",
+      "sha256": "2bde03b3be0f3c26710396bd101ba7408f89c91d4d49d5690b4bad27ec3f3eac",
+      "bytes": 279838
+    },
+    {
+      "file": "butterfly-phoenix-sss.jpg",
+      "name": "Butterfly Phượng Cửu Thiên",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/c192c05d24cefe6ad9bb61ef8e5ab5ca5e4530f0d4ad51.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/butterfly/",
+      "sha256": "607f4142c1ff69fa2323e490c030fe0d38e1552361924345771f35657c840ebe",
+      "bytes": 367279
+    },
+    {
+      "file": "liliana-magic-sss.jpg",
+      "name": "Liliana Ma Pháp Tối Thượng",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/51015.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/liliana/",
+      "sha256": "6288e4f1af2d4db148f1fac87d8e629ada4cf8d9ba0d4a5c91f3bf42a1f3a38d",
+      "bytes": 150931
     }
   ]
 }

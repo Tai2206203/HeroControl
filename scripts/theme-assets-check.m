@@ -3,7 +3,7 @@
 #include <assert.h>
 int main(int argc,const char **argv) { @autoreleasepool {
     assert(argc==2);NSString *root=[NSString stringWithUTF8String:argv[1]];
-    for(NSString *name in @[@"violet-sss.png",@"lauriel-sss.jpg",@"airi-sss.jpg",@"app-background.jpg"]) {
+    for(NSString *name in @[@"violet-sss.png",@"lauriel-sss.jpg",@"airi-sss.jpg",@"telannas-fee-sss.jpg",@"telannas-dimension-sss.jpg",@"telannas-newyear-sss.jpg",@"butterfly-phoenix-sss.jpg",@"liliana-magic-sss.jpg",@"app-background.jpg"]) {
         NSString *path=HCThemePathInRoots(name,@[@"/nonexistent-root",root]);assert(path);
         CGImageSourceRef source=CGImageSourceCreateWithURL((__bridge CFURLRef)[NSURL fileURLWithPath:path],NULL);assert(source);
         NSDictionary *options=@{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,(__bridge id)kCGImageSourceThumbnailMaxPixelSize:@640,(__bridge id)kCGImageSourceShouldCacheImmediately:@YES};

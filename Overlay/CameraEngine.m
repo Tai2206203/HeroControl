@@ -257,10 +257,11 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
 - (void)readEsp:(BOOL)unseenOnly {
     HCEspFrame frame;
     NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;
-    int status = HCEspRead(self.memory, _base, false, &frame);
+    HCCameraMemory readOnly={&_target,HCEngineRead,NULL};
+    int status = HCEspRead(readOnly, _base, false, &frame);
     HCLogicFrame logic = {0};
     BOOL logicAvailable = _logicLayoutVerified && (status == HC_ESP_OK || status == HC_ESP_MATRICES_PENDING) &&
-        HCLogicRead(self.memory, _base, frame.hostCamp, &logic);
+        HCLogicRead(readOnly, _base, frame.hostCamp, &logic);
     if (status == HC_ESP_OK || status == HC_ESP_MATRICES_PENDING) HCLogicMerge(&frame, &logic, logicAvailable, false);
     HCEspPresentation presentation=HCEspPresent(&_espSamples,&frame,now,unseenOnly);
     if (!_readWindow) _readWindow = now;
@@ -330,7 +331,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     unsigned char hpActual[8] = {0}, maxHPActual[8] = {0};
     if (!HCEngineRead(&_target, base + 0x550F16C, actual, sizeof(actual)) || memcmp(actual, signature, sizeof(actual)) ||
         !HCEngineRead(&_target, base + 0x540E520, updateActual, sizeof(updateActual)) ||
-        memcmp(updateActual, updateSignature, sizeof(updateActual)) || !_target.write ||
+        memcmp(updateActual, updateSignature, sizeof(updateActual)) ||
         !HCEngineRead(&_target, base + 0x70279A4, hpActual, 8) || memcmp(hpActual, hpSignature, 8) ||
         !HCEngineRead(&_target, base + 0x70279B4, maxHPActual, 8) || memcmp(maxHPActual, maxHPSignature, 8)) {
         [self releaseTarget];
