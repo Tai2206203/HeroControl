@@ -29,6 +29,12 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -Wall -Wextra -I"$OUTPUT" -framework Foundation \
     "$ROOT/scripts/settings-store-check.m" -o "$OUTPUT/settings-store-check"
 "$OUTPUT/settings-store-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -std=c11 -Wall -Wextra -Werror "$ROOT/scripts/drawer-motion-check.c" -o "$OUTPUT/drawer-motion-check"
+"$OUTPUT/drawer-motion-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation "$ROOT/scripts/report-notice-check.m" -o "$OUTPUT/report-notice-check"
+"$OUTPUT/report-notice-check"
 # Also exercise invalid input/unsupported-host responses of the actual ABI.
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -dynamiclib -fvisibility=hidden -framework Foundation \

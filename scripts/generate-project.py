@@ -69,7 +69,7 @@ app_settings = {
     'INFOPLIST_FILE': 'HeroControl/Info.plist', 'GENERATE_INFOPLIST_FILE': 'NO',
     'TARGETED_DEVICE_FAMILY': '1', 'SUPPORTED_PLATFORMS': 'iphoneos iphonesimulator',
     'LD_RUNPATH_SEARCH_PATHS': '$(inherited) @executable_path/Frameworks',
-    'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon', 'CODE_SIGN_STYLE': 'Automatic', 'CURRENT_PROJECT_VERSION': '32', 'MARKETING_VERSION': '0.15.0'
+    'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon', 'CODE_SIGN_STYLE': 'Automatic', 'CURRENT_PROJECT_VERSION': '33', 'MARKETING_VERSION': '0.16.0'
 }
 test_settings = {
     'PRODUCT_NAME': '$(TARGET_NAME)', 'PRODUCT_BUNDLE_IDENTIFIER': 'local.herocontrol.tests',

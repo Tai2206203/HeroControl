@@ -9,6 +9,8 @@
 #import "SettingsStore.h"
 #include "OverlayLock.h"
 #include "CapturePolicy.h"
+#include "DrawerMotion.h"
+#import "ReportNotice.h"
 #include "../BackendSDK/EspPresentation.h"
 #include "../BackendSDK/CameraControl.h"
 #import "CameraEngine.h"
@@ -128,7 +130,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.15.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.16.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -171,6 +173,7 @@ static void HCStop(NSString *message, BOOL failed) {
 @property(nonatomic,strong) HCEspDrawingView *espView;
 - (void)toggleMenu;
 - (void)welcome;
+- (void)receiveReports:(NSDictionary *)report;
 - (void)receivePoint:(CGPoint)point phase:(UITouchPhase)phase pointer:(NSInteger)pointer;
 @end
 
@@ -241,7 +244,13 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     NSInteger _calibrationPage, _reportRecordIndex;
     BOOL _editingMinimap;
     CGRect _startMapRect;
-    double _menuOpenedAt, _nextMenuRedraw, _emptyEspSince, _welcomeUntil;
+    double _nextMenuRedraw, _emptyEspSince, _welcomeUntil;
+    double _menuProgress,_menuMotionFrom,_menuMotionTo,_menuMotionStarted;
+    double _reportNoticeStarted;
+    BOOL _reportNoticeWasVisible;
+    NSString *_reportNoticeReason;
+    NSUInteger _reportNoticeCount;
+    HCReportNoticeTracker *_reportNoticeTracker;
     BOOL _imagesPurged;
     HCEspScreenState _screenStates[HC_ESP_MAX_TARGETS];
     NSInteger _screenPID;
@@ -254,6 +263,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         self.opaque = NO; self.multipleTouchEnabled = NO;
         _bubble = CGPointMake(38, 115); _pointer = -1; _group=5;
         _targets = [NSMutableArray array];
+        _reportNoticeTracker=[[HCReportNoticeTracker alloc] initWithPath:[HCDirectory stringByAppendingPathComponent:@"report-notice-seen.json"]];
         [self reloadSettings];
         _espView=[[HCEspDrawingView alloc] initWithFrame:self.bounds];
         [self addSubview:_espView];
@@ -261,6 +271,37 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         [self refreshEspSurface];
     }
     return self;
+}
+- (void)updateMenuMotion:(double)now {
+    _menuProgress=HCMotionProgress(_menuMotionFrom,_menuMotionTo,now-_menuMotionStarted,0.28);
+    double target=HCMenuOpen ? 1 : 0;
+    if(target!=_menuMotionTo) {
+        _menuMotionFrom=_menuProgress;_menuMotionTo=target;_menuMotionStarted=now;
+    }
+}
+- (HCDrawerGeometry)drawer:(CGRect)destination progress:(double)progress {
+    CGRect bubble=[self bubbleRect];
+    return HCDrawerFromAnchor((HCMotionRect){bubble.origin.x,bubble.origin.y,bubble.size.width,bubble.size.height},
+        (HCMotionRect){destination.origin.x,destination.origin.y,destination.size.width,destination.size.height},progress);
+}
+- (CGRect)reportNoticeRect {
+    CGRect bubble=[self bubbleRect];CGFloat width=MIN(344,self.bounds.size.width-32),height=96;
+    CGFloat x=CGRectGetMidX(bubble)<self.bounds.size.width/2 ? CGRectGetMaxX(bubble)+10 : bubble.origin.x-width-10;
+    x=MAX(16,MIN(self.bounds.size.width-width-16,x));
+    CGFloat y=MAX(MAX(20,self.safeAreaInsets.top),MIN(self.bounds.size.height-height-20,CGRectGetMidY(bubble)-height/2));
+    return CGRectMake(x,y,width,height);
+}
+- (BOOL)menuInteractive { return HCMenuOpen && _menuProgress>=0.999; }
+- (void)receiveReports:(NSDictionary *)report {
+    HCReportsStatus=report;
+    NSArray *arrivals=[_reportNoticeTracker observe:report enabled:([self.settings[@"flags"][@"reports.enabled"] boolValue] && ![report[@"code"] isEqual:@"reports_disabled"]) now:NSDate.date.timeIntervalSince1970];
+    if(arrivals.count) {
+        NSDictionary *latest=arrivals.lastObject;
+        NSString *reason=[latest[@"reason"] isKindOfClass:NSString.class] ? latest[@"reason"] : @"Máy chủ chưa cung cấp lý do chi tiết";
+        _reportNoticeReason=[reason substringToIndex:MIN((NSUInteger)240,reason.length)];
+        _reportNoticeCount=arrivals.count;_reportNoticeStarted=NSProcessInfo.processInfo.systemUptime;
+    }
+    if(arrivals.count || (HCMenuOpen && self.group==4)) [self setNeedsDisplay];
 }
 - (void)refreshEspSurface {
     HCCaptureProtected=![self.settings[@"espCaptureProtected"] isEqual:@NO];
@@ -276,8 +317,18 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     if(self.hidden) { HCEspDrawFPS=0;HCEspDraws=0;HCEspDrawWindow=0; }
     [self.espView setNeedsDisplay];
     double now=NSProcessInfo.processInfo.systemUptime;
-    if(!self.hidden && (HCMenuOpen || _editingMinimap) && now>=_nextMenuRedraw) {
-        _nextMenuRedraw=now+0.05;[self setNeedsDisplay];
+    double previous=_menuProgress;[self updateMenuMotion:now];
+    BOOL notice=_reportNoticeStarted>0 && now-_reportNoticeStarted<4;
+    BOOL repaint=HCMenuOpen || _menuProgress>0 || previous>0 || _editingMinimap || notice || _reportNoticeWasVisible;
+    BOOL clearNotice=_reportNoticeWasVisible && !notice;
+    BOOL clearMenu=previous>0 && _menuProgress==0;
+    if(_reportNoticeStarted>0 && now-_reportNoticeStarted>=4) {
+        _reportNoticeStarted=0;_reportNoticeReason=nil;_reportNoticeCount=0;
+    }
+    BOOL moving=fabs(_menuProgress-_menuMotionTo)>0.0001 || (notice && HCReportNoticeProgress(now-_reportNoticeStarted)<1);
+    if(!self.hidden && repaint && (clearNotice || clearMenu || now>=_nextMenuRedraw)) {
+        _reportNoticeWasVisible=notice;
+        _nextMenuRedraw=now+(moving ? 1.0/60 : 0.05);[self setNeedsDisplay];
     }
 }
 - (void)cancelInteraction {
@@ -372,23 +423,26 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     return CGRectMake((self.bounds.size.width-width)/2,(self.bounds.size.height-height)/2,width,height);
 }
 - (CGRect)contentRect {
-    CGRect p=[self panelRect];return CGRectMake(p.origin.x+66,p.origin.y+62,p.size.width-82,p.size.height-104);
+    CGRect p=[self panelRect];BOOL function=self.group>=1 && self.group<=4;
+    CGFloat reserve=function && p.size.width>500 ? 174 : 0;
+    CGFloat banner=function && p.size.width<=500 && p.size.height>=400 ? 100 : 0;
+    return CGRectMake(p.origin.x+66,p.origin.y+62+banner,p.size.width-82-reserve,p.size.height-104-banner);
 }
 - (void)tile:(CGRect)rect title:(NSString *)title subtitle:(NSString *)subtitle image:(int32_t)hero action:(NSString *)action {
     HCFillGradient(rect,[UIColor colorWithWhite:0.98 alpha:1],[UIColor colorWithWhite:0.93 alpha:1]);
     CGContextRef context=UIGraphicsGetCurrentContext();CGContextSaveGState(context);
     [[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:14] addClip];
     NSString *cover=hero==130 ? @"violet-sss.png" : hero==156 ? @"veres-dragon.jpg" : hero==118 ? @"sephera-nova.jpg" : hero==537 ? @"liliana-dragon.jpg" : @"diaochan-celestial.jpg";
-    HCDrawImageFill(HCThemeImage(cover),rect,0.72,1);
-    [[UIColor colorWithWhite:1 alpha:0.57] setFill];UIRectFill(rect);CGContextRestoreGState(context);
+    HCDrawImageFill(HCThemeImage(cover),rect,1,1);
+    [[UIColor.blackColor colorWithAlphaComponent:0.30] setFill];UIRectFill(rect);CGContextRestoreGState(context);
     NSString *glyph=hero==130 || hero==156 ? @"viewfinder" : hero==118 ? @"slider.horizontal.3" : hero==537 ? @"camera.fill" : @"envelope.fill";
     UIImage *symbol=[[UIImage systemImageNamed:glyph] imageWithTintColor:[HCMenuAccent() colorWithAlphaComponent:0.22] renderingMode:UIImageRenderingModeAlwaysOriginal];
     [symbol drawInRect:CGRectMake(CGRectGetMaxX(rect)-43,rect.origin.y+10,28,28)];
     [[HCMenuAccent() colorWithAlphaComponent:0.18] setStroke];
     UIBezierPath *path=[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:14];path.lineWidth=0.8;[path stroke];
     CGFloat font=rect.size.width<130 ? 13 : 17;
-    HCText(title,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-47,rect.size.width-18,22),font,UIColor.blackColor,YES);
-    HCText(subtitle,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-23,rect.size.width-18,18),8,UIColor.darkGrayColor,NO);
+    HCText(title,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-47,rect.size.width-18,22),font,UIColor.whiteColor,YES);
+    HCText(subtitle,CGRectMake(rect.origin.x+10,CGRectGetMaxY(rect)-23,rect.size.width-18,18),8,UIColor.whiteColor,NO);
     [self target:action rect:rect];
 }
 - (NSString *)minimapKey:(NSString *)key {
@@ -469,7 +523,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     [self setNeedsDisplay];
 }
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
-    return !self.hidden && !HCLocked && (CGRectContainsPoint([self bubbleRect], point) || (HCMenuOpen && CGRectContainsPoint([self panelRect], point)) ||
+    return !self.hidden && !HCLocked && (CGRectContainsPoint([self bubbleRect], point) || ([self menuInteractive] && CGRectContainsPoint([self panelRect], point)) ||
         (_editingMinimap && (CGRectContainsPoint([self minimapRect],point) || CGRectContainsPoint([self minimapDoneRect],point) || CGRectContainsPoint([self minimapResizeRect],point) || CGRectContainsPoint([self minimapIconButton:NO],point) || CGRectContainsPoint([self minimapIconButton:YES],point))));
 }
 - (void)target:(NSString *)key rect:(CGRect)rect { [self.targets addObject:@{@"key": key, @"rect": [NSValue valueWithCGRect:rect]}]; }
@@ -482,24 +536,28 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if(CGRectContainsPoint([self minimapResizeRect],point)) return @"minimap-resize";
         if(CGRectContainsPoint([self minimapRect],point)) return @"minimap-move";
     }
-    if (!HCMenuOpen) return nil;
+    if (![self menuInteractive]) return nil;
     for (NSDictionary *target in self.targets.reverseObjectEnumerator)
         if (CGRectContainsPoint([target[@"rect"] CGRectValue], point)) return target[@"key"];
     return nil;
 }
 - (void)drawRect:(CGRect)rect {
     [self.targets removeAllObjects];
-    if (HCMenuOpen) {
+    CGContextClearRect(UIGraphicsGetCurrentContext(),self.bounds);
+    if (_menuProgress>0) {
         CGRect p=[self panelRect];
         CGContextRef ctx=UIGraphicsGetCurrentContext();
         UIBezierPath *outline=[UIBezierPath bezierPathWithRoundedRect:p cornerRadius:26];
         CGContextSaveGState(ctx);
-        double fade=_menuOpenedAt>0 ? HCClamp((NSProcessInfo.processInfo.systemUptime-_menuOpenedAt)/0.18,0,1) : 1;
-        CGContextSetAlpha(ctx,fade);
+        HCDrawerGeometry motion=[self drawer:p progress:_menuProgress];
+        CGRect reveal=CGRectMake(motion.reveal.x,motion.reveal.y,motion.reveal.width,motion.reveal.height);
+        [[UIBezierPath bezierPathWithRoundedRect:reveal cornerRadius:26] addClip];
+        CGContextTranslateCTM(ctx,motion.dx,motion.dy);
         [UIColor.whiteColor setFill];[outline fill];
         CGContextSaveGState(ctx);[outline addClip];
-        HCDrawImageFill(HCThemeImage(HCMenuArt(self.group)),p,0.30,1);
-        [[UIColor colorWithWhite:1 alpha:0.48] setFill];UIRectFill(p);
+        HCDrawImageFill(HCThemeImage(HCMenuArt(self.group)),p,1,1);
+        [[UIColor colorWithWhite:1 alpha:0.88] setFill];
+        UIRectFill(CGRectMake(p.origin.x,p.origin.y,p.size.width,55));
         CGContextRestoreGState(ctx);
         CGFloat pulse=0.18+0.08*sin(NSProcessInfo.processInfo.systemUptime*1.7);
         [[HCMenuAccent() colorWithAlphaComponent:pulse] setStroke];
@@ -529,6 +587,19 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         CGRect close=CGRectMake(CGRectGetMaxX(p)-47,p.origin.y+9,34,32);
         HCText(@"×",CGRectInset(close,10,0),30,UIColor.blackColor,NO);[self target:@"close" rect:close];
         CGRect c=[self contentRect];
+        if(self.group!=5) {
+            [[UIColor colorWithWhite:1 alpha:0.90] setFill];
+            [[UIBezierPath bezierPathWithRoundedRect:CGRectInset(c,-7,-5) cornerRadius:14] fill];
+            if(self.group>=1 && self.group<=4 && p.size.width>500) {
+                CGRect portrait=CGRectMake(CGRectGetMaxX(p)-166,p.origin.y+62,148,p.size.height-104);
+                CGContextSaveGState(ctx);[[UIBezierPath bezierPathWithRoundedRect:portrait cornerRadius:16] addClip];
+                HCDrawImageFill(HCThemeImage(HCMenuArt(self.group)),portrait,1,1);CGContextRestoreGState(ctx);
+            } else if(self.group>=1 && self.group<=4 && p.size.height>=400) {
+                CGRect banner=CGRectMake(p.origin.x+66,p.origin.y+62,p.size.width-82,90);
+                CGContextSaveGState(ctx);[[UIBezierPath bezierPathWithRoundedRect:banner cornerRadius:16] addClip];
+                HCDrawImageFill(HCThemeImage(HCMenuArt(self.group)),banner,1,1);CGContextRestoreGState(ctx);
+            }
+        }
         if(self.group==5) {
             BOOL wide=c.size.width>460;
             CGFloat leftWidth=wide ? c.size.width*0.54 : c.size.width;
@@ -651,7 +722,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 CGRect row=CGRectMake(c.origin.x+(i%columns)*(cellWidth+gap),c.origin.y+(i/columns)*rowHeight,cellWidth,rowHeight-6);
                 [[UIColor colorWithWhite:0.95 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:row cornerRadius:10] fill];
                 CGContextSaveGState(ctx);[[UIBezierPath bezierPathWithRoundedRect:row cornerRadius:10] addClip];
-                NSArray *art=HCMenuArtFiles();HCDrawImageFill(HCThemeImage(art[i%art.count]),row,0.45,1);
+                NSArray *art=HCMenuArtFiles();HCDrawImageFill(HCThemeImage(art[i%art.count]),row,0.85,1);
                 [[UIColor colorWithWhite:1 alpha:0.55] setFill];UIRectFill(row);CGContextRestoreGState(ctx);
                 BOOL on=[self.settings[@"flags"][feature[@"key"]] boolValue];
                 HCText(feature[@"title"],CGRectMake(row.origin.x+10,row.origin.y+9,row.size.width-54,row.size.height),12,UIColor.blackColor,NO);
@@ -688,7 +759,25 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         CGRect resize=[self minimapResizeRect];[HCAccent() setFill];[[UIBezierPath bezierPathWithRoundedRect:resize cornerRadius:6] fill];
         HCText(@"↘",CGRectInset(resize,5,3),18,UIColor.blackColor,YES);
     }
-    if(_welcomeUntil>NSProcessInfo.processInfo.systemUptime) {
+    double noticeProgress=_reportNoticeStarted>0 ? HCReportNoticeProgress(NSProcessInfo.processInfo.systemUptime-_reportNoticeStarted) : 0;
+    _reportNoticeWasVisible=noticeProgress>0;
+    if(noticeProgress>0) {
+        CGRect banner=[self reportNoticeRect];
+        HCDrawerGeometry notice=[self drawer:banner progress:noticeProgress];
+        CGRect reveal=CGRectMake(notice.reveal.x,notice.reveal.y,notice.reveal.width,notice.reveal.height);
+        CGContextRef context=UIGraphicsGetCurrentContext();CGContextSaveGState(context);
+        [[UIBezierPath bezierPathWithRoundedRect:reveal cornerRadius:18] addClip];
+        CGContextTranslateCTM(context,notice.dx,notice.dy);
+        [UIColor.whiteColor setFill];[[UIBezierPath bezierPathWithRoundedRect:banner cornerRadius:18] fill];
+        HCDrawImageFill(HCThemeImage(@"diaochan-celestial.jpg"),banner,0.12,1);
+        [[UIColor colorWithWhite:1 alpha:0.70] setFill];UIRectFill(banner);
+        [HCMenuAccent() setFill];UIRectFill(CGRectMake(banner.origin.x,banner.origin.y,4,banner.size.height));
+        HCText(@"DORO-CHEAT • PHÁT HIỆN TỐ CÁO",CGRectMake(banner.origin.x+14,banner.origin.y+10,banner.size.width-28,20),11,HCMenuAccent(),YES);
+        HCText(_reportNoticeReason ?: @"Đã nhận bản ghi tố cáo mới.",CGRectMake(banner.origin.x+14,banner.origin.y+35,banner.size.width-28,34),12,UIColor.blackColor,YES);
+        HCText([NSString stringWithFormat:@"%lu bản ghi mới • tự đóng sau 4 giây",(unsigned long)_reportNoticeCount],CGRectMake(banner.origin.x+14,banner.origin.y+75,banner.size.width-28,14),9,UIColor.darkGrayColor,NO);
+        CGContextRestoreGState(context);
+    }
+    if(noticeProgress<=0 && _welcomeUntil>NSProcessInfo.processInfo.systemUptime) {
         CGFloat width=MIN(356,self.bounds.size.width-32);
         CGRect toast=CGRectMake((self.bounds.size.width-width)/2,MAX(44,self.safeAreaInsets.top+10),width,66);
         [[UIColor colorWithRed:0.055 green:0.075 blue:0.11 alpha:0.95] setFill];
@@ -735,12 +824,23 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         memset(_screenStates,0,sizeof(_screenStates));_screenPID=pid;_screenSize=self.bounds.size;_screenCamera=[camera copy];
     }
     CGContextRef context=UIGraphicsGetCurrentContext();
-    if (HCMenuOpen) {
+    NSMutableArray<NSValue *> *masks=[NSMutableArray array];
+    if(_menuProgress>0) {
+        HCDrawerGeometry menu=[self drawer:[self panelRect] progress:_menuProgress];
+        [masks addObject:[NSValue valueWithCGRect:CGRectMake(menu.reveal.x,menu.reveal.y,menu.reveal.width,menu.reveal.height)]];
+    }
+    double noticeProgress=_reportNoticeStarted>0 ? HCReportNoticeProgress(now-_reportNoticeStarted) : 0;
+    if(noticeProgress>0) {
+        HCDrawerGeometry notice=[self drawer:[self reportNoticeRect] progress:noticeProgress];
+        [masks addObject:[NSValue valueWithCGRect:CGRectMake(notice.reveal.x,notice.reveal.y,notice.reveal.width,notice.reveal.height)]];
+    }
+    // Intersect exclusions independently, so overlapping menu/notice regions
+    // never reveal ESP through an even-odd overlap.
+    for(NSValue *mask in masks) {
         UIBezierPath *clip=[UIBezierPath bezierPathWithRect:self.bounds];
-        [clip appendPath:[UIBezierPath bezierPathWithRect:[self panelRect]]];
+        [clip appendPath:[UIBezierPath bezierPathWithRect:mask.CGRectValue]];
         clip.usesEvenOddFillRule=YES;[clip addClip];
     }
-    (void)context;
     CGFloat w = self.bounds.size.width, h = self.bounds.size.height;
     UIColor *color = HCAccent();
     CGRect map=[self minimapRect];
@@ -821,14 +921,16 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     }
 }
 - (void)welcome {
-    HCMenuOpen=NO;_editingMinimap=NO;[self cancelInteraction];
+    HCMenuOpen=NO;_menuProgress=_menuMotionFrom=_menuMotionTo=0;_editingMinimap=NO;[self cancelInteraction];
     _welcomeUntil=NSProcessInfo.processInfo.systemUptime+3.5;[self setNeedsDisplay];HCState();
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(3.6*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ [self setNeedsDisplay]; });
 }
 - (void)toggleMenu {
+    [self updateMenuMotion:NSProcessInfo.processInfo.systemUptime];
     HCMenuOpen = !HCMenuOpen;
+    [self updateMenuMotion:NSProcessInfo.processInfo.systemUptime];
     self.activeTarget = nil; self.pointer = -1;
-    if (HCMenuOpen) { _editingMinimap=NO;_menuOpenedAt=NSProcessInfo.processInfo.systemUptime;[self reloadSettings]; }
+    if (HCMenuOpen) { _editingMinimap=NO;[self reloadSettings]; }
     [self setNeedsDisplay]; HCState();
 }
 - (void)cameraAt:(CGPoint)point {
@@ -1101,8 +1203,7 @@ static void HCUpdateLock(void) {
             NSMutableDictionary *metadata=[report mutableCopy];[metadata removeObjectForKey:@"targets"];HCEspLastSample=metadata;
         } else if(![report[@"targets"] count]) HCEspLastSample=nil;
     } reportsReport:^(NSDictionary *report) {
-        HCReportsStatus = report;
-        if (HCMenuOpen && HCCanvas.group == 4) [HCCanvas setNeedsDisplay];
+        [HCCanvas receiveReports:report];
     }];
     [HCCamera start];[HCCanvas welcome];
     self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayTick:)];

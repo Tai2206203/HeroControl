@@ -1,0 +1,9 @@
+DORO-CHEAT 0.16.0 — build 33
+
+Menu mở/đóng trượt từ vị trí phím tắt trong 0,28 giây, đảo chiều được khi chạm lại. Không còn fade toàn bộ menu làm nhìn xuyên ra game. Nền ảnh hiện 100% trước vùng điều khiển trắng đục; các tab chức năng có ảnh lớn bên phải khi ngang và dải ảnh riêng khi dọc. Thẻ chức năng sáng rõ hơn, giữ chữ dễ đọc.
+Tố cáo: bản ghi mới tạo bảng trượt ra từ phím tắt, hiện lý do và số bản ghi, tự thu lại trong tổng 4 giây. Nếu nhận thêm bản ghi mới, nội dung cập nhật và đếm lại 4 giây. Không cần mở menu.
+Chống báo lặp theo ID bản ghi và tài khoản, có checkpoint qua lần khởi động. Bản lịch sử ban đầu không phát lại hàng loạt; OFF không báo, mẫu runtime cũ không tạo thông báo mới. Checkpoint giới hạn dưới 192KiB và bộ đệm ID có giới hạn. Lịch sử tố cáo vẫn giữ nguyên.
+ESP được cắt theo vùng menu/bảng thông báo đang trượt, tránh box/icon đè lên chữ. Khi bảng hết hạn, nội dung tạm được giải phóng.
+Icon app, cam 0–2, thanh cỡ box+icon, lưu/tải setting giữ nguyên.
+
+Kiểm tra toán hiệu ứng và các regression host đã qua; kiểm tra chống lặp Objective-C được đưa vào CI macOS. Máy hiện tại không có Xcode/iPhone để xác nhận trực tiếp ảnh và chuyển động. Sau cập nhật, mở lại game nếu adapter được chuẩn bị lại.
