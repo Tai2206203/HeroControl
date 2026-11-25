@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <errno.h>
 // Run only on the preparation queue, never on the camera or UI queue.
-static NSDictionary *HCPrepareReportRuntime(NSDictionary *config) {
+static NSDictionary *HCRunReportRuntime(NSDictionary *config,BOOL remove) {
     NSString *app=NSBundle.mainBundle.bundlePath.stringByDeletingLastPathComponent.stringByDeletingLastPathComponent;
     NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[app stringByAppendingPathComponent:@"Info.plist"]];
     NSString *helper=[app stringByAppendingPathComponent:@"Tools/hero-kernel-check"];
@@ -34,7 +34,7 @@ static NSDictionary *HCPrepareReportRuntime(NSDictionary *config) {
     if(!result) result=posix_spawn_file_actions_adddup2(&actions,errFD,STDERR_FILENO);
     if(!result) result=posix_spawn_file_actions_addclose(&actions,outFD);
     if(!result) result=posix_spawn_file_actions_addclose(&actions,errFD);
-    char *args[]={(char *)helper.fileSystemRepresentation,"--runtime-prepare",(char *)json.UTF8String,NULL};
+    char *args[]={(char *)helper.fileSystemRepresentation,remove ? "--runtime-remove" : "--runtime-prepare",remove ? NULL : (char *)json.UTF8String,NULL};
     char *env[]={"PATH=/usr/bin:/bin:/usr/sbin:/sbin",NULL};
     pid_t child=0;
     if(!result) result=posix_spawn(&child,helper.fileSystemRepresentation,&actions,NULL,args,env);
@@ -71,4 +71,6 @@ static NSDictionary *HCPrepareReportRuntime(NSDictionary *config) {
         @"message":@"Chưa chuẩn bị được adapter. Mở đúng game rồi bấm Thử lại; log đã giữ mã lỗi.",
         @"spawnStatus":@(result),@"exitStatus":@(status)};
 }
+static NSDictionary *HCPrepareReportRuntime(NSDictionary *config) { return HCRunReportRuntime(config,NO); }
+static NSDictionary *HCRemoveReportRuntime(void) { return HCRunReportRuntime(@{},YES); }
 #endif

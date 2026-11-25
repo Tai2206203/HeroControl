@@ -79,6 +79,8 @@ struct ControlSettings: Codable, Equatable {
     var flags: [String: Bool] = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, false) })
     var cameraScale: Double = 1
     var selectedSkins: [String: Int] = [:]
+    var readMemoryOnly: Bool? = nil
+    var isReadMemoryOnly: Bool { readMemoryOnly != false }
     var cameraEnabled: Bool? = nil
     var espReadHz: Int? = nil
     var gameRuntimeEnabled: Bool? = nil

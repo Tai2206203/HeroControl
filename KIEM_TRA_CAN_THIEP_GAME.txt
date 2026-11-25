@@ -1,3 +1,6 @@
+CẬP NHẬT BUILD 38 / 0.18.0
+READ MEMORY mặc định ON: chỉ ESP/minimap; worker chặn cam và runtime/truy vấn. OFF mở khóa chức năng theo setting riêng. Khi chuyển ON có bước dọn: khôi phục camera đã ghi, ngừng monitor và gỡ adapter/filter; hook trong game cần khởi động lại game để loại bỏ. Phần rà soát dưới đây mô tả đường can thiệp còn tồn tại khi READ MEMORY OFF và trạng thái lịch sử build 37.
+
 RÀ SOÁT ĐỌC / GHI GAME — DORO-CHEAT
 
 Phạm vi: mã nguồn hiện tại. Đây không phải khẳng định mọi chức năng đều chỉ đọc.

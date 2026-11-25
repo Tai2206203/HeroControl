@@ -12,14 +12,15 @@ int main(void) {
         int fd=open(lock.fileSystemRepresentation,O_RDWR|O_CREAT|O_EXCL,0600);assert(fd>=0);close(fd);
         NSMutableDictionary *flags=[NSMutableDictionary dictionary];
         for(NSDictionary *feature in HCFeatures()) flags[feature[@"key"]]=@NO;
-        NSDictionary *settings=@{@"flags":flags,@"cameraScale":@1.7,@"selectedSkins":@{},@"minimapX":@0.08,@"minimapPortraitX":@0.21};
+        NSDictionary *settings=@{@"readMemoryOnly":@NO,@"flags":flags,@"cameraScale":@1.7,@"selectedSkins":@{},@"minimapX":@0.08,@"minimapPortraitX":@0.21};
         assert(HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"settings":settings},profile,NULL));
         assert([HCSettingsSnapshot(profile,YES)[@"ok"] isEqual:@YES]);
-        NSMutableDictionary *changed=[settings mutableCopy];changed[@"cameraScale"]=@2.1;
+        NSMutableDictionary *changed=[settings mutableCopy];changed[@"cameraScale"]=@2.1;changed[@"readMemoryOnly"]=@YES;
         assert(HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"settings":changed},profile,NULL));
         assert([HCSettingsSnapshot(profile,NO)[@"ok"] isEqual:@YES]);
         NSDictionary *restored=HCRuntimeReadJSON(profile,131072)[@"settings"];
         assert([restored[@"cameraScale"] isEqual:@1.7] && [restored[@"minimapPortraitX"] isEqual:@0.21]);
+        assert(!HCReadMemoryOnly(restored));
         NSData *before=[NSData dataWithContentsOfFile:profile];
         NSString *snapshot=[folder stringByAppendingPathComponent:@"HeroControl.settings.json"];
         assert([[@"invalid" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:snapshot atomically:YES]);

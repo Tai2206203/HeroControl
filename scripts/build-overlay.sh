@@ -89,3 +89,14 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -Wall -Wextra -framework Foundation -framework ImageIO -framework CoreGraphics \
     "$ROOT/scripts/theme-assets-check.m" -o "$OUTPUT/theme-assets-check"
 "$OUTPUT/theme-assets-check" "$OUTPUT/HeroOverlay.app"
+
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation "$ROOT/scripts/read-memory-check.m" -o "$OUTPUT/read-memory-check"
+"$OUTPUT/read-memory-check"
+
+hc_build_protection macosx OVERLAY "$OUTPUT/protected-worker-host.o"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation -framework CoreFoundation \
+    "$ROOT/Overlay/CameraEngine.m" "$ROOT/scripts/read-memory-worker-check.m" \
+    "$OUTPUT/protected-worker-host.o" "$OUTPUT/protected-worker-host.o.opaque.o" -lc++ -o "$OUTPUT/read-memory-worker-check"
+"$OUTPUT/read-memory-worker-check"

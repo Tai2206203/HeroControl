@@ -139,6 +139,11 @@ static NSString *HCLuaValue(id value) {
 static void HCPulse(void) {
     @autoreleasepool {
         if (HCFaulted) return;
+        NSDictionary *gate=HCRuntimeReadJSON([HCDirectory stringByAppendingPathComponent:@"config.json"],131072);
+        if(HCReadMemoryOnly(gate[@"settings"])) {
+            if(HCBootstrapped && HCBase && !HCDisabledApplied) { HCExecute(@"return HeroControlRuntimeSuspend()");HCDisabledApplied=YES; }
+            HCState(@{@"phase":@"disabled",@"code":@"runtime_read_memory_only",@"message":@"READ MEMORY: adapter dừng. Mở lại game để gỡ hook cũ."});return;
+        }
         if (!HCBase && !HCFindModule()) return;
         if (!HCSignatures()) { HCFaulted=YES; HCFailure(@"runtime_signature_mismatch", @"Mã native không khớp; adapter không gọi hàm game."); return; }
         uint64_t environment = HCReadyEnvironment();

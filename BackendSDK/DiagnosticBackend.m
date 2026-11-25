@@ -498,7 +498,7 @@ __attribute__((visibility("default"))) const char *hc_backend_request(const char
         else if (HCGameSessionReport && ![action isEqual:@"diagnose"]) message = HCGameSessionReport[@"summary"];
         else message = report[@"summary"];
         NSMutableDictionary *snapshot = [@{
-            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.17.2",
+            @"protocolVersion": @1, @"backendName": @"Hero Control diagnostics 0.18.0",
             @"connected": @NO, @"gameRunning": [game[@"gameRunning"] boolValue] ? @YES : @NO,
             @"gameInspectionAvailable": [game[@"processScanSucceeded"] boolValue] ? @YES : @NO, @"supportedKeys": @[],
             @"heroes": @[], @"reports": @[], @"message": message, @"diagnostics": report

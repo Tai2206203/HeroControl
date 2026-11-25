@@ -107,6 +107,27 @@ final class ControlTests: XCTestCase {
         XCTAssertTrue(csv.contains("599,\"\",\"599.png\"\r\n"))
     }
 
+    func testReadMemoryModeDefaultsOnAndPersistsExplicitOff() throws {
+        var settings = ControlSettings()
+        XCTAssertTrue(settings.isReadMemoryOnly)
+        settings.readMemoryOnly = false
+        let decoded = try JSONDecoder().decode(ControlSettings.self, from: JSONEncoder().encode(settings))
+        XCTAssertFalse(decoded.isReadMemoryOnly)
+    }
+
+    @MainActor
+    func testDefaultReadMemoryModeBlocksRuntimeInstall() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let backend = TestBackend()
+        let store = ControlStore(directory: folder, backend: backend)
+        XCTAssertTrue(store.settings.isReadMemoryOnly)
+        await store.installRuntime()
+        let count = await backend.installRequestCount()
+        XCTAssertEqual(count, 0)
+    }
+
     @MainActor
     func testRejectedInstallPreservesRuntimeDiagnostics() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -116,6 +137,7 @@ final class ControlTests: XCTestCase {
         await backend.rejectNextInstall()
         let store = ControlStore(directory: folder, backend: backend)
         XCTAssertNil(store.persistenceError)
+        store.setReadMemoryOnly(false)
         await store.installRuntime()
         XCTAssertNil(store.persistenceError)
         let installRequests = await backend.installRequestCount()

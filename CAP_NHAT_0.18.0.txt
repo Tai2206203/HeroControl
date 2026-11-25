@@ -1,0 +1,10 @@
+DORO-CHEAT 0.18.0 — build 38
+
+- Công tắc READ MEMORY lớn ở đầu menu, hiện trên mọi tab. Mặc định ON, kể cả cấu hình cũ chưa có trường readMemoryOnly.
+- ON: chỉ ESP/minimap và tùy chỉnh phần vẽ được chạy. Cam xa, truy vấn tố cáo và tự chuẩn bị/bật adapter bị chặn ở worker; bộ cài/runtime có chặn bổ sung.
+- OFF: mở khóa các chức năng theo công tắc và giá trị đã lưu, không tự bật mọi chức năng.
+- Khi chuyển ON: khôi phục một lần phần camera worker đã ghi, dừng truy vấn, gỡ filter/thư viện adapter do app đã cài và tắt cấu hình runtime. Đây là bước dọn trạng thái cũ, không phải ghi camera liên tục.
+- Nếu adapter cũ còn trong tiến trình game, menu báo cần đóng hẳn/mở lại game; không tự coi việc đổi công tắc là đã gỡ hook khỏi bộ nhớ. Nếu gỡ thất bại, báo chưa xác nhận dọn xong và thử lại có giới hạn tần suất.
+- Lưu/tải setting giữ chế độ đã chọn; default ON không làm mất lựa chọn cam/tố cáo để có thể dùng lại khi OFF.
+
+26 kiểm tra Python, 5 bài Lua gồm chặn game API/patch/prefs/truy vấn trong READ MEMORY đã qua tại Windows. Kiểm tra kiểu/cú pháp dự án cũng qua. Kiểm tra worker, policy, lưu/tải native và XCTest thêm vào CI macOS; chưa chạy SDK Apple/iPhone ở môi trường Windows.

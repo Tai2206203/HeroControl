@@ -32,7 +32,7 @@ CS={System={IO={File={ReadAllBytes=function() return {} end},MemoryStream=functi
   SetFloat=function(k,v) prefs[k]=v end,GetFloat=function(k,d) return prefs[k] or d end,
   DeleteKey=function(k) prefs[k]=nil end,Save=function() saves=saves+1 end}}}
 assert(dofile('Runtime/Runtime.lua')=='initialized')
-local config={revision='revision-1',settings={flags={['reports.enabled']=true,['DoroCheat.Reference.R1.Icon']=true,
+local config={revision='revision-1',settings={readMemoryOnly=false,flags={['reports.enabled']=true,['DoroCheat.Reference.R1.Icon']=true,
  ['DoroCheat.Reference.R1.Map']=true},cameraEnabled=true,cameraScale=1.75,selectedSkins={['123']=7}}}
 local reply=HeroControlRuntimePulse(config,'/fixture')
 assert(reply:find('"phase":"active"',1,true),reply)
@@ -81,10 +81,11 @@ assert(HeroControlNativeRuntime.catalog[1].id==599)
 assert(HeroControlNativeRuntime.catalog[1].name=='')
 config.settings=nil
 reply=HeroControlRuntimePulse(config,'/fixture')
-assert(reply:find('"phase":"failed"',1,true),reply)
+assert(reply:find('"code":"runtime_read_memory_only"',1,true),reply)
+monitor.retired=false -- reset the fixture after the fail-closed malformed profile
 print('Runtime Lua contract passed: patch loading once, preference readback, skin removal, camera opt-out, server metadata, bounded newest records and failure propagation; no game/network accessed.')
 
-config.settings={flags={['reports.enabled']=true},selectedSkins={}}
+config.settings={readMemoryOnly=false,flags={['reports.enabled']=true},selectedSkins={}}
 ComplaintMonitorPolling.candidates={}
 ComplaintMonitorPolling.captureError='player_center'
 reply=HeroControlRuntimePulse(config,'/fixture')

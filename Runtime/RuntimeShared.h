@@ -8,13 +8,19 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define HC_RUNTIME_BUILD "37"
+#define HC_RUNTIME_BUILD "38"
 #ifndef HC_RUNTIME_GENERATION
 #define HC_RUNTIME_GENERATION "development"
 #endif
 static NSString *const HCRuntimeUUID = @"298E718A-DA06-33B8-8253-910447B649E3";
 static NSString *const HCRuntimeBundle = @"com.garena.game.kgvn";
 static NSString *const HCRuntimeFolder = @"Documents/HeroControlRuntime";
+
+static inline BOOL HCReadMemoryOnly(NSDictionary *settings) {
+    if(![settings isKindOfClass:NSDictionary.class]) return YES;
+    id value=settings[@"readMemoryOnly"];
+    return !([value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value)==CFBooleanGetTypeID() && ![value boolValue]);
+}
 
 static inline BOOL HCRuntimeSettingsValid(id settings) {
     if (![settings isKindOfClass:NSDictionary.class]) return NO;
@@ -40,7 +46,7 @@ static inline BOOL HCRuntimeSettingsValid(id settings) {
     if(refresh && (![refresh isKindOfClass:NSString.class] || [refresh length]>128)) return NO;
     id heroIDFlag=flags[@"HeroControl.ESP.HeroID"];
     if (heroIDFlag && (![heroIDFlag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)heroIDFlag)!=CFBooleanGetTypeID())) return NO;
-    for (NSString *key in @[@"cameraEnabled",@"gameRuntimeEnabled",@"espCaptureProtected",@"minimapRotated",@"minimapAutoAlign"]) {
+    for (NSString *key in @[@"readMemoryOnly",@"cameraEnabled",@"gameRuntimeEnabled",@"espCaptureProtected",@"minimapRotated",@"minimapAutoAlign"]) {
         id flag=settings[key];
         if (flag && (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID())) return NO;
     }

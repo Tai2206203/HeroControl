@@ -134,7 +134,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.17.2", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.18.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -311,11 +311,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     HCReportsStatus=report;
     if(_reportNoticeBusy) { _pendingNoticeReport=report;return; }
     _reportNoticeBusy=YES;
-    BOOL enabled=[self.settings[@"flags"][@"reports.enabled"] boolValue] && ![report[@"code"] isEqual:@"reports_disabled"];
+    BOOL enabled=!HCReadMemoryOnly(self.settings) && [self.settings[@"flags"][@"reports.enabled"] boolValue] && ![report[@"code"] isEqual:@"reports_disabled"];
     dispatch_async(_noticeQueue,^{ @autoreleasepool {
         NSArray *arrivals=[self->_reportNoticeTracker observe:report enabled:enabled now:NSDate.date.timeIntervalSince1970];
         dispatch_async(dispatch_get_main_queue(),^{
-            if(arrivals.count && [self.settings[@"flags"][@"reports.enabled"] boolValue] && [HCReportsStatus[@"accountID"] isEqual:report[@"accountID"]]) {
+            if(arrivals.count && !HCReadMemoryOnly(self.settings) && [self.settings[@"flags"][@"reports.enabled"] boolValue] && [HCReportsStatus[@"accountID"] isEqual:report[@"accountID"]]) {
                 NSDictionary *latest=arrivals.lastObject;
                 NSString *reason=[latest[@"reason"] isKindOfClass:NSString.class] ? latest[@"reason"] : @"Máy chủ chưa cung cấp lý do chi tiết";
                 self->_reportNoticeReason=[reason substringToIndex:MIN((NSUInteger)240,reason.length)];
@@ -501,9 +501,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     _reportScroll=HCReportScrollClamp(_reportScroll,y,_reportViewport.size.height);
 }
 - (void)drawReportTable:(CGRect)c {
-    BOOL enabled=[self.settings[@"flags"][@"reports.enabled"] boolValue];
+    BOOL enabled=!HCReadMemoryOnly(self.settings) && [self.settings[@"flags"][@"reports.enabled"] boolValue];
     CGRect toggle=CGRectMake(c.origin.x,c.origin.y,c.size.width-86,24);
-    HCText(enabled ? @"CHECK TỐ CÁO • ON" : @"CHECK TỐ CÁO • OFF",toggle,11,HCMenuAccent(),YES);
+    HCText(HCReadMemoryOnly(self.settings) ? @"READ MEMORY • CHỈ ESP" : enabled ? @"CHECK TỐ CÁO • ON" : @"CHECK TỐ CÁO • OFF",toggle,11,HCMenuAccent(),YES);
     [self target:@"flag:reports.enabled" rect:toggle];
     CGRect retry=CGRectMake(CGRectGetMaxX(c)-78,c.origin.y,78,24);
     HCText(@"↻ LÀM MỚI",retry,10,HCMenuAccent(),YES);[self target:@"reports-refresh" rect:retry];
@@ -692,8 +692,15 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             [symbol drawInRect:CGRectMake(CGRectGetMidX(r)-11,CGRectGetMidY(r)-11,22,22)];
             [self target:[NSString stringWithFormat:@"tab:%@",groups[i]] rect:r];
         }
-        HCText(@"DORO-CHEAT",CGRectMake(p.origin.x+66,p.origin.y+14,p.size.width-130,20),15,UIColor.blackColor,YES);
-        HCText(@"BẢNG ĐIỀU KHIỂN",CGRectMake(p.origin.x+66,p.origin.y+34,p.size.width-130,14),10,UIColor.darkGrayColor,YES);
+        HCText(@"DORO-CHEAT",CGRectMake(p.origin.x+66,p.origin.y+14,MAX(100,p.size.width-300),20),13,UIColor.blackColor,YES);
+        HCText(@"BẢNG ĐIỀU KHIỂN",CGRectMake(p.origin.x+66,p.origin.y+34,MAX(100,p.size.width-300),14),8,UIColor.darkGrayColor,YES);
+        BOOL readMode=HCReadMemoryOnly(self.settings);
+        CGRect mode=CGRectMake(CGRectGetMaxX(p)-210,p.origin.y+9,154,36);
+        [(readMode ? HCMenuAccent() : [UIColor colorWithWhite:0.28 alpha:1]) setFill];
+        [[UIBezierPath bezierPathWithRoundedRect:mode cornerRadius:9] fill];
+        HCText(readMode ? @"READ MEMORY: ON" : @"READ MEMORY: OFF",CGRectMake(mode.origin.x+8,mode.origin.y+5,mode.size.width-16,15),11,UIColor.whiteColor,YES);
+        HCText(readMode ? ((! [HCCameraStatus[@"cleanupComplete"] boolValue] || [HCCameraStatus[@"restartRequired"] boolValue]) ? @"DỌN ADAPTER / MỞ LẠI GAME" : @"CHỈ ESP / MINIMAP") : @"MỞ KHÓA CÁC CHỨC NĂNG",CGRectMake(mode.origin.x+8,mode.origin.y+22,mode.size.width-16,11),8,UIColor.whiteColor,YES);
+        [self target:@"read-memory" rect:mode];
         CGRect close=CGRectMake(CGRectGetMaxX(p)-47,p.origin.y+9,34,32);
         HCText(@"×",CGRectInset(close,10,0),30,UIColor.blackColor,NO);[self target:@"close" rect:close];
         CGRect c=[self contentRect];
@@ -738,6 +745,16 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 [self tile:CGRectMake(c.origin.x,y+th+10,tw,th) title:@"CAMERA" subtitle:@"GÓC NHÌN" image:537 action:@"tab:1"];
                 [self tile:CGRectMake(c.origin.x+tw+10,y+th+10,tw,th) title:@"REPORTS" subtitle:@"BẢNG PHÂN TÍCH" image:193 action:@"tab:4"];
             }
+        } else if(self.group==1 && HCReadMemoryOnly(self.settings)) {
+            HCText(@"READ MEMORY ĐANG BẬT",CGRectMake(c.origin.x,c.origin.y,c.size.width,23),13,HCMenuAccent(),YES);
+            HCText(HCCameraStatus[@"message"] ?: @"Cam xa bị khóa. Tắt READ MEMORY để cho phép ghi camera.",CGRectMake(c.origin.x,c.origin.y+30,c.size.width,84),11,UIColor.darkGrayColor,YES);
+            double combined=[self.settings[@"espCombinedScale"] doubleValue] ?: 1;
+            HCText([NSString stringWithFormat:@"CỠ BOX + ICON   %.2f×",combined],CGRectMake(c.origin.x,c.origin.y+135,c.size.width,18),11,HCMenuAccent(),YES);
+            CGRect slider=CGRectMake(c.origin.x,c.origin.y+163,c.size.width,24);
+            [[UIColor colorWithWhite:0.8 alpha:1] setFill];UIRectFill(CGRectMake(slider.origin.x,CGRectGetMidY(slider)-2,slider.size.width,4));
+            CGFloat knob=slider.origin.x+(HCClamp(combined,0.5,4)-0.5)/3.5*slider.size.width;
+            [HCMenuAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-7,CGRectGetMidY(slider)-7,14,14)] fill];
+            [self target:@"esp-combined" rect:slider];
         } else if(self.group==1) {
             double distance=HCCameraDistance([self.settings[@"cameraScale"] doubleValue]);
             HCText([NSString stringWithFormat:@"CAM XA  %.2f / 2",distance],CGRectMake(c.origin.x,c.origin.y,c.size.width,30),22,UIColor.blackColor,YES);
@@ -1082,6 +1099,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if ([target isEqual:@"esp-combined"]) { [self espCombinedAt:point];[self saveSettings];return; }
         if (self.dragged || ![[self targetAt:point] isEqual:target]) return;
         if ([target isEqual:@"bubble"] || [target isEqual:@"close"]) [self toggleMenu];
+        else if ([target isEqual:@"read-memory"]) {
+            [self reloadSettings];self.settings[@"readMemoryOnly"]=HCReadMemoryOnly(self.settings) ? @NO : @YES;
+            if(HCReadMemoryOnly(self.settings)) { _reportNoticeStarted=0;_reportNoticeReason=nil;_reportNoticeCount=0;_reportVelocity=0;[self discardReportLayout]; }
+            [self saveSettings];[self refreshEspSurface];[self setNeedsDisplay];
+        }
         else if ([target isEqual:@"settings-save"] || [target isEqual:@"settings-load"]) {
             BOOL saving=[target isEqual:@"settings-save"];
             if(saving && self.pendingSettingsSave) [self saveSettings];
@@ -1118,6 +1140,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             [self reloadSettings];self.settings[@"reportsPeriod"]=[target substringFromIndex:7];_reportScroll=0;_reportVelocity=0;[self saveSettings];
         }
         else if ([target isEqual:@"reports-refresh"]) {
+            if(HCReadMemoryOnly(self.settings)) return;
             [self reloadSettings];self.settings[@"reportsRefreshID"]=NSUUID.UUID.UUIDString;self.settings[@"flags"][@"reports.enabled"]=@YES;self.settings[@"gameRuntimeEnabled"]=@YES;[self saveSettings];
         }
         else if ([target isEqual:@"capture"]) {
@@ -1132,6 +1155,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             }
         }
         else if ([target isEqual:@"cameraEnabled"]) {
+            if(HCReadMemoryOnly(self.settings)) return;
             [self reloadSettings];
             if (self.settings) {
                 self.settings[@"cameraEnabled"] = [self.settings[@"cameraEnabled"] boolValue] ? @NO : @YES;
@@ -1141,6 +1165,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         else if ([target hasPrefix:@"flag:"]) {
             [self reloadSettings];
             NSString *key = [target substringFromIndex:5];
+            if([key isEqual:@"reports.enabled"] && HCReadMemoryOnly(self.settings)) return;
             if (self.settings) {
                 BOOL on=![self.settings[@"flags"][key] boolValue];self.settings[@"flags"][key]=@(on);
                 if(on && [key isEqual:@"reports.enabled"]) {
@@ -1290,7 +1315,9 @@ static void HCUpdateLock(void) {
     }];
     HCUpdateLock(); HCState();
     HCCamera = [[HCCameraEngine alloc] initWithProfile:HCProfile report:^(NSDictionary *report) {
+        BOOL changed=![HCCameraStatus[@"message"] isEqual:report[@"message"]];
         HCCameraStatus = report;
+        if(changed && HCMenuOpen) [HCCanvas setNeedsDisplay];
     } espReport:^(NSDictionary *report) {
         HCEspStatus = report;
         // Preserve the last actor sample for export after switching away from

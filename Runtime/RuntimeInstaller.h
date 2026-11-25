@@ -91,6 +91,9 @@ static NSDictionary *HCRuntimeReport(NSString *action, NSDictionary *config) {
     if (!directory) { report[@"code"]=@"runtime_container_unavailable";report[@"summary"]=@"Không xác định duy nhất container dữ liệu của game; không ghi tệp.";return report; }
     NSFileManager *manager=NSFileManager.defaultManager;
     BOOL install=[action isEqual:@"--runtime-install"], remove=[action isEqual:@"--runtime-remove"];
+    if(!remove && ![action isEqual:@"--runtime-status"] && HCReadMemoryOnly(config[@"settings"])) {
+        report[@"code"]=@"runtime_read_memory_only";report[@"summary"]=@"READ MEMORY đang bật; không cài hoặc bật adapter.";return report;
+    }
     if (install || remove) {
         NSString *loader=HCRuntimeLoaderDirectory(report);
         if (!loader) { report[@"code"]=@"runtime_loader_unavailable";report[@"summary"]=@"Không tìm được duy nhất thư mục bộ nạp tweak được quản lý bởi root. Không tự đoán đường dẫn.";return report; }
@@ -104,6 +107,8 @@ static NSDictionary *HCRuntimeReport(NSString *action, NSDictionary *config) {
         }
         NSError *error=nil;
         if (remove) {
+            BOOL existed=[manager fileExistsAtPath:filter] || [manager fileExistsAtPath:library];
+            if(existed) report[@"removedAdapterPID"]=HCGameInspection()[@"pid"] ?: @0;
             // Remove the filter first. No recursive deletion or wildcard paths.
             report[@"installStage"]=@"remove_filter";report[@"installPath"]=filter;
             if ([manager fileExistsAtPath:filter] && ![manager removeItemAtPath:filter error:&error]) goto failed;

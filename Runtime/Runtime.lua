@@ -34,7 +34,19 @@ local function listJson(values)
   return json(values)
 end
 
+function HeroControlRuntimeSuspend()
+  local monitor=rawget(_G,'DoroCheatCheckToR9')
+  if monitor then
+    if monitor.stopQuery then pcall(monitor.stopQuery) end
+    monitor.enabled=false;monitor.retired=true
+  end
+  return 'OK'
+end
 function HeroControlRuntimePulse(config, directory)
+  if not config or not config.settings or config.settings.readMemoryOnly~=false then
+    HeroControlRuntimeSuspend()
+    return json({phase='disabled',code='runtime_read_memory_only',message='READ MEMORY: chỉ ESP.'})
+  end
   local ok,result=pcall(function()
     if CS==nil or N==nil then
       return json({phase='waiting',code='runtime_waiting_bindings',message='Đang chờ bindings của game khởi tạo.'})
@@ -77,6 +89,7 @@ function HeroControlRuntimePulse(config, directory)
     if runtime.savedRevision~=config.revision then prefs.Save();runtime.savedRevision=config.revision end
 
     local monitor=rawget(_G,'DoroCheatCheckToR9')
+    if monitor and monitor.retired then rawset(_G,'DoroCheatCheckToR9',nil);monitor=nil end
     if not monitor then
       local chunk,err=load(IO.File.ReadAllText(directory..'/ComplaintHistory.lua'),'HeroControlComplaintHistory')
       assert(chunk,err);assert(chunk()=='OK','complaint_bootstrap')

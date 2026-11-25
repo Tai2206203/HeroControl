@@ -9,6 +9,8 @@
 #include "../BackendSDK/LuaReports.h"
 #include "../Runtime/RuntimeShared.h"
 
+static BOOL HCEngineProcessAlive(pid_t pid) { return pid>0 && (kill(pid,0)==0 || errno==EPERM); }
+
 typedef kern_return_t (*HCMachWrite)(mach_port_t, mach_vm_address_t, vm_offset_t, mach_msg_type_number_t);
 typedef struct { mach_port_t task; HCRemoteRead read; HCMachWrite write; } HCCameraTask;
 static bool HCEngineRead(void *context, uint64_t address, void *buffer, size_t size) {
@@ -33,6 +35,10 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     void (^_espReport)(NSDictionary *);
     void (^_reportsReport)(NSDictionary *);
     BOOL _reportsActive;
+    BOOL _readModeCleanupPending,_readModeCleaned;
+    NSTimeInterval _nextReadModeCleanup,_nextReadModeReport;
+    pid_t _readModeAdapterPID;
+    NSString *_readModeMessage;
     NSTimeInterval _nextReportsRead;
     BOOL _espActive;
     BOOL _logicLayoutVerified;
@@ -113,7 +119,38 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     }
     _hasWritten = NO;
 }
+- (void)enforceReadMemoryMode:(NSTimeInterval)now {
+    // One transition cleanup may restore our previous camera write. No repeat writes.
+    if(_hasWritten) { [self restoreCamera];if([_lastReport[@"memoryStatus"] intValue]!=HC_CAMERA_OK) _readModeAdapterPID=_pid;_hasWritten=NO; }
+    if(!_readModeCleaned && !_readModeCleanupPending && now>=_nextReadModeCleanup) {
+        _readModeCleanupPending=YES;_readModeMessage=@"Đang dừng và gỡ adapter cũ. Chỉ ESP được phép hoạt động.";
+        NSString *directory=HCRuntimeFindDirectory();
+        NSDictionary *state=directory ? HCRuntimeReadJSON([directory stringByAppendingPathComponent:@"state.json"],4*1024*1024) : nil;
+        pid_t previous=[state[@"pid"] intValue];
+        if(HCEngineProcessAlive(previous)) _readModeAdapterPID=previous;
+        if(directory) HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"enabled":@NO,@"settings":@{@"readMemoryOnly":@YES}},[directory stringByAppendingPathComponent:@"config.json"],NULL);
+        dispatch_async(_preparationQueue,^{
+            NSDictionary *result=HCRemoveReportRuntime();
+            dispatch_async(self->_queue,^{
+                self->_readModeCleanupPending=NO;
+                self->_readModeCleaned=[result[@"code"] isEqual:@"runtime_removed_restart_required"];
+                if([result[@"removedAdapterPID"] intValue]>0) self->_readModeAdapterPID=[result[@"removedAdapterPID"] intValue];
+                self->_nextReadModeCleanup=NSProcessInfo.processInfo.systemUptime+5;
+                self->_readModeMessage=self->_readModeCleaned ? @"READ MEMORY: chỉ ESP. Adapter cũ đã gỡ; nếu game đang mở, đóng hẳn rồi mở lại game." :
+                    @"READ MEMORY chặn cam/truy vấn mới; chưa xác nhận gỡ adapter cũ. Mở lại game sau khi gỡ thành công.";
+                self->_reportsPreparationToken=nil;self->_nextRuntimeSync=0;
+            });
+        });
+    }
+    BOOL restart=HCEngineProcessAlive(_readModeAdapterPID);
+    NSString *message=restart ? @"READ MEMORY chặn cam/truy vấn mới. Đóng hẳn và mở lại game để loại adapter đang nằm trong bộ nhớ." :
+        (_readModeMessage ?: @"READ MEMORY: chỉ đọc và vẽ ESP.");
+    if(now<_nextReadModeReport) return;_nextReadModeReport=now+1;
+    [self emit:@"read_memory_only" message:message extra:@{@"restartRequired":@(restart),@"cleanupComplete":@(_readModeCleaned)}];
+    [self emitReports:@{@"code":@"reports_read_memory_only",@"message":message,@"records":@[],@"querySupported":@NO,@"runtimeResponding":@NO}];
+}
 - (void)prepareReports:(NSDictionary *)settings {
+    if(HCReadMemoryOnly(settings)) return;
     if(![settings[@"flags"][@"reports.enabled"] isEqual:@YES]) return;
     NSString *token=settings[@"reportsRefreshID"] ?: @"legacy-on";
     NSString *failure=_reportsPreparationResult[@"code"];
@@ -142,7 +179,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
             self->_reportsPreparationResult=result;
             self->_nextReportsPreparationAttempt=NSProcessInfo.processInfo.systemUptime+5;
             self->_nextRuntimeSync=0;
-            if(![self->_settings[@"flags"][@"reports.enabled"] isEqual:@YES]) {
+            if(!HCReadMemoryOnly(self->_settings) && ![self->_settings[@"flags"][@"reports.enabled"] isEqual:@YES]) {
                 NSString *directory=HCRuntimeFindDirectory();
                 if(directory && self->_profileRevision && self->_settings)
                     HCRuntimeWriteJSON(@{@"schemaVersion":@1,@"enabled":@YES,@"revision":self->_profileRevision,@"settings":self->_settings},
@@ -152,6 +189,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
     });
 }
 - (void)syncRuntime:(NSDictionary *)settings now:(NSTimeInterval)now {
+    if(HCReadMemoryOnly(settings)) return;
     [self prepareReports:settings];
     if (now<_nextRuntimeSync) return;
     _nextRuntimeSync=now+1;
@@ -362,15 +400,18 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         id enabled = [settings isKindOfClass:NSDictionary.class] ? settings[@"cameraEnabled"] : nil;
         id flags = [settings isKindOfClass:NSDictionary.class] ? settings[@"flags"] : nil;
         if (!HCRuntimeSettingsValid(settings)) {
-            [self restore];
+            [self restore];[self enforceReadMemoryMode:now];
             [self emit:@"profile_invalid" message:@"Cấu hình không hợp lệ; đã dừng worker." extra:nil];
             [self emitEsp:@{@"code":@"profile_invalid",@"message":@"Cấu hình không hợp lệ.",@"targets":@[]}];
             return;
         }
-        BOOL runtimeMode=[settings[@"gameRuntimeEnabled"] isEqual:@YES] || [flags[@"reports.enabled"] isEqual:@YES];
+        BOOL readOnly=HCReadMemoryOnly(settings);
+        if(readOnly) [self enforceReadMemoryMode:now];
+        else { _readModeCleaned=NO;_nextReadModeCleanup=0;_readModeMessage=nil; }
+        BOOL runtimeMode=!readOnly && ([settings[@"gameRuntimeEnabled"] isEqual:@YES] || [flags[@"reports.enabled"] isEqual:@YES]);
         // Runtime is a report transport, never the owner of external camera/ESP.
         if (runtimeMode) [self syncRuntime:settings now:now];
-        if(!runtimeMode && now>=_nextRuntimeSync) {
+        if(!readOnly && !runtimeMode && now>=_nextRuntimeSync) {
             _nextRuntimeSync=now+1;
             NSString *directory=HCRuntimeFindDirectory();
             NSDictionary *state=directory ? HCRuntimeReadJSON([directory stringByAppendingPathComponent:@"state.json"],4*1024*1024) : nil;
@@ -379,9 +420,9 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         }
         id espFlag = [flags isKindOfClass:NSDictionary.class] ? flags[@"__ifxEnemyEspEnabledV1"] : nil;
         BOOL espEnabled = [espFlag isKindOfClass:NSNumber.class] && [espFlag doubleValue] == 1;
-        BOOL cameraEnabled = [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;
-        BOOL reportsEnabled = !runtimeMode && [flags[@"reports.enabled"] isEqual:@YES];
-        if (!reportsEnabled && _reportsActive) [self emitReports:@{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO}];
+        BOOL cameraEnabled = !readOnly && [enabled isKindOfClass:NSNumber.class] && [enabled doubleValue] == 1;
+        BOOL reportsEnabled = !readOnly && !runtimeMode && [flags[@"reports.enabled"] isEqual:@YES];
+        if (!readOnly && !reportsEnabled && _reportsActive) [self emitReports:@{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO}];
         _reportsActive = reportsEnabled;
         _requestedHz = [settings[@"espReadHz"] isEqual:@120] ? 120 : 60;
         NSInteger targetHz = espEnabled ? _requestedHz : 10;
@@ -397,7 +438,7 @@ static bool HCReceiptBudgetRead(void *context, uint64_t address, void *buffer, s
         _espActive = espEnabled;
         if (!cameraEnabled) {
             BOOL wasActive = _hasWritten; [self restoreCamera];
-            if (!wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"] && ![_lastReport[@"code"] isEqual:@"camera_disabled"])
+            if (!readOnly && !wasActive && ![_lastReport[@"code"] hasPrefix:@"camera_restore"] && ![_lastReport[@"code"] isEqual:@"camera_disabled"])
                 [self emit:@"camera_disabled" message:@"Camera xa đang tắt." extra:nil];
             if (!espEnabled && !reportsEnabled) { [self releaseTarget]; _nextDiscovery = 0; return; }
         }

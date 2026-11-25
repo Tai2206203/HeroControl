@@ -58,6 +58,7 @@ final class ControlStore: ObservableObject {
         edit { settings.flags[key] = value }
     }
     func setCamera(_ value: Double) { edit { settings.cameraScale = value } }
+    func setReadMemoryOnly(_ value: Bool) { edit { settings.readMemoryOnly = value } }
     func setCameraEnabled(_ value: Bool) { edit { settings.cameraEnabled = value } }
     func setReportsPeriod(_ value: String) { edit { settings.reportsPeriod = value } }
     func setReportsEnabled(_ value: Bool) {
@@ -205,7 +206,7 @@ final class ControlStore: ObservableObject {
         await requestStatus(action: "inspectGame")
     }
     func installRuntime() async {
-        guard !busy else { return }
+        guard !busy, !settings.isReadMemoryOnly else { return }
         var previous: Bool? = nil
         edit { previous = settings.gameRuntimeEnabled; settings.gameRuntimeEnabled = true }
         guard persistenceError == nil else { return }
