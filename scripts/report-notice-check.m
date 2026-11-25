@@ -33,6 +33,15 @@ int main(void) {
         assert([attributes[NSFileSize] unsignedLongLongValue]<=196608);
         tracker=[[HCReportNoticeTracker alloc] initWithPath:path];
         assert([tracker observe:status(@"large",large,YES) enabled:YES now:1007].count==0);
+        // Rolling snapshots exceed the in-memory cap; the current window must
+        // remain deduplicated even when old IDs are pruned.
+        assert([tracker observe:status(@"rolling",@[],YES) enabled:YES now:2000].count==0);
+        for(int batch=0;batch<4;batch++) {
+            NSMutableArray *window=[NSMutableArray array];
+            for(int i=0;i<2048;i++) [window addObject:row([NSString stringWithFormat:@"r-%d-%d",batch,i],2001+batch)];
+            assert([tracker observe:status(@"rolling",window,YES) enabled:YES now:2001+batch].count==2048);
+            assert([tracker observe:status(@"rolling",window.reverseObjectEnumerator.allObjects,YES) enabled:YES now:2001+batch].count==0);
+        }
         assert([NSFileManager.defaultManager removeItemAtPath:folder error:NULL]);
         puts("Report notices passed: history baseline, single arrival, dedup/restart, OFF, stale deferral, account switch and bounded checkpoint.");
     }

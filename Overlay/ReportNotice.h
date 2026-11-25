@@ -40,19 +40,26 @@
         NSDictionary *record=value;
         NSString *identifier=[record[@"id"] isKindOfClass:NSString.class] ? record[@"id"] : nil;
         if(!identifier.length || identifier.length>256) continue;
-        [active addObject:identifier];
-        if([_seen containsObject:identifier]) { [_seen removeObject:identifier];[_seen addObject:identifier];continue; }
+        if([_seen containsObject:identifier]) { [active addObject:identifier];continue; }
         double event=[record[@"eventTime"] isKindOfClass:NSNumber.class] ? [record[@"eventTime"] doubleValue] : 0;
         BOOL recentLive=[record[@"source"] isEqual:@"live"] && isfinite(event) && now>=event && now-event<=30;
         // Historical first snapshots seed the baseline; later stale samples do
         // not consume IDs before a live sample can deliver the notification.
         if(_primed && enabled && !fresh) continue;
+        [active addObject:identifier];
         if(enabled && fresh && (_primed || (_allowRecentInitial && recentLive))) [arrivals addObject:record];
         [_seen addObject:identifier];changed=YES;
     }
     if(fresh || records.count) _primed=YES;
     if(wasPrimed!=_primed) changed=YES;
-    while(_seen.count>4096) [_seen removeObjectAtIndex:0];
+    if(_seen.count>4096) {
+        NSMutableOrderedSet *retained=[active mutableCopy];
+        for(NSString *identifier in _seen.reverseObjectEnumerator) {
+            if(retained.count>=4096) break;
+            [retained addObject:identifier];
+        }
+        _seen=retained;
+    }
     if(changed) {
         // Persist the active window first, then older IDs. The HUD inherits a
         // 256-KiB file limit, so never write an unbounded receipt checkpoint.

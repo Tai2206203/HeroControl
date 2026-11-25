@@ -1,0 +1,9 @@
+DORO-CHEAT 0.16.1 — build 34
+
+- Sửa kẹt chạm khi mất sự kiện nhấc tay hoặc thiếu mã ngón tay; hủy an toàn sự kiện kết thúc sai mã, tự phục hồi thao tác cũ.
+- Nền panel và vùng điều khiển trắng đặc. Ô chức năng có nền tối đặc ngay cả khi ảnh chưa tải; giữ ảnh tướng trong các ô và khung riêng.
+- Giải mã ảnh trên hàng đợi nền, giới hạn kích thước ảnh và cache. Không giải mã ảnh nền trong lúc vẽ UI.
+- Menu đứng yên không còn vẽ lại liên tục; chỉ cập nhật khi tương tác, đổi cấu hình, tải ảnh hoặc chạy hiệu ứng.
+- Xử lý và lưu dấu thông báo tố cáo trên hàng đợi riêng, chỉ giữ một bản cập nhật chờ; bỏ thao tác sắp lại toàn bộ lịch sử cho mỗi bản ghi cũ.
+
+Kiểm tra tại Windows: 17 unittest Python, kiểm tra dự án/payload, kiểm tra C nhận chạm và hiệu ứng trượt, phân tích cú pháp Objective-C. Chưa chạy trên iPhone; bản build và kiểm tra native đầy đủ cần CI macOS.

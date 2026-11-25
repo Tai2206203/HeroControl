@@ -31,6 +31,8 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
 "$OUTPUT/settings-store-check"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -std=c11 -Wall -Wextra -Werror "$ROOT/scripts/drawer-motion-check.c" -o "$OUTPUT/drawer-motion-check"
+xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Werror "$ROOT/scripts/input-capture-check.c" -o "$OUTPUT/input-capture-check"
+"$OUTPUT/input-capture-check"
 "$OUTPUT/drawer-motion-check"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -Wall -Wextra -framework Foundation "$ROOT/scripts/report-notice-check.m" -o "$OUTPUT/report-notice-check"

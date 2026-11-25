@@ -54,22 +54,28 @@ static NSString *HCMenuArt(NSInteger group) {
         case 2:return @"airi-sss.jpg";case 3:return @"yena-spirit.jpg";case 4:return @"diaochan-celestial.jpg";
         default:return @"violet-sss.png"; }
 }
+// Drawing only reads the cache. Decode photos on a serial worker, once per name.
 static UIImage *HCThemeImage(NSString *name) {
     NSCache *cache=HCThemeCache();
-    UIImage *image=[cache objectForKey:name];
-    if(!image) {
+    UIImage *cached=[cache objectForKey:name];if(cached) return cached;
+    static NSMutableSet *pending;static dispatch_queue_t worker;static dispatch_once_t once;
+    dispatch_once(&once,^{pending=[NSMutableSet set];worker=dispatch_queue_create("local.herocontrol.theme",DISPATCH_QUEUE_SERIAL);});
+    @synchronized(pending) { if([pending containsObject:name]) return nil;[pending addObject:name]; }
+    dispatch_async(worker,^{ @autoreleasepool {
         NSURL *url=[NSURL fileURLWithPath:[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:[@"Theme/" stringByAppendingString:name]]];
         CGImageSourceRef source=CGImageSourceCreateWithURL((__bridge CFURLRef)url,NULL);
         if(source) {
             NSDictionary *options=@{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,
-                (__bridge id)kCGImageSourceThumbnailMaxPixelSize:([name isEqual:@"app-background.jpg"] ? @256 : @768),(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,
-                (__bridge id)kCGImageSourceShouldCacheImmediately:@YES};
-            CGImageRef thumbnail=CGImageSourceCreateThumbnailAtIndex(source,0,(__bridge CFDictionaryRef)options);
-            if(thumbnail) { image=[UIImage imageWithCGImage:thumbnail];[cache setObject:image forKey:name cost:CGImageGetBytesPerRow(thumbnail)*CGImageGetHeight(thumbnail)];CGImageRelease(thumbnail); }
+                (__bridge id)kCGImageSourceThumbnailMaxPixelSize:([name isEqual:@"app-background.jpg"] ? @256 : @640),
+                (__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,(__bridge id)kCGImageSourceShouldCacheImmediately:@YES};
+            CGImageRef frame=CGImageSourceCreateThumbnailAtIndex(source,0,(__bridge CFDictionaryRef)options);
+            if(frame) { [cache setObject:[UIImage imageWithCGImage:frame] forKey:name cost:CGImageGetBytesPerRow(frame)*CGImageGetHeight(frame)];CGImageRelease(frame); }
             CFRelease(source);
         }
-    }
-    return image;
+        @synchronized(pending) { [pending removeObject:name]; }
+        dispatch_async(dispatch_get_main_queue(),^{[NSNotificationCenter.defaultCenter postNotificationName:@"HCThemeDidLoad" object:name];});
+    }});
+    return nil;
 }
 static void HCDrawImageFill(UIImage *image,CGRect rect,CGFloat alpha,CGFloat zoom) {
     if(!image || image.size.width<=0 || image.size.height<=0) return;
