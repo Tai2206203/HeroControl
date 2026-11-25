@@ -140,16 +140,6 @@ static void HCDrawHealthRing(NSDictionary *target,CGRect ring,BOOL redOnly,CGFlo
         radius:ring.size.width/2 startAngle:-M_PI_2 endAngle:-M_PI_2+M_PI*2*health.ratio clockwise:YES];
     [color setStroke];arc.lineWidth=width;arc.lineCapStyle=kCGLineCapRound;[arc stroke];
 }
-static void HCFillGradient(CGRect rect,UIColor *first,UIColor *last) {
-    CGContextRef context=UIGraphicsGetCurrentContext();
-    CGContextSaveGState(context);[[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:14] addClip];
-    CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
-    NSArray *colors=@[(__bridge id)first.CGColor,(__bridge id)last.CGColor];
-    CGGradientRef gradient=CGGradientCreateWithColors(space,(__bridge CFArrayRef)colors,NULL);
-    CGContextDrawLinearGradient(context,gradient,rect.origin,CGPointMake(CGRectGetMaxX(rect),CGRectGetMaxY(rect)),0);
-    CGGradientRelease(gradient);CGColorSpaceRelease(space);CGContextRestoreGState(context);
-}
-
 @protocol HCEspPainting <NSObject>
 - (void)drawEsp;
 @end

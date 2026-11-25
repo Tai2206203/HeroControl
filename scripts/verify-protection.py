@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shlex
 
 ROOT = Path(__file__).resolve().parent.parent
 GROUPS = ("BACKEND", "OVERLAY", "RUNTIME")
@@ -24,6 +25,25 @@ def plaintext_leaks(data, group):
     return [name for g, name, value in entries() if g in ("COMMON", group)
             and value.encode("utf8") in strings]
 
+def verify_platform_links(script):
+    """Every protected object and predicate object must match the link SDK."""
+    objects = {}
+    for line in script.replace("\\\n", " ").splitlines():
+        tokens = shlex.split(line, comments=True)
+        if not tokens:
+            continue
+        if tokens[0] == "hc_build_protection" and len(tokens) >= 4:
+            sdk, output = tokens[1], tokens[3]
+            for name in (output, output + ".opaque.o"):
+                if name in objects and objects[name] != sdk:
+                    raise ValueError("Protected object reused across SDKs: " + name)
+                objects[name] = sdk
+        if len(tokens) >= 4 and tokens[:2] == ["xcrun", "--sdk"] and tokens[3] in ("clang", "clang++"):
+            sdk = tokens[2]
+            for token in tokens[4:]:
+                if token in objects and objects[token] != sdk:
+                    raise ValueError("SDK mismatch: " + token + " built for " + objects[token] + " linked for " + sdk)
+
 def verify_sources():
     vendor = ROOT / "ThirdParty/oxorany"
     provenance = json.loads((vendor / "provenance.json").read_text("utf8"))
@@ -36,6 +56,7 @@ def verify_sources():
     registered = {n: g for g, n, _ in entries()}
     for group, names in source_groups.items():
         script = (ROOT / ("scripts/build-" + {"BACKEND": "diagnostics", "OVERLAY": "overlay", "RUNTIME": "runtime"}[group] + ".sh")).read_text("utf8")
+        verify_platform_links(script)
         if "hc_build_protection iphoneos " + group not in script or '"$OUTPUT/protected-ios.o"' not in script or '"$OUTPUT/protected-ios.o.opaque.o"' not in script:
             raise ValueError("Missing protected object build/link: " + group)
         for name in names:

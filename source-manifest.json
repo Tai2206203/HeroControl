@@ -881,8 +881,8 @@
   },
   {
     "path": "CAP_NHAT_0.17.1.txt",
-    "bytes": 1841,
-    "sha256": "973394924a9c37db26ccf936a9f4350665034fb28fb40cc7182ecc75252d76ce"
+    "bytes": 2011,
+    "sha256": "75d53cba0c39f908d50ac5499772ea7f78475086d67821a24b1bbac9dd5eb75a"
   },
   {
     "path": "CAP_NHAT_0.2.1.txt",
@@ -1101,8 +1101,8 @@
   },
   {
     "path": "Overlay/HeroAssets.h",
-    "bytes": 11863,
-    "sha256": "75f5176493c028bef7446e2c7f7bb6f12f700e5c0f353fc6d24f9abe280df212"
+    "bytes": 11188,
+    "sha256": "ca106a3e88e8aa692c2d9b4ea16041a72cddd0807939ec0fe5dc39b73c0a5ca0"
   },
   {
     "path": "Overlay/HeroOverlay.m",
@@ -1291,8 +1291,8 @@
   },
   {
     "path": "VERIFICATION.txt",
-    "bytes": 25454,
-    "sha256": "fc5b394fee55785247b28eb150f05cfcbe74cd3fe0183181fbaecd36efc6da64"
+    "bytes": 26016,
+    "sha256": "6a17b5dad743fef22f69ee6ec6fdf72cce4f6af4d8f41c5650b9970bc97e6828"
   },
   {
     "path": "scripts/build-diagnostics.sh",
@@ -1306,8 +1306,8 @@
   },
   {
     "path": "scripts/build-overlay.sh",
-    "bytes": 6245,
-    "sha256": "98794ea3104770668297fa460427ea168828ba5cf3bffdef4118340f2006fe36"
+    "bytes": 6324,
+    "sha256": "655022378373a6f3f9d65c6854ee3cc15fedc9d838e4ae42d07a8fff1fa291e1"
   },
   {
     "path": "scripts/build-protection.sh",
@@ -1511,8 +1511,8 @@
   },
   {
     "path": "scripts/verify-protection.py",
-    "bytes": 3982,
-    "sha256": "aee796ff1a02242743d2076f5a353b0b233641f885e567479d0874874b0d7a8f"
+    "bytes": 5021,
+    "sha256": "703f98d144f965d133ec5477095d019219821121e0895e0202a39a33f04fbba7"
   },
   {
     "path": "scripts/verify-runtime-payload.py",
@@ -1526,8 +1526,8 @@
   },
   {
     "path": "tests/test_protection.py",
-    "bytes": 1204,
-    "sha256": "2d0e0f06fa10ea339c7c0349f15460b48508ee548a3936a3cb7ae95f49d08d34"
+    "bytes": 2362,
+    "sha256": "b182497efdde5495dcb0ced16ecba0ca38a568ff0bd3e9fe919d2a3353fb924f"
   },
   {
     "path": "tests/test_runtime_payload.py",

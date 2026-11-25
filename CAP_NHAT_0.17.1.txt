@@ -9,3 +9,5 @@ DORO-CHEAT 0.17.1 — build 36
 23 kiểm tra Python, 4 kiểm tra Lua và kiểm tra C cuộn 60/120 Hz đã qua tại Windows; kiểm tra cấu trúc dự án, payload, oxorany và cú pháp nguồn/script cũng qua. Kiểm tra Foundation về nội dung dài/2048 bản ghi và ImageIO giải mã ảnh đã thêm vào CI macOS, chưa chạy trên Windows. Chưa xác nhận trực tiếp trên iPhone.
 
 Sau khi cài bản mới, đóng hẳn rồi mở lại game để thay bộ theo dõi cũ đang nằm trong bộ nhớ. Bảng hiển thị đủ dữ liệu đã nhận, không khẳng định lấy được toàn bộ lịch sử máy chủ.
+
+S?a CI: t?ch object oxorany macOS cho overlay-host.dylib, kh?ng d?ng l?i object iOS. Th?m ki?m tra SDK/object v? 3 b?i ki?m tra h?i quy; t?ng 26 ki?m tra Python ?? qua.

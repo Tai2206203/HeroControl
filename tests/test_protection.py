@@ -11,6 +11,25 @@ class ProtectionTests(unittest.TestCase):
     def test_vendor_and_native_wiring(self):
         protection.verify_sources()
 
+    def test_ios_object_rejected_in_macos_link(self):
+        script = ('hc_build_protection iphoneos BACKEND "$OUTPUT/device.o"\n'
+                  'xcrun --sdk macosx clang bridge.m "$OUTPUT/device.o" -o host.dylib\n')
+        with self.assertRaisesRegex(ValueError, "SDK mismatch"):
+            protection.verify_platform_links(script)
+
+    def test_ios_predicate_object_rejected_in_macos_link(self):
+        script = ('hc_build_protection iphoneos BACKEND "$OUTPUT/device.o"\n'
+                  'xcrun --sdk macosx clang bridge.m "$OUTPUT/device.o.opaque.o" -o host.dylib\n')
+        with self.assertRaisesRegex(ValueError, "SDK mismatch"):
+            protection.verify_platform_links(script)
+
+    def test_separate_host_and_device_links(self):
+        protection.verify_platform_links(
+            'hc_build_protection iphoneos BACKEND "$OUTPUT/device.o"\n'
+            'hc_build_protection macosx BACKEND "$OUTPUT/host.o"\n'
+            'xcrun --sdk iphoneos clang bridge.m "$OUTPUT/device.o" "$OUTPUT/device.o.opaque.o" -o device.dylib\n'
+            'xcrun --sdk macosx clang bridge.m "$OUTPUT/host.o" "$OUTPUT/host.o.opaque.o" -o host.dylib\n')
+
     def test_scanner_rejects_plaintext_in_each_group(self):
         for group, name, value in protection.entries():
             target = "BACKEND" if group == "COMMON" else group

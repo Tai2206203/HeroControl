@@ -7,6 +7,7 @@ GENERATION="$(python3 "$ROOT/scripts/runtime-generation.py")"
 source "$ROOT/scripts/build-protection.sh"
 hc_build_protection iphoneos OVERLAY "$OUTPUT/protected-ios.o" -arch arm64 -miphoneos-version-min=17.0
 hc_build_protection iphoneos BACKEND "$OUTPUT/protected-bridge.o" -arch arm64 -miphoneos-version-min=17.0
+hc_build_protection macosx BACKEND "$OUTPUT/protected-bridge-host.o"
 mkdir -p "$OUTPUT/HeroOverlay.app"
 python3 "$ROOT/scripts/generate-overlay-features.py" "$OUTPUT/HCFeatures.h"
 xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
@@ -43,7 +44,7 @@ xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
 # Also exercise invalid input/unsupported-host responses of the actual ABI.
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -fobjc-arc -dynamiclib -fvisibility=hidden -framework Foundation \
-    "$ROOT/Overlay/OverlayBridge.m" "$OUTPUT/protected-bridge.o" "$OUTPUT/protected-bridge.o.opaque.o" -lc++ -Wl,-x -o "$OUTPUT/overlay-host.dylib"
+    "$ROOT/Overlay/OverlayBridge.m" "$OUTPUT/protected-bridge-host.o" "$OUTPUT/protected-bridge-host.o.opaque.o" -lc++ -Wl,-x -o "$OUTPUT/overlay-host.dylib"
 python3 "$ROOT/scripts/check-overlay-bridge.py" "$OUTPUT/overlay-host.dylib"
 xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
     -Wall -Wextra -Werror "$ROOT/scripts/overlay-lock-check.c" -o "$OUTPUT/overlay-lock-check"
