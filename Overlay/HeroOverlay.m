@@ -1,5 +1,7 @@
 #include "../Protection/ProtectedStrings.h"
 #include "InputCapture.h"
+#import "ReportAnalysis.h"
+#include "ReportScroll.h"
 // Standalone HUD bootstrap/window-hosting approach adapted from TrollSpeed
 // (c) 2023 Lessica, MIT. See ThirdParty/TrollSpeed-LICENSE.txt and NOTICE.txt.
 // This process owns its window; game access is isolated in CameraEngine.
@@ -132,7 +134,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.17.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.17.1", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -176,6 +178,7 @@ static void HCStop(NSString *message, BOOL failed) {
 - (void)toggleMenu;
 - (void)welcome;
 - (void)receiveReports:(NSDictionary *)report;
+- (void)discardReportLayout;
 - (void)receivePoint:(CGPoint)point phase:(UITouchPhase)phase pointer:(NSInteger)pointer;
 @end
 
@@ -212,6 +215,7 @@ static NSArray *HCFilteredReports(NSDictionary *status,NSString *period) {
     NSISO8601DateFormatter *iso=[NSISO8601DateFormatter new];
     NSMutableArray *result=[NSMutableArray array];
     for(NSDictionary *record in records) {
+        if(![record isKindOfClass:NSDictionary.class]) continue;
         NSDate *date=[record[@"eventTime"] doubleValue]>0 ? [NSDate dateWithTimeIntervalSince1970:[record[@"eventTime"] doubleValue]] :
             ([formatter dateFromString:record[@"time"] ?: @""] ?: [iso dateFromString:record[@"time"] ?: @""]);
         if(date && [date compare:periodStart]!=NSOrderedAscending && [date compare:now]!=NSOrderedDescending) [result addObject:record];
@@ -243,7 +247,13 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 }
 
 @implementation HCOverlayCanvas {
-    NSInteger _calibrationPage, _reportRecordIndex;
+    NSInteger _calibrationPage;
+    NSArray<NSDictionary *> *_reportLayout;
+    NSDictionary *_reportLayoutStatus,*_reportObservedStatus;
+    NSString *_reportLayoutPeriod;
+    double _reportLayoutWidth,_reportContentHeight,_reportScroll,_reportDragStart;
+    double _reportVelocity,_reportLastY,_reportLastTouch,_reportTick;
+    CGRect _reportViewport;
     BOOL _editingMinimap;
     CGRect _startMapRect;
     double _nextMenuRedraw, _emptyEspSince, _welcomeUntil;
@@ -333,26 +343,34 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     [self.espView setNeedsDisplay];
     double now=NSProcessInfo.processInfo.systemUptime;
     if(self.pointer>=0 && now-_lastPointerEvent>6) [self cancelInteraction];
+    BOOL reportMoving=NO;
+    if(HCMenuOpen && self.group==4 && self.pointer<0 && fabs(_reportVelocity)>0) {
+        HCReportScrollStep step=HCReportScrollAdvance(_reportScroll,_reportVelocity,now-_reportTick,_reportContentHeight,_reportViewport.size.height);
+        reportMoving=step.offset!=_reportScroll;_reportScroll=step.offset;_reportVelocity=step.velocity;_reportTick=now;
+    } else if(!HCMenuOpen || self.group!=4) _reportVelocity=0;
+    BOOL reportStopped=reportMoving && _reportVelocity==0;
     double previous=_menuProgress;[self updateMenuMotion:now];
     BOOL notice=_reportNoticeStarted>0 && now-_reportNoticeStarted<4;
     BOOL welcome=now<_welcomeUntil;
-    BOOL repaint=previous!=_menuProgress || fabs(_menuProgress-_menuMotionTo)>0.0001 || (notice && HCReportNoticeProgress(now-_reportNoticeStarted)<1) || (_reportNoticeWasVisible && !notice) || (_welcomeWasVisible && !welcome);
+    BOOL repaint=reportMoving || previous!=_menuProgress || fabs(_menuProgress-_menuMotionTo)>0.0001 || (notice && HCReportNoticeProgress(now-_reportNoticeStarted)<1) || (_reportNoticeWasVisible && !notice) || (_welcomeWasVisible && !welcome);
     BOOL clearWelcome=_welcomeWasVisible && !welcome;
     _welcomeWasVisible=welcome;
     BOOL clearNotice=_reportNoticeWasVisible && !notice;
     BOOL clearMenu=previous>0 && _menuProgress==0;
     BOOL finishedMotion=previous!=_menuProgress && _menuProgress==_menuMotionTo;
+    if(clearMenu) [self discardReportLayout];
     _reportNoticeWasVisible=notice;
     if(_reportNoticeStarted>0 && now-_reportNoticeStarted>=4) {
         _reportNoticeStarted=0;_reportNoticeReason=nil;_reportNoticeCount=0;
     }
-    BOOL moving=fabs(_menuProgress-_menuMotionTo)>0.0001 || (notice && HCReportNoticeProgress(now-_reportNoticeStarted)<1);
-    if(!self.hidden && repaint && (clearNotice || clearMenu || clearWelcome || finishedMotion || now>=_nextMenuRedraw)) {
+    BOOL moving=reportMoving || fabs(_menuProgress-_menuMotionTo)>0.0001 || (notice && HCReportNoticeProgress(now-_reportNoticeStarted)<1);
+    if(!self.hidden && repaint && (clearNotice || clearMenu || clearWelcome || finishedMotion || reportStopped || now>=_nextMenuRedraw)) {
         _reportNoticeWasVisible=notice;
         _nextMenuRedraw=now+(moving ? 1.0/60 : 0.05);[self setNeedsDisplay];
     }
 }
 - (void)cancelInteraction {
+    _reportVelocity=0;
     BOOL editing=self.activeTarget!=nil;
     self.activeTarget=nil;self.pointer=-1;self.dragged=NO;
     if(editing) [self reloadSettings];
@@ -445,18 +463,88 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     return CGRectMake((self.bounds.size.width-width)/2,(self.bounds.size.height-height)/2,width,height);
 }
 - (CGRect)contentRect {
-    CGRect p=[self panelRect];BOOL function=self.group>=1 && self.group<=4;
+    CGRect p=[self panelRect];BOOL function=self.group>=1 && self.group<=3;
     CGFloat reserve=function && p.size.width>500 ? 174 : 0;
     CGFloat banner=function && p.size.width<=500 && p.size.height>=400 ? 100 : 0;
     return CGRectMake(p.origin.x+66,p.origin.y+62+banner,p.size.width-82-reserve,p.size.height-104-banner);
 }
-- (void)tile:(CGRect)rect title:(NSString *)title subtitle:(NSString *)subtitle image:(int32_t)hero action:(NSString *)action {
-    HCFillGradient(rect,[UIColor colorWithWhite:0.22 alpha:1],[UIColor colorWithWhite:0.12 alpha:1]);
+- (void)discardReportLayout {
+    _reportLayout=nil;_reportLayoutStatus=nil;_reportObservedStatus=nil;
+}
+- (void)prepareReportLayout:(CGFloat)width {
+    NSString *period=self.settings[@"reportsPeriod"] ?: @"all";
+    if(_reportLayout && width==_reportLayoutWidth && [_reportLayoutPeriod isEqual:period] &&
+        (self.activeTarget && [self.activeTarget isEqual:@"reports-scroll"])) return;
+    BOOL sameLayout=_reportLayout && width==_reportLayoutWidth && [_reportLayoutPeriod isEqual:period];
+    if(sameLayout && _reportObservedStatus==HCReportsStatus) return;
+    _reportObservedStatus=HCReportsStatus;
+    NSMutableDictionary *visible=[NSMutableDictionary dictionary];
+    for(NSString *key in @[@"message",@"queryStatus",@"candidateCount",@"sentRequestCount",@"receivedResponseCount",@"accountID",@"recordsTruncated",@"records"])
+        if(HCReportsStatus[key]) visible[key]=HCReportsStatus[key];
+    if(![period isEqual:@"all"]) {
+        double stamp=[HCReportsStatus[@"serverTime"] doubleValue] ?: NSDate.date.timeIntervalSince1970;
+        visible[@"filterDay"]=@((long long)((stamp+25200)/86400));
+    }
+    if(sameLayout && [_reportLayoutStatus isEqual:visible]) return;
+    _reportLayoutStatus=visible;_reportLayoutPeriod=period;_reportLayoutWidth=width;
+    NSArray *blocks=HCReportAnalysisBlocks(HCReportsStatus,HCFilteredReports(HCReportsStatus,period));
+    NSMutableArray *layout=[NSMutableArray arrayWithCapacity:blocks.count];CGFloat y=8;
+    NSDictionary *attributes=@{NSFontAttributeName:[UIFont boldSystemFontOfSize:11]};
+    for(NSDictionary *block in blocks) {
+        CGRect text=[block[@"text"] boundingRectWithSize:CGSizeMake(MAX(40,width-32),CGFLOAT_MAX)
+            options:NSStringDrawingUsesLineFragmentOrigin|NSStringDrawingUsesFontLeading attributes:attributes context:nil];
+        CGFloat height=ceil(text.size.height)+42;
+        NSMutableDictionary *row=[block mutableCopy];row[@"y"]=@(y);row[@"height"]=@(height);
+        [layout addObject:row];y+=height+8;
+    }
+    _reportLayout=layout;_reportContentHeight=y;
+    _reportScroll=HCReportScrollClamp(_reportScroll,y,_reportViewport.size.height);
+}
+- (void)drawReportTable:(CGRect)c {
+    BOOL enabled=[self.settings[@"flags"][@"reports.enabled"] boolValue];
+    CGRect toggle=CGRectMake(c.origin.x,c.origin.y,c.size.width-86,24);
+    HCText(enabled ? @"CHECK TỐ CÁO • ON" : @"CHECK TỐ CÁO • OFF",toggle,11,HCMenuAccent(),YES);
+    [self target:@"flag:reports.enabled" rect:toggle];
+    CGRect retry=CGRectMake(CGRectGetMaxX(c)-78,c.origin.y,78,24);
+    HCText(@"↻ LÀM MỚI",retry,10,HCMenuAccent(),YES);[self target:@"reports-refresh" rect:retry];
+    NSArray *periods=@[@"all",@"week",@"month"],*titles=@[@"TẤT CẢ",@"TUẦN NÀY",@"THÁNG NÀY"];
+    NSString *period=self.settings[@"reportsPeriod"] ?: @"all";
+    for(NSInteger i=0;i<3;i++) {
+        CGRect filter=CGRectMake(c.origin.x+i*c.size.width/3,c.origin.y+27,c.size.width/3-3,24);
+        [([period isEqual:periods[i]] ? [UIColor colorWithRed:0.84 green:0.95 blue:0.92 alpha:1] : [UIColor colorWithWhite:0.94 alpha:1]) setFill];
+        [[UIBezierPath bezierPathWithRoundedRect:filter cornerRadius:6] fill];
+        HCText(titles[i],CGRectInset(filter,5,6),9,UIColor.blackColor,YES);[self target:[@"period:" stringByAppendingString:periods[i]] rect:filter];
+    }
+    _reportViewport=CGRectMake(c.origin.x,c.origin.y+58,c.size.width,MAX(40,c.size.height-58));
+    [self prepareReportLayout:_reportViewport.size.width];
+    _reportScroll=HCReportScrollClamp(_reportScroll,_reportContentHeight,_reportViewport.size.height);
     CGContextRef context=UIGraphicsGetCurrentContext();CGContextSaveGState(context);
-    [[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:14] addClip];
-    NSString *cover=hero==130 ? @"violet-sss.png" : hero==156 ? @"veres-dragon.jpg" : hero==118 ? @"sephera-nova.jpg" : hero==537 ? @"liliana-dragon.jpg" : @"diaochan-celestial.jpg";
-    HCDrawImageFill(HCThemeImage(cover),rect,1,1);
-    [[UIColor.blackColor colorWithAlphaComponent:0.30] setFill];UIRectFill(rect);CGContextRestoreGState(context);
+    [[UIBezierPath bezierPathWithRoundedRect:_reportViewport cornerRadius:9] addClip];
+    [[UIColor colorWithWhite:0.93 alpha:1] setFill];UIRectFill(_reportViewport);
+    // Binary search skips offscreen rows; no subviews or images per receipt.
+    NSUInteger low=0,high=_reportLayout.count;
+    while(low<high) { NSUInteger mid=low+(high-low)/2;NSDictionary *row=_reportLayout[mid];
+        if([row[@"y"] doubleValue]+[row[@"height"] doubleValue]<_reportScroll) low=mid+1;else high=mid; }
+    for(NSUInteger i=low;i<_reportLayout.count;i++) {
+        NSDictionary *row=_reportLayout[i];CGFloat y=[row[@"y"] doubleValue]-_reportScroll;
+        if(y>_reportViewport.size.height) break;
+        CGRect card=CGRectMake(_reportViewport.origin.x+5,_reportViewport.origin.y+y,_reportViewport.size.width-10,[row[@"height"] doubleValue]);
+        [([row[@"detail"] boolValue] ? UIColor.whiteColor : [UIColor colorWithRed:0.94 green:0.98 blue:0.97 alpha:1]) setFill];
+        [[UIBezierPath bezierPathWithRoundedRect:card cornerRadius:7] fill];
+        HCText(row[@"title"],CGRectMake(card.origin.x+10,card.origin.y+8,card.size.width-22,17),10,HCMenuAccent(),YES);
+        HCText(row[@"text"],CGRectMake(card.origin.x+10,card.origin.y+28,card.size.width-22,card.size.height-34),11,UIColor.blackColor,YES);
+    }
+    if(_reportContentHeight>_reportViewport.size.height) {
+        CGFloat h=MAX(20,_reportViewport.size.height*_reportViewport.size.height/_reportContentHeight);
+        CGFloat y=_reportViewport.origin.y+(_reportViewport.size.height-h)*_reportScroll/(_reportContentHeight-_reportViewport.size.height);
+        [[HCMenuAccent() colorWithAlphaComponent:0.7] setFill];
+        [[UIBezierPath bezierPathWithRoundedRect:CGRectMake(CGRectGetMaxX(_reportViewport)-4,y,3,h) cornerRadius:1.5] fill];
+    }
+    CGContextRestoreGState(context);[self target:@"reports-scroll" rect:_reportViewport];
+}
+- (void)tile:(CGRect)rect title:(NSString *)title subtitle:(NSString *)subtitle image:(int32_t)hero action:(NSString *)action {
+    NSString *cover=hero==130 ? @"violet-sss.png" : hero==156 || hero==537 ? @"lauriel-sss.jpg" : @"airi-sss.jpg";
+    HCDrawSkinCard(rect,cover);
     NSString *glyph=hero==130 || hero==156 ? @"viewfinder" : hero==118 ? @"slider.horizontal.3" : hero==537 ? @"camera.fill" : @"envelope.fill";
     UIImage *symbol=[[UIImage systemImageNamed:glyph] imageWithTintColor:[HCMenuAccent() colorWithAlphaComponent:0.22] renderingMode:UIImageRenderingModeAlwaysOriginal];
     [symbol drawInRect:CGRectMake(CGRectGetMaxX(rect)-43,rect.origin.y+10,28,28)];
@@ -612,11 +700,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if(self.group!=5) {
             [[UIColor colorWithWhite:1 alpha:1] setFill];
             [[UIBezierPath bezierPathWithRoundedRect:CGRectInset(c,-7,-5) cornerRadius:14] fill];
-            if(self.group>=1 && self.group<=4 && p.size.width>500) {
+            if(self.group>=1 && self.group<=3 && p.size.width>500) {
                 CGRect portrait=CGRectMake(CGRectGetMaxX(p)-166,p.origin.y+62,148,p.size.height-104);
                 CGContextSaveGState(ctx);[[UIBezierPath bezierPathWithRoundedRect:portrait cornerRadius:16] addClip];
                 HCDrawImageFill(HCThemeImage(HCMenuArt(self.group)),portrait,1,1);CGContextRestoreGState(ctx);
-            } else if(self.group>=1 && self.group<=4 && p.size.height>=400) {
+            } else if(self.group>=1 && self.group<=3 && p.size.height>=400) {
                 CGRect banner=CGRectMake(p.origin.x+66,p.origin.y+62,p.size.width-82,90);
                 CGContextSaveGState(ctx);[[UIBezierPath bezierPathWithRoundedRect:banner cornerRadius:16] addClip];
                 HCDrawImageFill(HCThemeImage(HCMenuArt(self.group)),banner,1,1);CGContextRestoreGState(ctx);
@@ -625,16 +713,16 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if(self.group==5) {
             BOOL wide=c.size.width>460;
             CGFloat leftWidth=wide ? c.size.width*0.54 : c.size.width;
-            CGRect banner=CGRectMake(c.origin.x,c.origin.y,leftWidth,MIN(88,c.size.height*0.38));
+            CGRect banner=CGRectMake(c.origin.x,c.origin.y,leftWidth,wide ? MIN(88,c.size.height*0.38) : 56);
             [self tile:banner title:@"SẴN SÀNG" subtitle:@"TỰ ĐỘNG LƯU CẤU HÌNH" image:130 action:@"tab:0"];
             CGFloat rowY=CGRectGetMaxY(banner)+12;
             NSArray *quick=@[@{@"title":@"HIỂN THỊ KẺ ĐỊCH",@"key":@"__ifxEnemyEspEnabledV1"},@{@"title":@"ESP ICON",@"key":@"DoroCheat.Reference.R1.Icon"},@{@"title":@"ESP MINIMAP",@"key":@"DoroCheat.Reference.R1.Map"}];
             for(NSInteger i=0;i<3;i++) {
-                NSDictionary *q=quick[i];CGRect r=CGRectMake(c.origin.x,rowY+i*34,leftWidth,29);
-                [[UIColor colorWithWhite:0.95 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:12] fill];
+                NSDictionary *q=quick[i];CGRect r=CGRectMake(c.origin.x,rowY+i*(wide ? 34 : 30),leftWidth,wide ? 29 : 25);
+                HCDrawSkinCard(r,HCMenuArt(i));
                 BOOL on=[self.settings[@"flags"][q[@"key"]] boolValue];
-                HCText(q[@"title"],CGRectMake(r.origin.x+12,r.origin.y+8,r.size.width-65,18),11,UIColor.blackColor,YES);
-                HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(r)-44,r.origin.y+8,40,18),11,on ? HCMenuAccent() : UIColor.grayColor,YES);
+                HCText(q[@"title"],CGRectMake(r.origin.x+12,r.origin.y+8,r.size.width-65,18),11,UIColor.whiteColor,YES);
+                HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(r)-44,r.origin.y+8,40,18),11,on ? HCAccent() : UIColor.whiteColor,YES);
                 [self target:[@"flag:" stringByAppendingString:q[@"key"]] rect:r];
             }
             if(wide) {
@@ -643,6 +731,12 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 [self tile:CGRectMake(x+tw+10,c.origin.y,tw,th) title:@"CĂN CHỈNH" subtitle:@"BOX / ICON / MINIMAP" image:118 action:@"tab:3"];
                 [self tile:CGRectMake(x,c.origin.y+th+12,tw,th) title:@"CAMERA" subtitle:@"GÓC NHÌN" image:537 action:@"tab:1"];
                 [self tile:CGRectMake(x+tw+10,c.origin.y+th+12,tw,th) title:@"REPORTS" subtitle:@"LỊCH SỬ TỐ CÁO" image:193 action:@"tab:4"];
+            } else {
+                CGFloat y=rowY+100,tw=(c.size.width-10)/2,th=MAX(48,(CGRectGetMaxY(c)-y-10)/2);
+                [self tile:CGRectMake(c.origin.x,y,tw,th) title:@"ESP" subtitle:@"ẢNH TƯỚNG / ID" image:156 action:@"tab:0"];
+                [self tile:CGRectMake(c.origin.x+tw+10,y,tw,th) title:@"CĂN CHỈNH" subtitle:@"BOX / ICON / MINIMAP" image:118 action:@"tab:3"];
+                [self tile:CGRectMake(c.origin.x,y+th+10,tw,th) title:@"CAMERA" subtitle:@"GÓC NHÌN" image:537 action:@"tab:1"];
+                [self tile:CGRectMake(c.origin.x+tw+10,y+th+10,tw,th) title:@"REPORTS" subtitle:@"BẢNG PHÂN TÍCH" image:193 action:@"tab:4"];
             }
         } else if(self.group==1) {
             double distance=HCCameraDistance([self.settings[@"cameraScale"] doubleValue]);
@@ -696,43 +790,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             CGRect rotate=CGRectMake(c.origin.x+c.size.width*0.56,CGRectGetMaxY(c)-28,c.size.width*0.44,24);
             HCText([self.settings[@"minimapRotated"] boolValue] ? @"XOAY 180°: ON" : @"XOAY 180°: OFF",rotate,9,UIColor.blackColor,NO);[self target:@"minimap-rotate" rect:rotate];
         } else if(self.group==4) {
-            BOOL enabled=[self.settings[@"flags"][@"reports.enabled"] boolValue];
-            CGRect toggle=CGRectMake(c.origin.x,c.origin.y,c.size.width,27);
-            HCText(enabled ? @"CHECK TỐ CÁO TỰ ĐỘNG   ON" : @"CHECK TỐ CÁO TỰ ĐỘNG   OFF",toggle,13,HCMenuAccent(),YES);
-            [self target:@"flag:reports.enabled" rect:toggle];
-            CGRect status=CGRectMake(c.origin.x,c.origin.y+30,c.size.width,39);
-            [[UIColor colorWithRed:0.93 green:0.97 blue:0.96 alpha:1] setFill];
-            [[UIBezierPath bezierPathWithRoundedRect:status cornerRadius:8] fill];
-            HCText(enabled ? (HCReportsStatus[@"message"] ?: @"Tự chuẩn bị adapter, lấy người chơi và theo dõi phản hồi…") : @"Bật một lần để tự chuẩn bị và theo dõi.",CGRectInset(status,7,4),9,UIColor.darkGrayColor,NO);
-            NSArray *values=@[HCReportsStatus[@"candidateCount"] ?: @0,HCReportsStatus[@"sentRequestCount"] ?: @0,HCReportsStatus[@"receivedResponseCount"] ?: @0];
-            NSArray *labels=@[@"NGƯỜI CHƠI",@"ĐÃ GỬI",@"PHẢN HỒI"];
-            for(NSInteger i=0;i<3;i++) {
-                CGFloat x=c.origin.x+i*c.size.width/3;
-                HCText([NSString stringWithFormat:@"%@  %@",values[i],labels[i]],CGRectMake(x,c.origin.y+74,c.size.width/3,20),9,HCMenuAccent(),YES);
-            }
-            CGRect retry=CGRectMake(c.origin.x,c.origin.y+99,c.size.width*0.45,23);
-            HCText(@"↻ THỬ LẠI",retry,11,HCMenuAccent(),YES);[self target:@"reports-refresh" rect:retry];
-            NSArray *periods=@[@"all",@"week",@"month"],*titles=@[@"TẤT CẢ",@"TUẦN NÀY",@"THÁNG NÀY"];
-            NSString *period=self.settings[@"reportsPeriod"] ?: @"all";
-            for(NSInteger i=0;i<3;i++) {
-                CGRect filter=CGRectMake(c.origin.x+i*c.size.width/3,c.origin.y+128,c.size.width/3-3,22);
-                [[UIColor colorWithWhite:0.95 alpha:1] setFill];UIRectFill(filter);
-                if([period isEqual:periods[i]]) { [[HCMenuAccent() colorWithAlphaComponent:0.14] setFill];UIRectFill(filter); }
-                HCText(titles[i],CGRectInset(filter,3,4),9,UIColor.blackColor,YES);[self target:[@"period:" stringByAppendingString:periods[i]] rect:filter];
-            }
-            NSArray *records=HCFilteredReports(HCReportsStatus,period);
-            _reportRecordIndex=MAX(0,MIN(_reportRecordIndex,(NSInteger)records.count-1));
-            NSString *recordText=@"Chưa có bản ghi đã nhận. Chưa thể kết luận có hoặc không bị tố cáo.";
-            if(records.count) {
-                NSDictionary *record=records[records.count-1-_reportRecordIndex];
-                recordText=[NSString stringWithFormat:@"%@ • %@\nLý do: %@",record[@"time"] ?: @"Chưa rõ giờ",record[@"information"] ?: @"",record[@"reason"] ?: @"Chưa được cung cấp"];
-            }
-            HCText(recordText,CGRectMake(c.origin.x,c.origin.y+157,c.size.width,MAX(18,MIN(44,c.size.height-179))),10,UIColor.blackColor,NO);
-            CGFloat bottom=CGRectGetMaxY(c)-18;
-            HCText([NSString stringWithFormat:@"LỊCH SỬ ĐÃ THU THẬP • %ld bản ghi",(long)records.count],CGRectMake(c.origin.x,bottom,c.size.width-65,18),8,UIColor.darkGrayColor,YES);
-            CGRect prev=CGRectMake(CGRectGetMaxX(c)-60,bottom,26,20),next=CGRectMake(CGRectGetMaxX(c)-28,bottom,26,20);
-            HCText(@"‹",prev,17,HCMenuAccent(),YES);HCText(@"›",next,17,HCMenuAccent(),YES);
-            [self target:@"report-prev" rect:prev];[self target:@"report-next" rect:next];
+            [self drawReportTable:c];
         } else {
             NSMutableArray *features=[NSMutableArray array];
             for(NSDictionary *feature in HCFeatures()) if([feature[@"group"] integerValue]==self.group) [features addObject:feature];
@@ -742,11 +800,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             for(NSUInteger i=0;i<features.count;i++) {
                 NSDictionary *feature=features[i];
                 CGRect row=CGRectMake(c.origin.x+(i%columns)*(cellWidth+gap),c.origin.y+(i/columns)*rowHeight,cellWidth,rowHeight-6);
-                [[UIColor colorWithWhite:0.95 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:row cornerRadius:10] fill];
+                HCDrawSkinCard(row,HCMenuArt(i));
 
                 BOOL on=[self.settings[@"flags"][feature[@"key"]] boolValue];
-                HCText(feature[@"title"],CGRectMake(row.origin.x+10,row.origin.y+9,row.size.width-54,row.size.height),12,UIColor.blackColor,NO);
-                HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(row)-38,row.origin.y+9,34,22),10,on ? HCMenuAccent() : UIColor.grayColor,YES);
+                HCText(feature[@"title"],CGRectMake(row.origin.x+10,row.origin.y+9,row.size.width-54,row.size.height),12,UIColor.whiteColor,NO);
+                HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(row)-38,row.origin.y+9,34,22),10,on ? HCAccent() : UIColor.whiteColor,YES);
                 [self target:[@"flag:" stringByAppendingString:feature[@"key"]] rect:row];
             }
         }
@@ -980,6 +1038,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if (!target) return;
         self.pointer = pointer; self.activeTarget = target;
         self.startPoint = point; self.startBubble = self.bubble; self.dragged = NO;
+        if([target isEqual:@"reports-scroll"]) {
+            _reportDragStart=_reportScroll;_reportVelocity=0;_reportLastY=point.y;_reportLastTouch=now;
+        }
         if ([target isEqual:@"camera"]) { [self reloadSettings]; [self cameraAt:point]; }
         if ([target isEqual:@"esp-combined"]) { [self reloadSettings];[self espCombinedAt:point]; }
         if ([target hasPrefix:@"adjust:"]) { [self reloadSettings];[self calibrationAt:point]; }
@@ -988,7 +1049,12 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     _lastPointerEvent=NSProcessInfo.processInfo.systemUptime;
     HCTouchCount++;
     if (phase == UITouchPhaseMoved) {
-        if ([self.activeTarget isEqual:@"bubble"]) {
+        if([self.activeTarget isEqual:@"reports-scroll"]) {
+            double dy=point.y-self.startPoint.y,dt=now-_reportLastTouch;
+            _reportScroll=HCReportScrollClamp(_reportDragStart-dy,_reportContentHeight,_reportViewport.size.height);
+            if(dt>0 && dt<0.15) _reportVelocity=HCClamp(0.3*_reportVelocity+0.7*(_reportLastY-point.y)/dt,-2200,2200);
+            _reportLastY=point.y;_reportLastTouch=now;self.dragged=YES;[self setNeedsDisplay];
+        } else if ([self.activeTarget isEqual:@"bubble"]) {
             CGFloat dx = point.x - self.startPoint.x, dy = point.y - self.startPoint.y;
             if (hypot(dx, dy) > 7) self.dragged = YES;
             if (self.dragged) {
@@ -1006,6 +1072,10 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if(phase==UITouchPhaseEnded && mapGesture) [self minimapAt:point];
         if(phase==UITouchPhaseEnded && [target hasPrefix:@"adjust:"]) [self calibrationAt:point];
         self.activeTarget = nil; self.pointer = -1;
+        if([target isEqual:@"reports-scroll"]) {
+            if(phase==UITouchPhaseCancelled || now-_reportLastTouch>0.12) _reportVelocity=0;
+            _reportTick=now;[self setNeedsDisplay];return;
+        }
         if (phase == UITouchPhaseCancelled) { [self reloadSettings]; return; }
         if (mapGesture || [target hasPrefix:@"adjust:"]) { [self saveSettings];return; }
         if ([target isEqual:@"camera"]) { [self cameraAt:point]; [self saveSettings]; return; }
@@ -1043,12 +1113,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         }
         else if ([target isEqual:@"minimap-done"]) { _editingMinimap=NO;[self setNeedsDisplay]; }
         else if ([target isEqual:@"stop"]) HCStop(@"Đã tắt nút nổi. Mở DORO-CHEAT để bật lại.", NO);
-        else if ([target hasPrefix:@"tab:"]) { self.group = [[target substringFromIndex:4] integerValue]; [self.targets removeAllObjects];[self setNeedsDisplay]; }
+        else if ([target hasPrefix:@"tab:"]) { self.group = [[target substringFromIndex:4] integerValue];_reportVelocity=0;if(self.group!=4) [self discardReportLayout]; [self.targets removeAllObjects];[self setNeedsDisplay]; }
         else if ([target hasPrefix:@"period:"]) {
-            [self reloadSettings];self.settings[@"reportsPeriod"]=[target substringFromIndex:7];_reportRecordIndex=0;[self saveSettings];
-        }
-        else if ([target isEqual:@"report-prev"] || [target isEqual:@"report-next"]) {
-            _reportRecordIndex+=[target isEqual:@"report-next"] ? 1 : -1;[self setNeedsDisplay];
+            [self reloadSettings];self.settings[@"reportsPeriod"]=[target substringFromIndex:7];_reportScroll=0;_reportVelocity=0;[self saveSettings];
         }
         else if ([target isEqual:@"reports-refresh"]) {
             [self reloadSettings];self.settings[@"reportsRefreshID"]=NSUUID.UUID.UUIDString;self.settings[@"flags"][@"reports.enabled"]=@YES;self.settings[@"gameRuntimeEnabled"]=@YES;[self saveSettings];
@@ -1216,7 +1283,7 @@ static void HCUpdateLock(void) {
         (void)notification;[HCCanvas cancelInteraction];
     }];
     [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidReceiveMemoryWarningNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
-        (void)notification;HCPurgeHeroImages();[HCThemeCache() removeAllObjects];HCEspLastSample=nil;[HCCanvas.espView setNeedsDisplay];
+        (void)notification;[HCCanvas discardReportLayout];HCPurgeHeroImages();[HCThemeCache() removeAllObjects];HCEspLastSample=nil;[HCCanvas.espView setNeedsDisplay];
     }];
     [NSNotificationCenter.defaultCenter addObserverForName:@"HCThemeDidLoad" object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
         if(HCMenuOpen || [notification.object isEqual:@"app-background.jpg"]) [HCCanvas setNeedsDisplay];

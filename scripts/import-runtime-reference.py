@@ -83,6 +83,27 @@ end
 
 """+script[finish:]
     script=script.replace(' /checkto day để xuất danh sách.',' Xem lịch sử trong menu Hero Control.')
+    # The native HUD owns all receipt presentation; never open the game's tips UI.
+    script=script.replace('existing.version == 25','existing.version == 26').replace('version=25,','version=26,')
+    tip_start=script.index('  tip=function(text)')
+    tip_end=script.index('  mail=function()',tip_start)
+    script=script[:tip_start]+script[tip_end:]
+    notice_start=script.index('function m.notify()')
+    notice_end=script.index('function m.tick()',notice_start)
+    script=script[:notice_start]+"""function m.notify()
+  -- Drain the legacy counter after durable receipt storage. The HUD observes
+  -- the ledger and presents notices through its own menu shortcut only.
+  if m.pending<=0 or m.retired then return end
+  local ok,err=pcall(function()
+    if not m.refresh() then return end
+    m.api.set(key('Pending'),0)
+    m.pending=0
+  end)
+  if not ok then fail(err) end
+end
+
+"""+script[notice_end:]
+    assert 'OpenTips' not in script and 'm.api.tip' not in script
     assert '/checkto' not in script
     return script
 

@@ -59,7 +59,7 @@ def send_document(token, chat_id, path, opener=urllib.request.urlopen):
     caption = f"DORO-CHEAT | commit {commit}\nSHA-256: {digest}"
     if repo and run_id:
         caption += f"\n{server}/{repo}/actions/runs/{run_id}"
-    caption += "\nDORO-CHEAT 0.17.0 build 35: tích hợp oxorany cho 30 chuỗi native, giải mã một lần, ẩn symbol nội bộ và kiểm tra chuỗi rõ trước khi đóng gói."
+    caption += "\nDORO-CHEAT 0.17.1 build 36: ảnh nữ SSS trên ô chức năng; bảng phân tích tố cáo cuộn dọc, đầy đủ nội dung; bỏ popup tố cáo cũ trong game, chỉ hiển thị qua HUD."
     boundary = "HeroControl" + uuid.uuid4().hex
     body = multipart(chat_id, caption, path.name, payload, boundary)
     request = urllib.request.Request(

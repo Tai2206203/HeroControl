@@ -25,6 +25,8 @@ def verify(root=ROOT):
     assert "if f[1]=='I' then" in lua
     assert "if f[1]=='I' or (f[1]=='B' and not freshMatch) then" not in lua
     assert b'/checkto' not in patch and 'function m.command(' not in lua
+    assert 'OpenTips' not in lua and 'm.api.tip' not in lua
+    assert 'ĐÃ NHẬN THÔNG BÁO BỊ TỐ CÁO' not in lua
     assert 'function m.setEnabled(value)' in lua
     assert 'CSID_CMD_COMPLAINT_RECORD_REQ' in lua and 'syncPendingRequest' in lua
     filter_ = plistlib.loads((root / 'Runtime/HeroControlRuntime.plist').read_bytes())

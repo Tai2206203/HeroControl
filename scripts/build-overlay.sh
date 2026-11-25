@@ -77,3 +77,14 @@ printf 'Built independent Hero Control overlay: %s\n' "$OUTPUT"
 python3 "$ROOT/scripts/verify-protection.py" --group OVERLAY "$OUTPUT/HeroOverlay.app/hero-overlay"
 
 python3 "$ROOT/scripts/verify-protection.py" --group BACKEND "$OUTPUT/HeroOverlayBridge.dylib"
+
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -std=c11 -Wall -Wextra -Werror "$ROOT/scripts/report-scroll-check.c" -o "$OUTPUT/report-scroll-check"
+"$OUTPUT/report-scroll-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation "$ROOT/scripts/report-analysis-check.m" -o "$OUTPUT/report-analysis-check"
+"$OUTPUT/report-analysis-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation -framework ImageIO -framework CoreGraphics \
+    "$ROOT/scripts/theme-assets-check.m" -o "$OUTPUT/theme-assets-check"
+"$OUTPUT/theme-assets-check" "$OUTPUT/HeroOverlay.app"

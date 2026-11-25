@@ -1,9 +1,9 @@
 -- Local receipt ledger and Chap_To server-history monitoring for this account.
 local globalKey = 'DoroCheatCheckToR9'
 local existing = rawget(_G, globalKey)
-if type(existing) == 'table' and existing.version == 25 then return 'OK' end
+if type(existing) == 'table' and existing.version == 26 then return 'OK' end
 
-local m = {version=25, records={}, seen={}, pending=0, error='', account=nil,staleMail=setmetatable({},{__mode='k'})}
+local m = {version=26, records={}, seen={}, pending=0, error='', account=nil,staleMail=setmetatable({},{__mode='k'})}
 local floor = math.floor
 local function clean(v)
   return tostring(v or ''):gsub('[\t\r\n%z]', ' '):sub(1, 2000)
@@ -51,10 +51,6 @@ m.api = {
   battle=function()
     local battle=N.BattleLogic.instance
     return battle~=nil and battle.isRuning
-  end,
-  tip=function(text)
-    N.OLDSYS_CUIManager.GetInstance():OpenTips(text,false,8,nil,nil)
-    return true
   end,
   mail=function() return package.loaded['AOV.Mail.MailSys'] end,
   open=function() return N.CUICommonSystem.JumpFormLua(127,0,0,0,0) end,
@@ -188,16 +184,14 @@ function m.installMail()
 end
 
 function m.notify()
-  if m.pending<=0 or m.notifying or m.retired then return end
+  -- Drain the legacy counter after durable receipt storage. The HUD observes
+  -- the ledger and presents notices through its own menu shortcut only.
+  if m.pending<=0 or m.retired then return end
   local ok,err=pcall(function()
-    if not m.refresh() or not m.enabled or m.api.battle() then return end
-    m.notifying=true
-    local count=m.pending
-    if m.api.tip('ĐÃ NHẬN THÔNG BÁO BỊ TỐ CÁO: '..integer(count)..' bản ghi mới từ game. Xem lịch sử trong menu Hero Control.')~=false then
-      m.pending=0;m.api.set(key('Pending'),0)
-    end
+    if not m.refresh() then return end
+    m.api.set(key('Pending'),0)
+    m.pending=0
   end)
-  m.notifying=false
   if not ok then fail(err) end
 end
 

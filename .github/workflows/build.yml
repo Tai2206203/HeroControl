@@ -23,6 +23,7 @@ jobs:
           lua scripts/runtime-smoke.lua
           lua scripts/report-monitor-smoke.lua
           lua scripts/report-reasons-smoke.lua
+          lua scripts/report-menu-only-smoke.lua
       - name: Test Telegram delivery without network
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Test native string protection

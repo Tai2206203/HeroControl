@@ -1,7 +1,7 @@
 -- Exercise the shipped (and patch-embedded) monitor, not a rewritten model.
 assert(dofile('Runtime/Payload/ComplaintHistory.lua')=='OK')
 local m=DoroCheatCheckToR9
-assert(m.version==25)
+assert(m.version==26)
 m.enabled=true
 m.account="123_1"
 m.refresh=function() return true end

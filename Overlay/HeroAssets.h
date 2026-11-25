@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <ImageIO/ImageIO.h>
+#import "ThemeResources.h"
 #include "../BackendSDK/EspVisualStyle.h"
 
 static NSDictionary *HCHeroCatalog(void) {
@@ -47,23 +48,24 @@ static NSCache *HCThemeCache(void) {
     return cache;
 }
 static NSArray<NSString *> *HCMenuArtFiles(void) {
-    return @[@"violet-sss.png",@"lauriel-sss.jpg",@"liliana-dragon.jpg",@"airi-sss.jpg",@"yena-spirit.jpg",@"diaochan-celestial.jpg",@"veres-dragon.jpg",@"sephera-nova.jpg",@"violet-nobara.jpg"];
+    return @[@"violet-sss.png",@"lauriel-sss.jpg",@"airi-sss.jpg"];
 }
 static NSString *HCMenuArt(NSInteger group) {
-    switch(group) { case 0:return @"lauriel-sss.jpg";case 1:return @"liliana-dragon.jpg";
-        case 2:return @"airi-sss.jpg";case 3:return @"yena-spirit.jpg";case 4:return @"diaochan-celestial.jpg";
+    switch(group) { case 0:case 3:return @"lauriel-sss.jpg";
+        case 1:case 4:return @"airi-sss.jpg";
         default:return @"violet-sss.png"; }
 }
 // Drawing only reads the cache. Decode photos on a serial worker, once per name.
 static UIImage *HCThemeImage(NSString *name) {
     NSCache *cache=HCThemeCache();
     UIImage *cached=[cache objectForKey:name];if(cached) return cached;
-    static NSMutableSet *pending;static dispatch_queue_t worker;static dispatch_once_t once;
-    dispatch_once(&once,^{pending=[NSMutableSet set];worker=dispatch_queue_create("local.herocontrol.theme",DISPATCH_QUEUE_SERIAL);});
-    @synchronized(pending) { if([pending containsObject:name]) return nil;[pending addObject:name]; }
+    static NSMutableSet *pending;static NSMutableDictionary *retryAfter;static dispatch_queue_t worker;static dispatch_once_t once;
+    dispatch_once(&once,^{pending=[NSMutableSet set];retryAfter=[NSMutableDictionary dictionary];worker=dispatch_queue_create("local.herocontrol.theme",DISPATCH_QUEUE_SERIAL);});
+    @synchronized(pending) { if([pending containsObject:name] || [retryAfter[name] doubleValue]>NSProcessInfo.processInfo.systemUptime) return nil;[pending addObject:name]; }
     dispatch_async(worker,^{ @autoreleasepool {
-        NSURL *url=[NSURL fileURLWithPath:[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:[@"Theme/" stringByAppendingString:name]]];
-        CGImageSourceRef source=CGImageSourceCreateWithURL((__bridge CFURLRef)url,NULL);
+        NSString *path=HCThemeResourcePath(name);
+        NSURL *url=path ? [NSURL fileURLWithPath:path] : nil;
+        CGImageSourceRef source=url ? CGImageSourceCreateWithURL((__bridge CFURLRef)url,NULL) : NULL;
         if(source) {
             NSDictionary *options=@{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,
                 (__bridge id)kCGImageSourceThumbnailMaxPixelSize:([name isEqual:@"app-background.jpg"] ? @256 : @640),
@@ -72,8 +74,11 @@ static UIImage *HCThemeImage(NSString *name) {
             if(frame) { [cache setObject:[UIImage imageWithCGImage:frame] forKey:name cost:CGImageGetBytesPerRow(frame)*CGImageGetHeight(frame)];CGImageRelease(frame); }
             CFRelease(source);
         }
-        @synchronized(pending) { [pending removeObject:name]; }
-        dispatch_async(dispatch_get_main_queue(),^{[NSNotificationCenter.defaultCenter postNotificationName:@"HCThemeDidLoad" object:name];});
+        BOOL loaded=[cache objectForKey:name]!=nil;
+        @synchronized(pending) { [pending removeObject:name];
+            if(loaded) [retryAfter removeObjectForKey:name];else retryAfter[name]=@(NSProcessInfo.processInfo.systemUptime+5);
+        }
+        if(loaded) dispatch_async(dispatch_get_main_queue(),^{[NSNotificationCenter.defaultCenter postNotificationName:@"HCThemeDidLoad" object:name];});
     }});
     return nil;
 }
@@ -84,6 +89,19 @@ static void HCDrawImageFill(UIImage *image,CGRect rect,CGFloat alpha,CGFloat zoo
     CGContextRef context=UIGraphicsGetCurrentContext();CGContextSaveGState(context);CGContextClipToRect(context,rect);
     [image drawInRect:CGRectMake(CGRectGetMidX(rect)-size.width/2,CGRectGetMidY(rect)-size.height/2,size.width,size.height) blendMode:kCGBlendModeNormal alpha:alpha];
     CGContextRestoreGState(context);
+}
+// Paint the whole card opaquely; only a localized shade sits above the photo.
+static void HCDrawSkinCard(CGRect rect,NSString *name) {
+    CGContextRef context=UIGraphicsGetCurrentContext();CGContextSaveGState(context);
+    [[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:12] addClip];
+    [[UIColor colorWithRed:0.14 green:0.12 blue:0.24 alpha:1] setFill];UIRectFill(rect);
+    HCDrawImageFill(HCThemeImage(name),rect,1,1);
+    CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
+    NSArray *colors=@[(__bridge id)[UIColor colorWithWhite:0 alpha:0.08].CGColor,
+        (__bridge id)[UIColor colorWithWhite:0 alpha:0.68].CGColor];
+    CGGradientRef shade=CGGradientCreateWithColors(space,(__bridge CFArrayRef)colors,NULL);
+    CGContextDrawLinearGradient(context,shade,rect.origin,CGPointMake(rect.origin.x,CGRectGetMaxY(rect)),0);
+    CGGradientRelease(shade);CGColorSpaceRelease(space);CGContextRestoreGState(context);
 }
 static void HCDrawHeroIcon(int32_t heroID,CGRect rect) {
     UIImage *image=HCHeroIcon(heroID);

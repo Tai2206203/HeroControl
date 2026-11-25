@@ -1,0 +1,11 @@
+DORO-CHEAT 0.17.1 — build 36
+
+- Dùng ảnh Violet, Lauriel, Airi SSS làm nền đặc cho các ô SẴN SÀNG, ESP, CAMERA, CĂN CHỈNH, REPORTS và các nút bật/tắt. Cả bố cục dọc/ngang đều có ô chức năng.
+- Tìm tài nguyên theo vị trí executable HUD trước, rồi mới đến NSBundle; không phụ thuộc duy nhất vào bundle của tiến trình plugin. Ảnh vẫn tải nền, có chặn vòng lặp tải lại nếu lỗi.
+- Thay mũi tên đổi từng bản ghi bằng bảng phân tích cuộn dọc có quán tính và thanh cuộn. Có thống kê theo lý do, nguồn, trạng thái và danh sách đầy đủ các bản ghi đã nhận trong khoảng chọn.
+- Mỗi bản ghi tự tăng chiều cao theo nội dung, gồm thời gian, lý do, nội dung, mã lý do, ID và trường bổ sung. Cache bố cục, chỉ vẽ phần đang nhìn thấy; không dựng lại vì heartbeat/bộ đếm nội bộ không hiển thị.
+- Monitor 26 bỏ hẳn OpenTips và thông báo “ĐÃ NHẬN THÔNG BÁO BỊ TỐ CÁO”. Cập nhật cả Lua rời và Lua nhúng trong payload. Giữ lịch sử đã lưu và thông báo trượt 4 giây của phím tắt menu.
+
+23 kiểm tra Python, 4 kiểm tra Lua và kiểm tra C cuộn 60/120 Hz đã qua tại Windows; kiểm tra cấu trúc dự án, payload, oxorany và cú pháp nguồn/script cũng qua. Kiểm tra Foundation về nội dung dài/2048 bản ghi và ImageIO giải mã ảnh đã thêm vào CI macOS, chưa chạy trên Windows. Chưa xác nhận trực tiếp trên iPhone.
+
+Sau khi cài bản mới, đóng hẳn rồi mở lại game để thay bộ theo dõi cũ đang nằm trong bộ nhớ. Bảng hiển thị đủ dữ liệu đã nhận, không khẳng định lấy được toàn bộ lịch sử máy chủ.
