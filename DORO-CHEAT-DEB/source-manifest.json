@@ -1,0 +1,1437 @@
+[
+  {
+    "path": ".gitattributes",
+    "bytes": 466,
+    "sha256": "690e428323738c6230a677e8e0d280844ab395ebf5b375c5d467bdf34d0f80c8"
+  },
+  {
+    "path": ".github/workflows/build.yml",
+    "bytes": 1212,
+    "sha256": "ba088976b594898754fe91572d0f8a6ace5c2660902fa5b8fefe98743037223d"
+  },
+  {
+    "path": ".gitignore",
+    "bytes": 83,
+    "sha256": "89eab208e85454863a0aa14fbe2fb2b48c2dc1a66e45d3ef7a02125c3d80225a"
+  },
+  {
+    "path": "Assets/AppIcon.json",
+    "bytes": 1557,
+    "sha256": "151e63749fc4b5e1f4f94c3bc2f74651105f0a125b2bbbdda6a27b7cfdbb42c1"
+  },
+  {
+    "path": "Assets/HeroIcons/105.img",
+    "bytes": 10895,
+    "sha256": "57b5c8d9df6f41ae665ef89a6b2ad1b80c0f9cff22790f7e5036566ff92663f0"
+  },
+  {
+    "path": "Assets/HeroIcons/106.img",
+    "bytes": 41003,
+    "sha256": "2aa92e533e3ecdddc1ae4d85a553dad6f6f3e106640db2d6bd1e450d29e0d9da"
+  },
+  {
+    "path": "Assets/HeroIcons/107.img",
+    "bytes": 11791,
+    "sha256": "65844399bca1f410ee5b7fa4ab7420fcee284aff778f52c5eebc5d7330f1c8a5"
+  },
+  {
+    "path": "Assets/HeroIcons/108.img",
+    "bytes": 20488,
+    "sha256": "78e84e17540831c6af5180d7adca8653d1f042810b6591c992792a3c10b05854"
+  },
+  {
+    "path": "Assets/HeroIcons/109.img",
+    "bytes": 21900,
+    "sha256": "8eca93d5050282d642f218b81dd0993a08b2b0947c42b5d1ddb19d16e7458c21"
+  },
+  {
+    "path": "Assets/HeroIcons/110.img",
+    "bytes": 39739,
+    "sha256": "bf0eb83be44382e2139e83148bdc28770ede731c36f87c317c13faec4c8304b3"
+  },
+  {
+    "path": "Assets/HeroIcons/111.img",
+    "bytes": 8139,
+    "sha256": "98d9b2c8c6e369514bd951e55298618f030803ca19f4521781300877f9748600"
+  },
+  {
+    "path": "Assets/HeroIcons/112.img",
+    "bytes": 7597,
+    "sha256": "c562583dc662cd163dae936d8cf7d8c2c6302fc32494b74059714dfa6dc206ef"
+  },
+  {
+    "path": "Assets/HeroIcons/113.img",
+    "bytes": 7996,
+    "sha256": "3b70484d0a9464d15639ac56eaab7b19c87e15f92cba6ae56234937c50ae0184"
+  },
+  {
+    "path": "Assets/HeroIcons/114.img",
+    "bytes": 7196,
+    "sha256": "59d854b945f1c86412e6470dad7bd617982a298a0da5f5d2b85f9f93cd4a300f"
+  },
+  {
+    "path": "Assets/HeroIcons/115.img",
+    "bytes": 10141,
+    "sha256": "0d051489aa8923fe803ebd81cc9daf371384eac5f15277c194c5c350e55977d0"
+  },
+  {
+    "path": "Assets/HeroIcons/116.img",
+    "bytes": 9161,
+    "sha256": "11d59e83991a9b027a3403ca54f86a78c166873ac1a5f54c92208ddc15f100ff"
+  },
+  {
+    "path": "Assets/HeroIcons/117.img",
+    "bytes": 10180,
+    "sha256": "22088b21a2af9539e7dfea5e3f437a09607cdecb0d1185812a9130769a639c3a"
+  },
+  {
+    "path": "Assets/HeroIcons/118.img",
+    "bytes": 41589,
+    "sha256": "d78bd38b7be611e3fcdf0f93b2935f8817a7b70e424bc3a5871118fffc4c5a36"
+  },
+  {
+    "path": "Assets/HeroIcons/119.img",
+    "bytes": 8569,
+    "sha256": "4e99c825680810a5f52254a74f647d7562aa4b7ea8d1fd537671c279477c80a9"
+  },
+  {
+    "path": "Assets/HeroIcons/120.img",
+    "bytes": 42183,
+    "sha256": "8416dc404c0cb7419acd0289afbeb677312b27498ed2eecf8b1ee396425aec58"
+  },
+  {
+    "path": "Assets/HeroIcons/121.img",
+    "bytes": 9066,
+    "sha256": "9dd60a81a0c10fe9bbb90de450b70468907aab51d4a2f061d118bf2f4a97bacb"
+  },
+  {
+    "path": "Assets/HeroIcons/123.img",
+    "bytes": 8584,
+    "sha256": "65dd7b02057bc69bd9e9403136caad5d2323859c1340d508b1053d0be1cf7042"
+  },
+  {
+    "path": "Assets/HeroIcons/124.img",
+    "bytes": 7395,
+    "sha256": "3aacc129093e0c9d4917ae9043b675b666593eb5bccf2deed43986b04a4f19a1"
+  },
+  {
+    "path": "Assets/HeroIcons/126.img",
+    "bytes": 7926,
+    "sha256": "e046ff91c18c2bc54953139e4a4369d1cab15b32641ae5d45b762db7eb1b38a2"
+  },
+  {
+    "path": "Assets/HeroIcons/127.img",
+    "bytes": 11495,
+    "sha256": "bf0590ed84a27f1a04ded99fe9f6b1bd1034f6b6fcb2fbc56651683ede7d2dc2"
+  },
+  {
+    "path": "Assets/HeroIcons/128.img",
+    "bytes": 7519,
+    "sha256": "0f729e08c7a53bc54ea7cd0ff7f7c57fc87238f71ad70c4672e57e676e6c6c24"
+  },
+  {
+    "path": "Assets/HeroIcons/129.img",
+    "bytes": 11198,
+    "sha256": "abdb0b5b6ffda9d7a8edc1210cfdc6114c00d7ed58e8045916b34e27e3a710e0"
+  },
+  {
+    "path": "Assets/HeroIcons/130.img",
+    "bytes": 7875,
+    "sha256": "4209b7f69e9390c9678e0bd8c0b7827adfe97cc604f70a8c89f8b435d919dadf"
+  },
+  {
+    "path": "Assets/HeroIcons/131.img",
+    "bytes": 5735,
+    "sha256": "d3e98a8b7b79b86ca3f7479e47d9d4e1d1aee58bc8b8ab581315d9db38018e6d"
+  },
+  {
+    "path": "Assets/HeroIcons/132.img",
+    "bytes": 6710,
+    "sha256": "dba4c4dd298e626475e18d8f0274b0ad9bd399da50097cb00192b8ca3c95ec5d"
+  },
+  {
+    "path": "Assets/HeroIcons/133.img",
+    "bytes": 9643,
+    "sha256": "d24a10730eedfb2fff7027ea2af3c56e852d6bf12dc58bbe561ca729763fed8f"
+  },
+  {
+    "path": "Assets/HeroIcons/134.img",
+    "bytes": 9319,
+    "sha256": "32e66efe8f6c11d3edbbe8bc46eb79222f399e710438cff7e1f4add743391f51"
+  },
+  {
+    "path": "Assets/HeroIcons/135.img",
+    "bytes": 43093,
+    "sha256": "2183d9d4188ef9403a565fbb3d3279059bc2276407443a9739e14fe2078ac44b"
+  },
+  {
+    "path": "Assets/HeroIcons/136.img",
+    "bytes": 9158,
+    "sha256": "16bd525dd932e535c93ade8fbc18da8a5a223e00d0ce522150c566b4bedb71d4"
+  },
+  {
+    "path": "Assets/HeroIcons/137.img",
+    "bytes": 8271,
+    "sha256": "26437404f51c1b744c4851efd1aa72640d6de0c774281bb9aec1218e74a45e43"
+  },
+  {
+    "path": "Assets/HeroIcons/139.img",
+    "bytes": 9843,
+    "sha256": "1a089bda20ab6a1c1415f8a592cb0056ba6c215a6e890ed8757ef8062aebec02"
+  },
+  {
+    "path": "Assets/HeroIcons/140.img",
+    "bytes": 6917,
+    "sha256": "3938d7a757a00d1461bf0652c103904bf43b37367ae7e38c8ea3e34545d16d4f"
+  },
+  {
+    "path": "Assets/HeroIcons/141.img",
+    "bytes": 7978,
+    "sha256": "0cdab67e8db87fa5af060bb13acd8e8ebb94eecabcdb6f73cc6f9070ee8ff4a9"
+  },
+  {
+    "path": "Assets/HeroIcons/142.img",
+    "bytes": 7193,
+    "sha256": "ad623b5e26c4b7e3d0208d4a9e61e52af924dd780f53ee203a0739a68255353c"
+  },
+  {
+    "path": "Assets/HeroIcons/144.img",
+    "bytes": 10323,
+    "sha256": "71d70379713a7abc25f819fc71a1167beb59376dd6e0cd396a3fe9bb3fcd0ac0"
+  },
+  {
+    "path": "Assets/HeroIcons/146.img",
+    "bytes": 6504,
+    "sha256": "33d9bdd3957fac0a97e0ec7fa5725b4cd1ea7cbd858397e9a00e29aa3a73c522"
+  },
+  {
+    "path": "Assets/HeroIcons/148.img",
+    "bytes": 15466,
+    "sha256": "ccc17d37a875800ee29596ca265e98915ef73411b36701fd983507dd636062e3"
+  },
+  {
+    "path": "Assets/HeroIcons/149.img",
+    "bytes": 8422,
+    "sha256": "005f9f925a7f9139f33cf88be9b59a3b1885027979990efe734a46be35001e32"
+  },
+  {
+    "path": "Assets/HeroIcons/150.img",
+    "bytes": 9310,
+    "sha256": "4ad3ec8ef389fd82d680d8f9c9663e5e2de9eee693ddf2aa0722210c89cd4cee"
+  },
+  {
+    "path": "Assets/HeroIcons/152.img",
+    "bytes": 7966,
+    "sha256": "5bf5c2527f4a75114aef7ecb80c4ba4c1ceca461f40553710b656ac2101fa000"
+  },
+  {
+    "path": "Assets/HeroIcons/153.img",
+    "bytes": 19968,
+    "sha256": "11da50aa41e3f2c0dd1c0d6d4d57c12e78dd2f5082140bac6ab1d85a5fa413cd"
+  },
+  {
+    "path": "Assets/HeroIcons/154.img",
+    "bytes": 10476,
+    "sha256": "fd601abe6f83fa5ea4e214fa60ee3da777b0fe9d4e0d87185e18a394e9b2b17c"
+  },
+  {
+    "path": "Assets/HeroIcons/156.img",
+    "bytes": 14016,
+    "sha256": "3b12b2edd3eb0b629238c00f648ad4f5ca6c5b71d46b1b73561321a329700151"
+  },
+  {
+    "path": "Assets/HeroIcons/157.img",
+    "bytes": 7788,
+    "sha256": "0119c846e72e470b0e9083a9f2a8356d9b9b3606373ebbd320dfb0cab2b4430e"
+  },
+  {
+    "path": "Assets/HeroIcons/159.img",
+    "bytes": 16197,
+    "sha256": "2e4f0e41854feb17ada5433ef73b34dd41d7b9491f5ae9cfa081173f85fb4ded"
+  },
+  {
+    "path": "Assets/HeroIcons/162.img",
+    "bytes": 24586,
+    "sha256": "8fcd6f9dd2ee27bb3e45db03c9e1b1286a35506fd2490e440891d304e2d270ea"
+  },
+  {
+    "path": "Assets/HeroIcons/163.img",
+    "bytes": 7262,
+    "sha256": "65054f255f404c16a57dd38e5c7ca89bbae7bb842566aaef81467d58fec76dfb"
+  },
+  {
+    "path": "Assets/HeroIcons/166.img",
+    "bytes": 5584,
+    "sha256": "76c5e4d4f7775389bf785562a3b8e67c650dfa00da552248c6a2477687a25ed4"
+  },
+  {
+    "path": "Assets/HeroIcons/167.img",
+    "bytes": 10206,
+    "sha256": "56cfa627c573806de23fe505b2706aadddea28c016ca9ace944b98675393080a"
+  },
+  {
+    "path": "Assets/HeroIcons/168.img",
+    "bytes": 8271,
+    "sha256": "13a1618f9fba47eb2a5dfc1b295f381c11041a3471d2b2b48ba10b5fc44599f7"
+  },
+  {
+    "path": "Assets/HeroIcons/169.img",
+    "bytes": 25091,
+    "sha256": "102396bba08c9b499bad67fe5adfb67c6f74372635823ff122a275987538b241"
+  },
+  {
+    "path": "Assets/HeroIcons/170.img",
+    "bytes": 13745,
+    "sha256": "590747855fb93423c825bd4c71693c1a484a35d75bf8244cb3f52b3e00b9885d"
+  },
+  {
+    "path": "Assets/HeroIcons/171.img",
+    "bytes": 7780,
+    "sha256": "20cfd2b3c07199c0f5d94d43bf3e53491473cd9fd784bccfc9982fb47a363c91"
+  },
+  {
+    "path": "Assets/HeroIcons/173.img",
+    "bytes": 8619,
+    "sha256": "4788b74c5a0d1d85a58ef4e823a1dbc04208fb21950d175657ed9d9fdf23cb75"
+  },
+  {
+    "path": "Assets/HeroIcons/174.img",
+    "bytes": 19251,
+    "sha256": "ad1f1ffd989e89aa9ff553680b05bb4cb27d941a4b15530f875f8d65925bdedc"
+  },
+  {
+    "path": "Assets/HeroIcons/175.img",
+    "bytes": 21551,
+    "sha256": "f63425b8a42d2dcf7f22f912577c0de11cddbc770de8f4bbaf0dc427d4524273"
+  },
+  {
+    "path": "Assets/HeroIcons/177.img",
+    "bytes": 6473,
+    "sha256": "12199f6469b13fec873d1a2080006d95671c8bf1ad782da5dd8c98819068e4e7"
+  },
+  {
+    "path": "Assets/HeroIcons/180.img",
+    "bytes": 12140,
+    "sha256": "a69b0193725fe3f4b80a8c91cc8e0ce26ed5dc244db948385a3f225d37854c0f"
+  },
+  {
+    "path": "Assets/HeroIcons/184.img",
+    "bytes": 11702,
+    "sha256": "e01730e83c39861096da4a99987cae3474b2b5e37cddf1e497b2c6bc71471543"
+  },
+  {
+    "path": "Assets/HeroIcons/186.img",
+    "bytes": 7687,
+    "sha256": "e3eb8f0e8701c52d0d6ea8f11f9dfa0d9ea81f3d544b25ef8c433b69e42e0775"
+  },
+  {
+    "path": "Assets/HeroIcons/187.img",
+    "bytes": 7883,
+    "sha256": "aebc1ec2ff923260cc002856dc15afb4780e4decf6003d746b0fe642d0ba1f64"
+  },
+  {
+    "path": "Assets/HeroIcons/189.img",
+    "bytes": 36737,
+    "sha256": "8144202ff1e67de19a9cf162fedb5e91fbf53b543280c89831e9259f5145c6db"
+  },
+  {
+    "path": "Assets/HeroIcons/190.img",
+    "bytes": 5799,
+    "sha256": "c632b20c97c15f1ef9a766fd80f1b4220b21ef9aeaf02c9025e343b1239c1152"
+  },
+  {
+    "path": "Assets/HeroIcons/191.img",
+    "bytes": 8529,
+    "sha256": "0bd304cafbfaf33d82cecda57e7e8238c1d059cdfc094e5055719a472a7d29cd"
+  },
+  {
+    "path": "Assets/HeroIcons/192.img",
+    "bytes": 8107,
+    "sha256": "7a2811c2f0cf2c413226dd546110deea05d7664de17e1a79e43f9d1bf60426c1"
+  },
+  {
+    "path": "Assets/HeroIcons/193.img",
+    "bytes": 8771,
+    "sha256": "8bfe1f39f572fb5b1212772c77e697341e74aea592034cfa0d55daee1a043834"
+  },
+  {
+    "path": "Assets/HeroIcons/194.img",
+    "bytes": 5599,
+    "sha256": "de04ebdef2d987d04124860d510a8921f67513bbacef17fde83672480721ecc9"
+  },
+  {
+    "path": "Assets/HeroIcons/195.img",
+    "bytes": 6549,
+    "sha256": "0790a9b07ba699c7e37d31b1983f9d58e6464e81d44dbbe6cdd30eee13be71cb"
+  },
+  {
+    "path": "Assets/HeroIcons/196.img",
+    "bytes": 12647,
+    "sha256": "57941e0db72fe758b9a5ab350e34dc602600c104768289fd8496cefc6a574092"
+  },
+  {
+    "path": "Assets/HeroIcons/199.img",
+    "bytes": 8662,
+    "sha256": "b25ee0179fe2a8d620cedbfef647eac7aef9e53fe5895909a3e8ea3a5bcc62c4"
+  },
+  {
+    "path": "Assets/HeroIcons/206.img",
+    "bytes": 14041,
+    "sha256": "56d43bbe1c36de4fa440122c2a30af459431d5ec58b6fbeaab8a40e2e86c6980"
+  },
+  {
+    "path": "Assets/HeroIcons/501.img",
+    "bytes": 8105,
+    "sha256": "ac79896e6cf66c43a68e38ceec07163657fd2370a8c83cf3153e24dc1d0da5b3"
+  },
+  {
+    "path": "Assets/HeroIcons/502.img",
+    "bytes": 8225,
+    "sha256": "da48e721a3dc5750125ac28db81705a6649898054349111c70623c85da9c9acd"
+  },
+  {
+    "path": "Assets/HeroIcons/503.img",
+    "bytes": 8481,
+    "sha256": "93cf12df94366bfccf855567edf83c260af502d7262fe7c75ea71763d667e868"
+  },
+  {
+    "path": "Assets/HeroIcons/504.img",
+    "bytes": 6706,
+    "sha256": "6513ab4a55f26a2b2dc4dae666cbaa8f106a4614e6abb8d8aefa3da95e784229"
+  },
+  {
+    "path": "Assets/HeroIcons/505.img",
+    "bytes": 8791,
+    "sha256": "09c95af30181196df5efd322dcb66a8f4d5853b74099dff85bc6b050697385d8"
+  },
+  {
+    "path": "Assets/HeroIcons/506.img",
+    "bytes": 8375,
+    "sha256": "f9f4be50030035ff10069f6a0252badcd9c5a3d3226171be0f70b3508ae3bc7e"
+  },
+  {
+    "path": "Assets/HeroIcons/507.img",
+    "bytes": 8663,
+    "sha256": "4d3522f513ddd30b8d174f50525a9ede50e2c6db8f43cf4ae91b98e74f054c02"
+  },
+  {
+    "path": "Assets/HeroIcons/508.img",
+    "bytes": 6564,
+    "sha256": "f39f6d194b79db468fa0c8a288e6e6a6ca73203e81086bee48be3b8522b31c0a"
+  },
+  {
+    "path": "Assets/HeroIcons/509.img",
+    "bytes": 8806,
+    "sha256": "431ed8168ef61eac2ff498b9358fd75f3a794182133d8620507e2770721d46e3"
+  },
+  {
+    "path": "Assets/HeroIcons/510.img",
+    "bytes": 7050,
+    "sha256": "2fedca7c0a42a68c2808d4470a45863dab00cf80b545377982d596b70f824a9b"
+  },
+  {
+    "path": "Assets/HeroIcons/511.img",
+    "bytes": 9655,
+    "sha256": "f5dd6c3c475d7ac608f2243b22df1fdb372649b72a344e103a15fcd5f5646602"
+  },
+  {
+    "path": "Assets/HeroIcons/512.img",
+    "bytes": 6992,
+    "sha256": "50012ad82f884b181406bba592302ab50376d46ef8f23ccc9c314c3a44476ada"
+  },
+  {
+    "path": "Assets/HeroIcons/513.img",
+    "bytes": 7575,
+    "sha256": "8fde6f33a5c07bb722d0a2fec7fa2076e48cfc52453febea0222ddb1129ffa81"
+  },
+  {
+    "path": "Assets/HeroIcons/514.img",
+    "bytes": 11648,
+    "sha256": "b564ec15d365e5426fbc0b581993cb392c4e6806c176b8e2392c251330de81e2"
+  },
+  {
+    "path": "Assets/HeroIcons/515.img",
+    "bytes": 8216,
+    "sha256": "451529ffa7aae3e1464141afd343fd10899a18014d295aff4b4417bf5ff9878e"
+  },
+  {
+    "path": "Assets/HeroIcons/518.img",
+    "bytes": 8471,
+    "sha256": "4b8aae2c60713c6a5f5e5a6012df064530bcd037001a4e39733b7f4dbde48247"
+  },
+  {
+    "path": "Assets/HeroIcons/519.img",
+    "bytes": 9280,
+    "sha256": "6b97df4ae2a799382935c4392d8074022aadafd222ec71b006c4e2e409c4186f"
+  },
+  {
+    "path": "Assets/HeroIcons/520.img",
+    "bytes": 8660,
+    "sha256": "aebbbfc1dcb4b0ab9052f141cf0f53fc1ceba172b42374068032b20925b213a1"
+  },
+  {
+    "path": "Assets/HeroIcons/521.img",
+    "bytes": 7315,
+    "sha256": "fbc3bbb86a630072d3ef2a3fd0de6b38fcd05b70868fcc7dd2ec42ef926edb6c"
+  },
+  {
+    "path": "Assets/HeroIcons/522.img",
+    "bytes": 8702,
+    "sha256": "539924b5b7487693106ee5dd31c5da4f8d963e450fec85d50f52f5d186de2900"
+  },
+  {
+    "path": "Assets/HeroIcons/523.img",
+    "bytes": 7817,
+    "sha256": "0ee829bc4030ca51b984cf9adbf2a1e8db84ef255e49b3cc0ca573ccbe0a0abc"
+  },
+  {
+    "path": "Assets/HeroIcons/524.img",
+    "bytes": 6584,
+    "sha256": "63665405f6b7230c46d3079edb63e48bb803e32657723ca072c03fb0ac4f5758"
+  },
+  {
+    "path": "Assets/HeroIcons/525.img",
+    "bytes": 8957,
+    "sha256": "f5706de17a27185bb0889b760745d0a01d87195e8852f054d6a76cfee4ac8f12"
+  },
+  {
+    "path": "Assets/HeroIcons/526.img",
+    "bytes": 8251,
+    "sha256": "1d7a67d869ee945bd8b5115b93baa9757b56cacbe8220dfc9795606d886f3e34"
+  },
+  {
+    "path": "Assets/HeroIcons/527.img",
+    "bytes": 7621,
+    "sha256": "f3e03b22b66d0ebf9687bf52d39b7b4dae8c5f41009c269047b824d01525dc14"
+  },
+  {
+    "path": "Assets/HeroIcons/528.img",
+    "bytes": 8410,
+    "sha256": "0dd0f15c809e27f6665ce29fc5448ed9cb550fe35ac3da79c4870e958085e247"
+  },
+  {
+    "path": "Assets/HeroIcons/529.img",
+    "bytes": 7081,
+    "sha256": "117a031c3f31296440dbf0ccebfdb6e6d7ed86ad628bef028b6a2a1958355c67"
+  },
+  {
+    "path": "Assets/HeroIcons/530.img",
+    "bytes": 15850,
+    "sha256": "ac115338921eebe4620a8e8d69ee799345f83d422130cae8ba7f530d7bbf9a48"
+  },
+  {
+    "path": "Assets/HeroIcons/531.img",
+    "bytes": 8914,
+    "sha256": "bf36ca68f02cf2da267591cc43bb73f70098f9ec1ac92a717fdcb497616a64f7"
+  },
+  {
+    "path": "Assets/HeroIcons/532.img",
+    "bytes": 7873,
+    "sha256": "7455f2fac03437dba49c280b0105e15a89bde27fe51dc91af81256655004daa5"
+  },
+  {
+    "path": "Assets/HeroIcons/533.img",
+    "bytes": 8940,
+    "sha256": "302796f7603b6571b4129e0c9eb482a5d1100567358ad04cc31b678574e3501a"
+  },
+  {
+    "path": "Assets/HeroIcons/534.img",
+    "bytes": 7153,
+    "sha256": "ab4a5d2051953e5611fdf3a56856bf927038488f056037e518586f3c5ee0f481"
+  },
+  {
+    "path": "Assets/HeroIcons/535.img",
+    "bytes": 7066,
+    "sha256": "56fda2cf591d57ab7e502d8170ebf25abd24f88eb5b4c7e108389a33204846d3"
+  },
+  {
+    "path": "Assets/HeroIcons/536.img",
+    "bytes": 84482,
+    "sha256": "3634d5dcd92bd5a8e72a76f296a6e30425828e4adf4202068192e443c87f71d3"
+  },
+  {
+    "path": "Assets/HeroIcons/537.img",
+    "bytes": 8303,
+    "sha256": "af0d7bcba349e75e2bb87cc6f488de000e20a580210986ea59b2084fa04ec995"
+  },
+  {
+    "path": "Assets/HeroIcons/538.img",
+    "bytes": 211096,
+    "sha256": "45a0fe1053a054b1ffa26121a54ca0c39e06ad00f2a31f04884544f987121ca5"
+  },
+  {
+    "path": "Assets/HeroIcons/539.img",
+    "bytes": 8584,
+    "sha256": "001dfa255415d87f1bc3fd53190648262aec3a6c9c8fe5769c1c6e9c6d172ecf"
+  },
+  {
+    "path": "Assets/HeroIcons/540.img",
+    "bytes": 8595,
+    "sha256": "725dc89cd79bf1ae93ef252dcd31396b3ac45101a9b3ccb6a5601a18917c2c3f"
+  },
+  {
+    "path": "Assets/HeroIcons/541.img",
+    "bytes": 22905,
+    "sha256": "8554d0f105b24f728ea3b5271782185054c110e288f542215b9e5fa1349da3fd"
+  },
+  {
+    "path": "Assets/HeroIcons/542.img",
+    "bytes": 23074,
+    "sha256": "3fac996f74de6190caf7ed81353261068461e3bec54776169b5d56f8c79d46ef"
+  },
+  {
+    "path": "Assets/HeroIcons/543.img",
+    "bytes": 20487,
+    "sha256": "b488cda5bd24ed5d400d12b046270a31e695fd3028215d3d44f541643e7abfed"
+  },
+  {
+    "path": "Assets/HeroIcons/544.img",
+    "bytes": 22794,
+    "sha256": "bc29ec7aad08169e0203b62db5b217590800a13d580f5bdb78085cc5a64b2f3c"
+  },
+  {
+    "path": "Assets/HeroIcons/545.img",
+    "bytes": 7090,
+    "sha256": "e0587ded230e2705ed916f1b0f77dd3f2cef7948efc08da3de01b9ca6cc79fd1"
+  },
+  {
+    "path": "Assets/HeroIcons/546.img",
+    "bytes": 9729,
+    "sha256": "a5a73983725de0626457d6fce082f831f67a6a0b8736c4d4dca21ff0074f24c0"
+  },
+  {
+    "path": "Assets/HeroIcons/548.img",
+    "bytes": 25977,
+    "sha256": "352fcbb6aeb5642e365fbf8caaabed6ebd1c732a01e8acecda203bb4dc5fec03"
+  },
+  {
+    "path": "Assets/HeroIcons/563.img",
+    "bytes": 12434,
+    "sha256": "7f8302f18bfd2138bd9bc58aa428c8922aeae2a393c643c1eb7a159b58d928f5"
+  },
+  {
+    "path": "Assets/HeroIcons/567.img",
+    "bytes": 22525,
+    "sha256": "84e16e27ffa9bf929683897f36f02d8f09b08d828adda66baf5f1dff5532bda3"
+  },
+  {
+    "path": "Assets/HeroIcons/568.img",
+    "bytes": 17984,
+    "sha256": "8429e03eb48d3290bc170a473199d0b7eec8366d066b09d1288a3074781de568"
+  },
+  {
+    "path": "Assets/HeroIcons/577.img",
+    "bytes": 22409,
+    "sha256": "f010575bafba401dc743e6e4f16ab52bcc010fefc81a9b4111f4f69389ae976a"
+  },
+  {
+    "path": "Assets/HeroIcons/582.img",
+    "bytes": 17249,
+    "sha256": "ddf75d9ed295e0a37b1fb40a25f9d944e4d895b5e93f36203e2d728f23e3f95a"
+  },
+  {
+    "path": "Assets/HeroIcons/584.img",
+    "bytes": 17216,
+    "sha256": "ce223d4e453fd99032e9986ed2e9dcba61660626a3ba98332568338b5e33d174"
+  },
+  {
+    "path": "Assets/HeroIcons/589.img",
+    "bytes": 13875,
+    "sha256": "12ca10104b6469dd2dd30f1ce46694ca9fff6f39e818b4e0854413f69c3d1c30"
+  },
+  {
+    "path": "Assets/HeroIcons/593.img",
+    "bytes": 73524,
+    "sha256": "69deb5691e148351335e9b85f000147cc5f5c962a745637cb05531441a31cae5"
+  },
+  {
+    "path": "Assets/HeroIcons/595.img",
+    "bytes": 10126,
+    "sha256": "242d1e821d2b144c7bab5fe2847b6c81564e1cf2d2e2e7d048c3767858a9c851"
+  },
+  {
+    "path": "Assets/HeroIcons/596.img",
+    "bytes": 13464,
+    "sha256": "da1ca33b18e22d01933dd8f4e56c12157989fb311b51882c2f759acd55bffbea"
+  },
+  {
+    "path": "Assets/HeroIcons/597.img",
+    "bytes": 10679,
+    "sha256": "8b4b47a41b197cc27a1a4d1bf46d05dab0265fed61db8279fcf51509ffe2e179"
+  },
+  {
+    "path": "Assets/HeroIcons/598.img",
+    "bytes": 10507,
+    "sha256": "983ae10470929775fd47f1201c046aba153dce8bf2720e9415c5d956875f65df"
+  },
+  {
+    "path": "Assets/HeroIcons/599.img",
+    "bytes": 20175,
+    "sha256": "21fb4f6f03e8a2d8c9a059ce79da05f3fde0260d467f298f04de287eeb333c5a"
+  },
+  {
+    "path": "Assets/HeroIcons/catalog.json",
+    "bytes": 48860,
+    "sha256": "7c93914ccb542e61a7cf58c9683dc0a17e08c42db247ecc6fb84750e6e737bcf"
+  },
+  {
+    "path": "Assets/Theme/airi-sss.jpg",
+    "bytes": 305842,
+    "sha256": "973e874bdfdbac0fb1bc70b94f6f2d779cec0040cdb552576a6d4d9eda49d6ff"
+  },
+  {
+    "path": "Assets/Theme/app-background.jpg",
+    "bytes": 78871,
+    "sha256": "db6c136b37bc07ccc5cfdb97d1f64ac113d0cf7fa42a1e58c432836eca758e27"
+  },
+  {
+    "path": "Assets/Theme/butterfly-phoenix-sss.jpg",
+    "bytes": 367279,
+    "sha256": "607f4142c1ff69fa2323e490c030fe0d38e1552361924345771f35657c840ebe"
+  },
+  {
+    "path": "Assets/Theme/diaochan-celestial.jpg",
+    "bytes": 151757,
+    "sha256": "f3f3469e4a50b1cf85c20894dadc95df44685e39fee8c82376287ae91e26c66a"
+  },
+  {
+    "path": "Assets/Theme/lauriel-sss.jpg",
+    "bytes": 195606,
+    "sha256": "d3da61279157658c0d155e61f31dc2adfad809195b2831bca6de9e5c842a79ff"
+  },
+  {
+    "path": "Assets/Theme/liliana-dragon.jpg",
+    "bytes": 244904,
+    "sha256": "5c3481ab53a8fe3a859dac2fc3247cf74c1785b002939f632900620acd0900c4"
+  },
+  {
+    "path": "Assets/Theme/liliana-magic-sss.jpg",
+    "bytes": 150931,
+    "sha256": "6288e4f1af2d4db148f1fac87d8e629ada4cf8d9ba0d4a5c91f3bf42a1f3a38d"
+  },
+  {
+    "path": "Assets/Theme/manifest.json",
+    "bytes": 5620,
+    "sha256": "d90bed841b7221717fce6db01974c2e435ebb427e446a16df81afa6b6e06bf70"
+  },
+  {
+    "path": "Assets/Theme/sephera-nova.jpg",
+    "bytes": 141889,
+    "sha256": "2e7ccf08bdb61a840a5da0af0b5ef56104dd004c868886ff6d3461d19d2352c4"
+  },
+  {
+    "path": "Assets/Theme/telannas-dimension-sss.jpg",
+    "bytes": 481937,
+    "sha256": "8f303369dd5c8a54f34d9583a5e6b10c413d8e93de46c4e3daf7e2831534933a"
+  },
+  {
+    "path": "Assets/Theme/telannas-fee-sss.jpg",
+    "bytes": 247965,
+    "sha256": "fe6ea6da318fb789678fcdbc1b7ac0da7f1fbfb7d3eba28b7d6fcab1c8257dea"
+  },
+  {
+    "path": "Assets/Theme/telannas-newyear-sss.jpg",
+    "bytes": 279838,
+    "sha256": "2bde03b3be0f3c26710396bd101ba7408f89c91d4d49d5690b4bad27ec3f3eac"
+  },
+  {
+    "path": "Assets/Theme/veres-dragon.jpg",
+    "bytes": 218314,
+    "sha256": "90c4abf681f56b1c02cbae90b7001e070a64ae09553e73984c2813a995c5c5ba"
+  },
+  {
+    "path": "Assets/Theme/violet-nobara.jpg",
+    "bytes": 139687,
+    "sha256": "f39d73168268933191da438fa47714d25b44d60d58ad70b4f4844c2402917a61"
+  },
+  {
+    "path": "Assets/Theme/violet-sss.png",
+    "bytes": 1473790,
+    "sha256": "1fd215c0d1f111070e37df4fd3576159eecf555f72ada99892adbcc61d03fce7"
+  },
+  {
+    "path": "Assets/Theme/yena-spirit.jpg",
+    "bytes": 142780,
+    "sha256": "7b9b639b43ec5ba7d39934ba9da7554e8868e9aa6f06643307f130b92b3a3563"
+  },
+  {
+    "path": "BackendSDK/CameraControl.h",
+    "bytes": 413,
+    "sha256": "3db99238298e0cd92b4b5f16da17f5c56e9197818d98f6dc056b51ae3e3fad65"
+  },
+  {
+    "path": "BackendSDK/CameraMemory.h",
+    "bytes": 5398,
+    "sha256": "89c53dc3bb214abb00c00f61d93424446cdb8e5d00b6e6cee45ceb693a508f91"
+  },
+  {
+    "path": "BackendSDK/DiagnosticBackend.m",
+    "bytes": 41144,
+    "sha256": "cc601f87f9c91e2d0be6f13561edd3b79855316abd71f18649e3c0ada09e8750"
+  },
+  {
+    "path": "BackendSDK/EspMemory.h",
+    "bytes": 11874,
+    "sha256": "ba4654fca2ebabd4dcbf5feab766289ea9e9a160799953f4c60eaa7afd5b55f6"
+  },
+  {
+    "path": "BackendSDK/EspPresentation.h",
+    "bytes": 4300,
+    "sha256": "80a66b9cf5c7e59d1301c8edc1be51436ec519969454bdd18abd878e3f454f81"
+  },
+  {
+    "path": "BackendSDK/EspVisualStyle.h",
+    "bytes": 1811,
+    "sha256": "1507014638e717841a391a9bba60a229cf5485fcea815ea3e9b7bfa0193a7cbb"
+  },
+  {
+    "path": "BackendSDK/GameInspection.h",
+    "bytes": 10020,
+    "sha256": "48ff6cf7fa8f732df1a3e91f32e509539dae60d0c1dcbb7b093639dfd3b528e7"
+  },
+  {
+    "path": "BackendSDK/HeroBackend.h",
+    "bytes": 651,
+    "sha256": "82ddc265a8c9863b9522ec5065d2f5df6bc862476f2ba5b66fe4b43fb9b1d620"
+  },
+  {
+    "path": "BackendSDK/LogicEsp.h",
+    "bytes": 8746,
+    "sha256": "51ee80905048a187d62804be26ce3af10680643a77521859f1c07a793d688bdc"
+  },
+  {
+    "path": "BackendSDK/LuaReports.h",
+    "bytes": 11243,
+    "sha256": "e99263bcc5c9ed10f043cb21e32eb163ba31c39b202552df232b9380d1c9d5c2"
+  },
+  {
+    "path": "BackendSDK/MinimapProjection.h",
+    "bytes": 1348,
+    "sha256": "fc2b74e6e3415d4cd76c006b14d7d473655bff2e500e9c9722b64869d02dde31"
+  },
+  {
+    "path": "BackendSDK/PROTOCOL.txt",
+    "bytes": 7806,
+    "sha256": "7be2d2e1b47e31c0d18266d6e4c7a229e15eb7c224ad04fca3f49e2423508717"
+  },
+  {
+    "path": "BackendSDK/RemoteCString.h",
+    "bytes": 968,
+    "sha256": "3554212da1b2283632c9d6ef4362117a35d023031d4d22489f552162f97d5183"
+  },
+  {
+    "path": "BackendSDK/UnavailableBackend.m",
+    "bytes": 1792,
+    "sha256": "9fc15ae604abb8e88acbc5c9ea869b876a6d89444c75ff2cb7cd2145aece2546"
+  },
+  {
+    "path": "Debian/DebControl.m",
+    "bytes": 839,
+    "sha256": "b7099344b1ce448cc9b9b320f21d0a633176a7bc403fcba8375d4953d3e46bcd"
+  },
+  {
+    "path": "Debian/package.json",
+    "bytes": 269,
+    "sha256": "b7d1b858a7b6dc75c7a72f9a34578806124194085b6b72440f325b41929d5610"
+  },
+  {
+    "path": "HeroControl.xcodeproj/project.pbxproj",
+    "bytes": 9833,
+    "sha256": "602458d2b08e90ae24abc3d434b567275176e1096ecc64aed9bab3aeef469b8b"
+  },
+  {
+    "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
+    "bytes": 2359,
+    "sha256": "2a4666497ac74e7f6d0d210289e60eb35f5f8b5795a23feb6f4f928cf01a0257"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+    "bytes": 1876947,
+    "sha256": "46498ea529af32e7e85132cfd94ae115268f75356d53094022790ae90d7d21a1"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-120.png",
+    "bytes": 37701,
+    "sha256": "0232d8e377619d690154b5a256ada00800d805c737e1d2edc55cb044111c4735"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-180.png",
+    "bytes": 79194,
+    "sha256": "79532f81620fbb9c4f8c271aa4f4a3bed74755b36e8b4356a64dc572c8849dc3"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-40.png",
+    "bytes": 4695,
+    "sha256": "c2b1b3e0be7a2df1009719c832a6736cb6f008130876ba574295883a28bb5b3e"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-58.png",
+    "bytes": 9578,
+    "sha256": "a99f2a36c19520e2ada9eb2e46515db5bac77e0f54cf386c049eaae352dff847"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-60.png",
+    "bytes": 10202,
+    "sha256": "83f6ed759f2c9efad046475a793d054f33aec6df907acde4c553117074147b0e"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-80.png",
+    "bytes": 17631,
+    "sha256": "fcc335e2dcd2754e8acb29af0621ff4648868e8f2a7bdcb2151016c00c76e4f3"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-87.png",
+    "bytes": 20662,
+    "sha256": "bca2930b11d2ed344a479a7137f74a7822c60c0913ffaa88e8683f8eade8f924"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/AppIcon.appiconset/Contents.json",
+    "bytes": 1147,
+    "sha256": "a2e046391eb555e01a4e4a3cc8462b8664447259f1e3aa5cb72ff5f00f1ec8c8"
+  },
+  {
+    "path": "HeroControl/Assets.xcassets/Contents.json",
+    "bytes": 60,
+    "sha256": "f5fb0e1f3a8142892ed092efb5955c1c2cc537003a89ad7bbdb9dade7fe8985f"
+  },
+  {
+    "path": "HeroControl/ContentView.swift",
+    "bytes": 1337,
+    "sha256": "d551bbfadf0de37fcc810c0d27d343175eb31b38b61c6de8cda1c83678eff751"
+  },
+  {
+    "path": "HeroControl/ControlStore.swift",
+    "bytes": 15419,
+    "sha256": "ff3f7aec8bb88166e347f55d424a72e6c91f2f182c9cd9a1395d9857130b061d"
+  },
+  {
+    "path": "HeroControl/HeroControlApp.swift",
+    "bytes": 265,
+    "sha256": "1cb40268c380fbafeb0a5ee790bc7c75d4e0fdb00bf1a0aeb047695a9d527270"
+  },
+  {
+    "path": "HeroControl/Info.plist",
+    "bytes": 1055,
+    "sha256": "6c6c61c8aa5b502c03fac7165a9c147c6d09a5189268e3151b299da84ddc9538"
+  },
+  {
+    "path": "HeroControl/Models.swift",
+    "bytes": 15934,
+    "sha256": "c76745e86bf6da4f1092a7b2e8fef06d38dfcb062b2b68dfc2b9e845d2795331"
+  },
+  {
+    "path": "HeroControl/NativeBackend.swift",
+    "bytes": 6206,
+    "sha256": "dbd18ebd95c784936a65aac7eb84c470208fa915e9f0f09df049012182f34877"
+  },
+  {
+    "path": "HeroControl/OverlayController.swift",
+    "bytes": 6744,
+    "sha256": "6b424b8c0c4e46c9392b2d21b4aba57b1d807b2fc0c143b8ed2434336980d7ca"
+  },
+  {
+    "path": "HeroControlTests/ControlTests.swift",
+    "bytes": 33966,
+    "sha256": "1b5bf758301e6b5d61e68291072a00417dcb57fbf950997f6f9ae849de73c23e"
+  },
+  {
+    "path": "Makefile",
+    "bytes": 320,
+    "sha256": "032ff134306789691d1c757ea7a230d8ad7165cd10e7fcfe834be3c4c964c435"
+  },
+  {
+    "path": "ORIGIN.json",
+    "bytes": 263,
+    "sha256": "c886f84c6020fb5869226dac7449be306bea492a46d373667f08d05b6506fde4"
+  },
+  {
+    "path": "Overlay/CameraEngine.h",
+    "bytes": 308,
+    "sha256": "260e9901cb1e0374a7ab397a16b8a88cc792cbb71cbe86534ccd4d574bdc6f11"
+  },
+  {
+    "path": "Overlay/CameraEngine.m",
+    "bytes": 33503,
+    "sha256": "45bf5df66531059a90a7b0a268c9725e0277601e58b1485dca2e11d549c110d0"
+  },
+  {
+    "path": "Overlay/CapturePolicy.h",
+    "bytes": 254,
+    "sha256": "3c8e75a830db963d3f19d8ddabc6bcb5f9ada12aeb64b73bd5f686548a0c6180"
+  },
+  {
+    "path": "Overlay/DrawerMotion.h",
+    "bytes": 1397,
+    "sha256": "7de225c27a4c93ef2cc12a4246bc514ce211d9da65757b670dcbba8fe364485d"
+  },
+  {
+    "path": "Overlay/HeroAssets.h",
+    "bytes": 11304,
+    "sha256": "25b1672f053608fc43713aa90bd6b3f0ceaa8daefe7d1948a3d3df3a516334e3"
+  },
+  {
+    "path": "Overlay/HeroOverlay.m",
+    "bytes": 98567,
+    "sha256": "b46f2a791e21c8ae0e79fa99d1d0e3db7e09eaa547ab21445ea380b57d0367bd"
+  },
+  {
+    "path": "Overlay/Info.plist",
+    "bytes": 832,
+    "sha256": "d587018f59d31a9d75a54ee0fb3e0c328cf24fa0530efffa4e212022df87186a"
+  },
+  {
+    "path": "Overlay/InputCapture.h",
+    "bytes": 775,
+    "sha256": "f852ed254d40767835ae93c7a745eaad209227e175c456c23687ab3fbf808471"
+  },
+  {
+    "path": "Overlay/OverlayBridge.m",
+    "bytes": 11929,
+    "sha256": "49d9f4895af3a7f28df8b2ebaa1e3f120dd8446ac153467e4c265151aed318af"
+  },
+  {
+    "path": "Overlay/OverlayCommon.h",
+    "bytes": 2708,
+    "sha256": "442814c5fca275eb54085399879cf3fe19912d89f5e0bf8d49d753ed4a83e2f2"
+  },
+  {
+    "path": "Overlay/OverlayLock.h",
+    "bytes": 1644,
+    "sha256": "68076140cc8284e9e8bc12d95490b63c66a86a4cab73c7b4499129cbb3416b58"
+  },
+  {
+    "path": "Overlay/ReportAnalysis.h",
+    "bytes": 5657,
+    "sha256": "eebc1170f371f4591511c942bc9113bb51af6e0bc80a2f43774dd4f541f747cf"
+  },
+  {
+    "path": "Overlay/ReportNotice.h",
+    "bytes": 4496,
+    "sha256": "59d29212fb89b113966838fa40779ac2868b4b0b63d258bf75b2ed23ef7c3fd7"
+  },
+  {
+    "path": "Overlay/ReportScroll.h",
+    "bytes": 897,
+    "sha256": "c010534e73ca1c32622a610e076dd658887557897d2754eb90551065c16adb93"
+  },
+  {
+    "path": "Overlay/ReportsPreparation.h",
+    "bytes": 4590,
+    "sha256": "c6646db98cc7c26873c1ac4d7bc99ef90ac85c6ae3457a8793c717187f228bf6"
+  },
+  {
+    "path": "Overlay/SettingsStore.h",
+    "bytes": 2937,
+    "sha256": "57f6a4db88d5c0e67c8a4f14e083d411467e6a2d15a2703c9432c923c847b10d"
+  },
+  {
+    "path": "Overlay/ThemeResources.h",
+    "bytes": 1529,
+    "sha256": "26d0408ca2c2d4b8bd0dad66f538ebb7298ab9ee5dabaa6a66154c2b0a860690"
+  },
+  {
+    "path": "Protection/ProtectedStrings.cpp",
+    "bytes": 1435,
+    "sha256": "664e4c8ef468976aa1614b0c93d7f858e427f9c687be89a0c4a74adcbbc942c4"
+  },
+  {
+    "path": "Protection/ProtectedStrings.def",
+    "bytes": 2305,
+    "sha256": "b7de8957870b610f8b37240d26ffe101b780d3d143edc5065d7bed20b9bb6e7b"
+  },
+  {
+    "path": "Protection/ProtectedStrings.h",
+    "bytes": 920,
+    "sha256": "f23730c7e7f9a43fbb28702152f19d0bc2a7b06ddf089e6af1e98bfb34d06a21"
+  },
+  {
+    "path": "Protection/README.txt",
+    "bytes": 2958,
+    "sha256": "ae020319d1ac44231b946ed30f4a57b7f250f8898c5ee06ad0e8f9b0dd580ea4"
+  },
+  {
+    "path": "README.txt",
+    "bytes": 3600,
+    "sha256": "31d9cda804d3d3ae3ccc0d52e885bae82cd5d6042f3d81a70b674ec3988de45a"
+  },
+  {
+    "path": "Runtime/DoroCheatDebRuntime.plist",
+    "bytes": 285,
+    "sha256": "390fd461e445cd956f206ffae39f3c325274095c1b16c38374ce9ad2214528b6"
+  },
+  {
+    "path": "Runtime/GameRuntime.mm",
+    "bytes": 12671,
+    "sha256": "2774696489671974fc3e34dbf1cef388f5a5357cbc4dd0de3db5a2ebe55beb23"
+  },
+  {
+    "path": "Runtime/Payload/ComplaintHistory.lua",
+    "bytes": 49369,
+    "sha256": "8876a96505d1ad5ccdd98fd3690534dbad890a8b92371de1e1cc45d1675d322a"
+  },
+  {
+    "path": "Runtime/Payload/HeroSkin_1.patch",
+    "bytes": 253084,
+    "sha256": "61c7b9c1ab055ea6a485c2384d7874af90cb36c9a386482b3dd20574723c11e2"
+  },
+  {
+    "path": "Runtime/Payload/HeroSkin_2.patch",
+    "bytes": 107922,
+    "sha256": "636355e6e184da6db72dbe3644fc8c84d41691a4e858554b9a852f91f1b2d63a"
+  },
+  {
+    "path": "Runtime/Payload/manifest.json",
+    "bytes": 862,
+    "sha256": "399004e9ec3a23f4f07263e50821c5185317b1bc67a89e65bca0cf5023350a99"
+  },
+  {
+    "path": "Runtime/Runtime.lua",
+    "bytes": 13202,
+    "sha256": "fa2cd5bc97a9bdd7a75897f3b6bef6c9330074c4dd893ee4f02a0ae6369ef331"
+  },
+  {
+    "path": "Runtime/RuntimeInstaller.h",
+    "bytes": 14813,
+    "sha256": "d526bdc6547c868dea4a9d710dcf4538e75e02d89d57dea9f921224c4f105e11"
+  },
+  {
+    "path": "Runtime/RuntimeShared.h",
+    "bytes": 7924,
+    "sha256": "ca6b6c2bd2307b8ed6192dfc2d793b925e5135de1f29a214cd194127cb2e514f"
+  },
+  {
+    "path": "Signing/App.entitlements",
+    "bytes": 543,
+    "sha256": "0d3002a47fcfe2ea700cd3dd6c4e29367a2173c38eac72478686633ef04683b4"
+  },
+  {
+    "path": "Signing/Helper.entitlements",
+    "bytes": 713,
+    "sha256": "a73c8049b8a4602e9c5785ebf02716c13c17d6a77cc523aa26f91e71d2ad00ae"
+  },
+  {
+    "path": "Signing/Overlay.entitlements",
+    "bytes": 1215,
+    "sha256": "552d4f9cb2c018e42c7bf4871cecb7c3e9ef9fdaa5e7d1838b230e0440c25a63"
+  },
+  {
+    "path": "ThirdParty/HeroIcons-NOTICE.txt",
+    "bytes": 1038,
+    "sha256": "6fd0c4440738be298fd9425bfc6d77c5ebcde7060d1e2c2306adf1b7ea653af8"
+  },
+  {
+    "path": "ThirdParty/NOTICE.txt",
+    "bytes": 1456,
+    "sha256": "e16938f8b1626f969a9d004891c182c2a92af6dc02a08c5b8100f996f39660b3"
+  },
+  {
+    "path": "ThirdParty/TrollSpeed-LICENSE.txt",
+    "bytes": 1064,
+    "sha256": "cc81c2a899100c1f4877876bbf969d5f8d9c8f491283db36027bd8cabfdc0a12"
+  },
+  {
+    "path": "ThirdParty/oxorany/LICENSE",
+    "bytes": 1062,
+    "sha256": "c8c05409b0e8d1d7bb510151ae8f366448789d1f59a50cd493e3893331e26d91"
+  },
+  {
+    "path": "ThirdParty/oxorany/README.en.md",
+    "bytes": 15628,
+    "sha256": "78bab0f30f88722eab070b23d0cfe5da9283bd66dcc376e3a06926125857f0db"
+  },
+  {
+    "path": "ThirdParty/oxorany/oxorany.cpp",
+    "bytes": 1285,
+    "sha256": "c4db047aa0c8515ed12bd83d7c692a4c296d7d577408864d5b692797c19d6959"
+  },
+  {
+    "path": "ThirdParty/oxorany/oxorany.h",
+    "bytes": 26388,
+    "sha256": "c446b10a806ed0223ab083ac0a65b6586a9a62d16fa2b3ffb4dd1ff462e0f448"
+  },
+  {
+    "path": "ThirdParty/oxorany/provenance.json",
+    "bytes": 498,
+    "sha256": "1d566abc83b36b71f35a8d1e04ad2077e768ee80eb018eea6039363bdfb3ada8"
+  },
+  {
+    "path": "VERIFICATION.txt",
+    "bytes": 732,
+    "sha256": "979579ec11eab1c19af26d913daada23be231c21bea648001adeab15f4e4aa61"
+  },
+  {
+    "path": "scripts/build-deb.sh",
+    "bytes": 3259,
+    "sha256": "97b57a9ecd5b1667f33689b1f4887360973b03ed92d2e0b34c1a909eef56cb6f"
+  },
+  {
+    "path": "scripts/build-diagnostics.sh",
+    "bytes": 2852,
+    "sha256": "43588fd31e2f2936998dbfab5de3af4fb0f1da4742e743227f3a7eb49d52ef05"
+  },
+  {
+    "path": "scripts/build-example-backend.sh",
+    "bytes": 503,
+    "sha256": "ec135ad88fe0db57da8e08f5b2a61cdd4037c992338f2b1a4275803d462fb9e4"
+  },
+  {
+    "path": "scripts/build-overlay.sh",
+    "bytes": 7014,
+    "sha256": "b24066db23903b9cbcd67b08a98e8569e97925add2a6ffd56806b055a5167c9a"
+  },
+  {
+    "path": "scripts/build-protection.sh",
+    "bytes": 824,
+    "sha256": "8782846b13773b206a63f7dcc25c62f33f7943e7745b6c6f395697bfbba4ced9"
+  },
+  {
+    "path": "scripts/build-runtime.sh",
+    "bytes": 1135,
+    "sha256": "a9ac049e10e4e6e0349fae0a9eb0a8f92c9fba247fcd0c0d6d0a50514634ed1f"
+  },
+  {
+    "path": "scripts/camera-memory-check.c",
+    "bytes": 5052,
+    "sha256": "a3adf8ecc11952fdbbe511c180d1a752c86146a55a615204db1ce924c01078ea"
+  },
+  {
+    "path": "scripts/check-helper-fds.py",
+    "bytes": 621,
+    "sha256": "8a81b3d82f182560768749da5b1b8cbab0f27c29e548d6de5f9de4d1bcbcd2e6"
+  },
+  {
+    "path": "scripts/check-overlay-bridge.py",
+    "bytes": 1179,
+    "sha256": "057c3eb1ca4da007efebecab39cde7dba87983be4a32d11fb9c91b2f5fcbab7a"
+  },
+  {
+    "path": "scripts/check-overlay-lock.py",
+    "bytes": 536,
+    "sha256": "e878bd75f6bc9a8917f28cf87a341e18a70061de3ddda8d7af8e6d33506bc13a"
+  },
+  {
+    "path": "scripts/drawer-motion-check.c",
+    "bytes": 1290,
+    "sha256": "ccd2872bb685b7c502afc4232307fc9601aa7c80ef7b6b726e197fc4a7342b8f"
+  },
+  {
+    "path": "scripts/esp-memory-check.c",
+    "bytes": 6554,
+    "sha256": "cbce5be3caa024c01381cb0184d93ef6884857fdb2639fa0135fdb435599ae51"
+  },
+  {
+    "path": "scripts/esp-presentation-check.c",
+    "bytes": 3800,
+    "sha256": "ed02bacd03903b916660558e849b31c9e50ebed9d9512fb1f6f56b3b3d88d459"
+  },
+  {
+    "path": "scripts/esp-visual-check.c",
+    "bytes": 2006,
+    "sha256": "95618ab59585b50de0756ccadfc0110f28e0d160cbb509b459bb791dbe3c1240"
+  },
+  {
+    "path": "scripts/fetch-hero-icons.py",
+    "bytes": 1640,
+    "sha256": "7b1a11015d0d845fa952adaf00735ae5263cbbb6adc6558cf1760e51fb28c5a5"
+  },
+  {
+    "path": "scripts/generate-overlay-features.py",
+    "bytes": 1285,
+    "sha256": "b6878ae088154b7c75bd65f3a5504c716150fcd86a8c365c6d8ae1690ea83bd2"
+  },
+  {
+    "path": "scripts/generate-project.py",
+    "bytes": 9391,
+    "sha256": "de0d2e4c7ccb110e8dff8c982266d96cd23f61f7734199f326c79cd26cd9833c"
+  },
+  {
+    "path": "scripts/import-runtime-reference.py",
+    "bytes": 8460,
+    "sha256": "39d06e500d53d4499b0959651c4895a49a7b989b878703bc5f38056af6a53657"
+  },
+  {
+    "path": "scripts/input-capture-check.c",
+    "bytes": 894,
+    "sha256": "f218e5676d3457772dfdddc29b9eea994b5d84e4433e19eecf352e15d6c5eb27"
+  },
+  {
+    "path": "scripts/logic-esp-check.c",
+    "bytes": 5086,
+    "sha256": "dc38120e0d43532d4a75143f202b39e363c549d7c01047641b38b9a3a51cc44f"
+  },
+  {
+    "path": "scripts/lua-reports-check.c",
+    "bytes": 6602,
+    "sha256": "96d327f7c6b6b2c0df348a24aad1be8b5d0f319b697666e8ac0687e73e4b86b8"
+  },
+  {
+    "path": "scripts/minimap-check.c",
+    "bytes": 1158,
+    "sha256": "d90564cab10a5f3619cacba750b373666e4ffddfeb28f6e2cc97552f55fa1ae5"
+  },
+  {
+    "path": "scripts/native-contract-check.swift",
+    "bytes": 3517,
+    "sha256": "922cbd206a93cf11cf80fd8dfa31fd12be7c351683eb9237fbdbd14aca17a830"
+  },
+  {
+    "path": "scripts/overlay-lock-check.c",
+    "bytes": 2252,
+    "sha256": "3e760e04cd0cacaf8010109a93c9af1edac8da2290d0fcc1184df5e703909f87"
+  },
+  {
+    "path": "scripts/package-deb.py",
+    "bytes": 7280,
+    "sha256": "bdfec884a339e92543d23100a9d9392246a184f180268888f181b977b08d253d"
+  },
+  {
+    "path": "scripts/protected-strings-check.cpp",
+    "bytes": 1510,
+    "sha256": "0008df5ac91054f6af0843c6592c6fde2c53aae6b23ac9456c007e4a34383754"
+  },
+  {
+    "path": "scripts/read-memory-check.m",
+    "bytes": 503,
+    "sha256": "a0e1db048d377e22d5d523f5e2e833ae163b76a0d114c00ab4fc91d12a6d7f84"
+  },
+  {
+    "path": "scripts/read-memory-runtime-smoke.lua",
+    "bytes": 733,
+    "sha256": "02e436167172c5a763605412839724cff0dcc4a5027044703bbc44794ce9ce84"
+  },
+  {
+    "path": "scripts/read-memory-worker-check.m",
+    "bytes": 2250,
+    "sha256": "36a5b19c6ba9b967a30ca32e26d3420912897bb53e8f246e8da7effe68ac7a9a"
+  },
+  {
+    "path": "scripts/remote-cstring-check.c",
+    "bytes": 1255,
+    "sha256": "e48964dfa610fcaffa0164825f972af6b8381d4661d474a53e3fe39e73f3db8b"
+  },
+  {
+    "path": "scripts/report-analysis-check.m",
+    "bytes": 1775,
+    "sha256": "70a344f9fe8eb9f9b52863b920c6e050e8e6338ca9ab1140f4e5af1cf9c25aec"
+  },
+  {
+    "path": "scripts/report-menu-only-smoke.lua",
+    "bytes": 831,
+    "sha256": "3b367bcf0d609949a31e4295d361abbb35d567314c80b603ec950d2a274c556f"
+  },
+  {
+    "path": "scripts/report-monitor-smoke.lua",
+    "bytes": 1551,
+    "sha256": "12ba1ad9bd2ce874d64a232f6a6f48f6083911de254de432cd57415ac513a57f"
+  },
+  {
+    "path": "scripts/report-notice-check.m",
+    "bytes": 3769,
+    "sha256": "d4f2182c4ee72a7cde5bce810fbda6276828325738185d4f91f533fd553deb30"
+  },
+  {
+    "path": "scripts/report-reasons-smoke.lua",
+    "bytes": 822,
+    "sha256": "ef43dfe4b98dfe8fc2888cbfc695a6b50cb8234732ca63bb683e81e038daf315"
+  },
+  {
+    "path": "scripts/report-scroll-check.c",
+    "bytes": 1221,
+    "sha256": "e660f99d441952956adb0596edc0ac8a85934f18aec96d3409a08fc88f007b6f"
+  },
+  {
+    "path": "scripts/reports-preparation-check.m",
+    "bytes": 416,
+    "sha256": "9f16e20de50547af52c1f7da500020a0de9b05f5caccba755c6fa0ad25f346e0"
+  },
+  {
+    "path": "scripts/runtime-generation.py",
+    "bytes": 259,
+    "sha256": "ddb5a931ff7d3fa7d64139d85605d7b9d7586170b4a351cb2c5c1e944f3a5a88"
+  },
+  {
+    "path": "scripts/runtime-smoke.lua",
+    "bytes": 5837,
+    "sha256": "0c98517e86026f13eb8dbd49847539669ba03ca616475e75ddbe58d3258280ae"
+  },
+  {
+    "path": "scripts/settings-store-check.m",
+    "bytes": 2436,
+    "sha256": "4303059ce6add242c40b26908b126a6d814f18f186205413cd0c5eed7c26ef64"
+  },
+  {
+    "path": "scripts/source-archive.py",
+    "bytes": 1277,
+    "sha256": "b5b6f62089bd5c94210785671299d608d61a17597a278b5ac69f3abf41b394f5"
+  },
+  {
+    "path": "scripts/source-manifest.py",
+    "bytes": 1630,
+    "sha256": "65bfcf2e802f78d11e88fdd47d101a81d832b391d40a8508fb3adf3b717316fb"
+  },
+  {
+    "path": "scripts/test-protection.sh",
+    "bytes": 920,
+    "sha256": "eba844cbdcaddfcaa98637d48d914e1ee18b346d12ba072418655bed9d628d13"
+  },
+  {
+    "path": "scripts/test-simulator.sh",
+    "bytes": 714,
+    "sha256": "7418e139f29a55e34f70ba86508daf567f88ddba1a9a405b585b98ed08b50ed7"
+  },
+  {
+    "path": "scripts/theme-assets-check.m",
+    "bytes": 1433,
+    "sha256": "3bf894fb3ff6d9080baeac1fbe1f0893fe631c52130e5b65d5b24a99888a68fd"
+  },
+  {
+    "path": "scripts/validate-project.py",
+    "bytes": 5595,
+    "sha256": "8e9756776edeb42346a2561837751eb8680cbaeec27663f3a20dbeb5250dabe2"
+  },
+  {
+    "path": "scripts/verify-entitlements.py",
+    "bytes": 2226,
+    "sha256": "67690ad59a79c9ee4e64886882cf46ae440bf62ecfb44cd80bfb4f8059b3b5e8"
+  },
+  {
+    "path": "scripts/verify-protection.py",
+    "bytes": 5020,
+    "sha256": "6544257d48a5665ab22e9068f9f9a2afbcff0ea5ec9d02b9d00870825df5527a"
+  },
+  {
+    "path": "scripts/verify-runtime-payload.py",
+    "bytes": 1806,
+    "sha256": "e541489894129ad873e5144fd3426eca0e6816e2ac35effd6bad3314473a044d"
+  },
+  {
+    "path": "tests/test_deb_package.py",
+    "bytes": 4318,
+    "sha256": "7e9cad335107d9e88c7586f118d0167de2fbe662aecfa7cdc38ebd4da303f5bb"
+  },
+  {
+    "path": "tests/test_hero_icons.py",
+    "bytes": 2529,
+    "sha256": "a975ad48083d37c0f6e20d7a7957a0de0425431eb8c77c1f1b1241a39fbd2e72"
+  },
+  {
+    "path": "tests/test_protection.py",
+    "bytes": 2362,
+    "sha256": "b182497efdde5495dcb0ced16ecba0ca38a568ff0bd3e9fe919d2a3353fb924f"
+  },
+  {
+    "path": "tests/test_runtime_payload.py",
+    "bytes": 982,
+    "sha256": "9034926b0e3b2d96402572f4cb1bc8caebf758f13d791b0ff74d1eed323856cb"
+  },
+  {
+    "path": "tests/test_signing.py",
+    "bytes": 1851,
+    "sha256": "8abab6f5f50d40c47b3e60c67b28c7aa553b5d35093d4552aac6bb19ee256fee"
+  },
+  {
+    "path": "tests/test_theme_assets.py",
+    "bytes": 2369,
+    "sha256": "ef5a26f4898f33e241d02fd42ef15a5ebca7867c2dc0ccbacb089e7fb8803b5c"
+  }
+]

@@ -1,0 +1,159 @@
+HERO CONTROL BACKEND v1 — BỔ SUNG 0.10.0
+
+C ABI và protocolVersion vẫn là 1. Mô tả 0.2 bên dưới là lịch sử, được thay
+bởi phần này khi adapter game đã được cài và phản hồi.
+
+Action mới: installRuntime, removeRuntime, runtimeStatus.
+installRuntime/apply nhận revision và ControlSettings đầy đủ.
+status cũng nhận settings để quảng bá đủ khóa SelectedSkin đang được lưu.
+
+Backend vẫn là chẩn đoán khi chưa có adapter. Khi runtime có phase active,
+đúng build/generation, PID còn sống và heartbeat dưới 6 giây, connected=true,
+sessionID là UUID của lần nạp thư viện, supportedKeys gồm 13 cờ + camera +
+SelectedSkin theo cấu hình. heroes đọc từ databin; không tạo danh mục giả.
+
+Snapshot thêm runtime và runtimeDiagnostics (tùy chọn).
+runtime có phase/code/message, responding, sessionID, appliedRevision,
+acknowledgement=preferences_readback, effectsVerified=false, reports,
+historicalReports, timestamp và catalogError. Danh mục heroes ở snapshot
+để không nhân đôi dữ liệu JSON lớn.
+
+installRuntime chỉ xác nhận cài payload/filter, không xác nhận được nạp.
+Cần mở lại game và xem phản hồi. removeRuntime cần mở lại game để loại bỏ
+hook trong bộ nhớ. Không sửa các file HeroSkin gốc.
+
+apply có thể trả ok=true sau khi lưu yêu cầu mà appliedRevision chưa khớp.
+Đây là yêu cầu đang chờ khi game bị tạm dừng; UI không đánh dấu thành công.
+UI theo dõi xác nhận cùng revision/session sau khi game hoạt động trở lại.
+Acknowledgement chỉ là đọc lại cấu hình trong game, không xác nhận hình ảnh.
+
+Reports: querySupported=true khi luồng NetworkModule được cài; các bộ đếm
+sentRequestCount/receivedResponseCount thể hiện hoạt động thực tế.
+completeHistoryGuaranteed=false. Có giữ baseline, FIFO, timeout và phân
+biệt tài khoản. Báo cáo tối đa 2048 bản ghi mới nhất/1 MiB; nhật ký giữ trên đĩa.
+Khi heartbeat cũ, không connected và chỉ xuất historicalReports có timestamp.
+
+ControlSettings thêm gameRuntimeEnabled (Bool tùy chọn). Profile schema 1
+thêm revision tùy chọn; ghi bằng khóa đọc-sửa-ghi và thay tệp nguyên tử.
+Worker ngoài dừng khi mode này bật; HUD chỉ đồng bộ cấu hình/trạng thái game.
+
+THAM KHẢO GIAO THỨC CŨ
+
+HERO CONTROL BACKEND PROTOCOL v1
+
+Update 0.2: build mặc định đóng gói DiagnosticBackend.m, chỉ hỗ trợ
+status/diagnose và từ chối apply. Đây chưa phải game adapter. Snapshot
+có thêm diagnostics (KernelDiagnostics) và gameInspectionAvailable=false.
+Ứng dụng vẫn chấp nhận backend v1 không có hai trường tùy chọn này.
+Gọi diagnose mới yêu cầu kiểm tra primitive; status polling không gọi
+kbase/kread. Với EUID khác 0, diagnose cũng bỏ qua primitive.
+
+ABI C: HeroBackend.h. Dylib được nạp trong ứng dụng UI; không tự có
+quyền kernel/root. Dylib thật có thể làm client của một helper đã được
+cài đặt và cấp quyền trong môi trường jailbreak.
+
+hc_backend_api_version() -> 1
+hc_backend_request(request_utf8) -> chuỗi JSON do backend cấp phát
+hc_backend_release(response_utf8) -> giải phóng đúng vùng nhớ đó
+
+Request UTF-8:
+  {"protocolVersion":1,"action":"status"}
+
+Request apply:
+  {
+    "protocolVersion":1,
+    "action":"apply",
+    "revision":"UUID-cua-yeu-cau",
+    "settings":{
+      "flags":{"__ifxEnemyEspEnabledV1":false,"reports.enabled":false},
+      "cameraScale":1.0,
+      "selectedSkins":{"123":7}
+    },
+    "preferenceValues":{
+      "__ifxEnemyEspEnabledV1":0.0,
+      "DoroCheat.Reference.R2.CameraScale":1.0,
+      "DoroCheat.Style.SelectedSkin.123":7.0
+    }
+  }
+
+Ví dụ trên rút gọn flags; request thực có đủ 13 công tắc.
+preferenceValues dùng tên khóa lấy từ gói ILFix. Đây chỉ là giá trị
+giao tiếp: không có nghĩa ghi UserDefaults trong ứng dụng riêng sẽ
+thay đổi PlayerPrefs của game. Backend phải triển khai hành vi thật.
+Không tự ghi VerifiedSkin chỉ vì có SelectedSkin.
+
+Reply status:
+  {
+    "protocolVersion":1,"ok":true,"message":"Thông tin thực tế",
+    "snapshot":{
+      "protocolVersion":1,
+      "backendName":"Tên backend/phiên bản",
+      "connected":false,
+      "gameRunning":false,
+      "sessionID":null,
+      "gameVersion":null,
+      "supportedKeys":[],
+      "appliedRevision":null,
+      "heroes":[],
+      "reports":[],
+      "message":"Chưa kết nối game"
+    }
+  }
+
+Ý nghĩa:
+  connected: đã liên lạc được với game adapter thật, không chỉ dlopen được.
+  gameRunning: trạng thái quan sát thực tế của tiến trình game.
+  sessionID: khác nhau sau mỗi lần tiến trình game khởi động lại.
+  supportedKeys: danh sách đầy đủ các khóa có khả năng áp dụng thật.
+  appliedRevision: revision đã thực hiện thành công trong session hiện tại.
+  gameVersion: phiên bản/bản build xác định được từ game hiện tại.
+
+Apply phải kiểm tra toàn bộ cấu hình trước khi thay đổi, rồi thực hiện
+theo cơ chế transactional hoặc rollback do adapter cung cấp. Khi chưa
+hoàn tất, trả ok=false và message; không trả revision mới. Nếu tác vụ
+bất đồng bộ, chỉ trả acknowledgement sau khi game/helper xác nhận.
+UI kiểm tra connected, gameRunning, sessionID và revision trước khi
+hiển thị đã áp dụng. Khi kết nối/game/session mất, UI hủy xác nhận cũ.
+
+Nếu snapshot không có hoặc JSON/ABI lỗi, app không coi là áp dụng được.
+UI gửi toàn bộ trạng thái, bao gồm các công tắc false để có thể tắt
+chức năng đã bật trước đó. Vì vậy backend phải hỗ trợ đủ các khóa
+trong request; bản backend chỉ hỗ trợ một phần sẽ bị khóa Apply.
+
+heroes:
+  [{"id":123,"name":"Tên tướng thật",
+    "skins":[{"id":0,"name":"Mặc định"},{"id":7,"name":"Tên skin thật"}]}]
+  ID tướng và skin phải hợp lệ, duy nhất trong phạm vi tương ứng.
+
+reports:
+  [{"id":"ID-ban-ghi-duy-nhat","time":"Thời gian",
+    "information":"Thông tin","reason":"Lý do"}]
+  Phải có nguồn dữ liệu thật. Mảng rỗng không phải kết luận không có tố cáo.
+
+Giới hạn trả về: 4 MiB UTF-8 + NUL. Tất cả lời gọi được serialize trên
+actor riêng. Backend không được gọi trực tiếp API UIKit từ luồng đó.
+request chỉ sống trong một lần gọi; copy chuỗi nếu cần giữ lại.
+Mỗi response phải được release, kể cả JSON không hợp lệ.
+Backend phải trả kết quả trong thời gian ngắn; không chờ vô hạn. Nên
+đặt timeout ở IPC với helper vì không thể ngắt an toàn một hàm C treo.
+
+Nhóm khóa bắt buộc hiện tại:
+  __ifxEnemyEspEnabledV1
+  DoroCheat.Reference.R1.Box
+  DoroCheat.Reference.R1.Icon
+  DoroCheat.Reference.R1.HP
+  DoroCheat.Reference.R1.Map
+  DoroCheat.Reference.R1.Unseen
+  DoroCheat.Reference.R1.Check
+  DoroCheat.Style.Buttons
+  DoroCheat.Style.Banner
+  DoroCheat.Style.Skin
+  DoroCheat.Style.BeforeMatch
+  DoroCheat.Style.LiveChange
+  DoroCheat.Reference.R2.CameraScale
+  reports.enabled
+  DoroCheat.Style.SelectedSkin.<hero-id> cho mỗi lựa chọn đã lưu
+
+reports.enabled là khóa giao thức mới: backend phải chuyển thành hành
+vi tương ứng với phần Lua /checkto; không phải PlayerPrefs gốc được tìm
+thấy trong dump. Tất cả khóa khác nêu ở đây được đối chiếu từ bản phân tích.

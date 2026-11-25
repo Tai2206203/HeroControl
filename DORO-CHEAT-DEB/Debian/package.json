@@ -1,0 +1,9 @@
+{
+  "package": "local.dorocheat.deb",
+  "name": "DORO-CHEAT DEB",
+  "version": "0.18.0-1",
+  "application": "DORO-CHEAT-DEB.app",
+  "bundleID": "local.dorocheat.deb.app",
+  "minimumIOS": "15.0",
+  "stateHome": "/var/mobile/Library/Application Support/DORO-CHEAT-DEB"
+}

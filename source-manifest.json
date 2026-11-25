@@ -5,6 +5,11 @@
     "sha256": "690e428323738c6230a677e8e0d280844ab395ebf5b375c5d467bdf34d0f80c8"
   },
   {
+    "path": ".github/workflows/build-deb.yml",
+    "bytes": 1368,
+    "sha256": "f750c6b846e3fbcfc220953d1b1cb5b4b21fbf822de82323f26808eabfed3849"
+  },
+  {
     "path": ".github/workflows/build.yml",
     "bytes": 1800,
     "sha256": "89703fdbaad573ef0ef84e94e51fec25397b1a31b7457dc032759dcbfba6af75"
@@ -1536,8 +1541,8 @@
   },
   {
     "path": "scripts/source-manifest.py",
-    "bytes": 1586,
-    "sha256": "804bef54e9b5a26611635ddd908ed95bbb758e3bce68aa221984a6ca530db70f"
+    "bytes": 1626,
+    "sha256": "5544751d4f556c49a74f79bea4d48e5a0f5f661784d18e77208e378e7cf0d678"
   },
   {
     "path": "scripts/test-protection.sh",

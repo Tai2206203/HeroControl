@@ -1,0 +1,22 @@
+*.sh text eol=lf
+*.py text eol=lf
+*.swift text eol=lf
+*.m text eol=lf
+*.h text eol=lf
+*.c text eol=lf
+*.yml text eol=lf
+*.pbxproj text eol=lf
+*.xcscheme text eol=lf
+*.mm text eol=lf
+*.lua text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.plist text eol=lf
+*.entitlements text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+*.cpp text eol=lf
+*.def text eol=lf
+# Preserve pinned upstream bytes and provenance hashes.
+ThirdParty/oxorany/* -text -whitespace

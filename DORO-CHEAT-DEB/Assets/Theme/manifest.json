@@ -1,0 +1,123 @@
+{
+  "userImage": {
+    "file": "app-background.jpg",
+    "sha256": "db6c136b37bc07ccc5cfdb97d1f64ac113d0cf7fa42a1e58c432836eca758e27"
+  },
+  "skins": [
+    {
+      "file": "violet-sss.png",
+      "name": "Violet Thứ nguyên vệ thần",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/5a230c283bc53d65263a2767c4d5aa695d47db1ec7d731.png",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/violet/",
+      "sha256": "1fd215c0d1f111070e37df4fd3576159eecf555f72ada99892adbcc61d03fce7"
+    },
+    {
+      "file": "violet-nobara.jpg",
+      "name": "Violet Nobara Kugisaki",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/11120.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/violet/",
+      "sha256": "f39d73168268933191da438fa47714d25b44d60d58ad70b4f4844c2402917a61"
+    },
+    {
+      "file": "lauriel-sss.jpg",
+      "name": "Lauriel Thứ nguyên vệ thần",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/90cd11fae49cc1f2d032cf6042e5410b6593edf516ed51.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/lauriel/",
+      "sha256": "d3da61279157658c0d155e61f31dc2adfad809195b2831bca6de9e5c842a79ff",
+      "bytes": 195606
+    },
+    {
+      "file": "liliana-dragon.jpg",
+      "name": "Liliana Lưu Thủy Thần Long",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/20575ee697ef70d1cb0e37574045b6e065b37f8d100ef1.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/liliana/",
+      "sha256": "5c3481ab53a8fe3a859dac2fc3247cf74c1785b002939f632900620acd0900c4",
+      "bytes": 244904
+    },
+    {
+      "file": "diaochan-celestial.jpg",
+      "name": "Điêu Thuyền Nhật Nguyệt Thánh Linh",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/15217-1.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/dieu-thuyen/",
+      "sha256": "f3f3469e4a50b1cf85c20894dadc95df44685e39fee8c82376287ae91e26c66a",
+      "bytes": 151757
+    },
+    {
+      "file": "yena-spirit.jpg",
+      "name": "Yena Trấn Yêu Thần Lộc",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/15413.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/yena/",
+      "sha256": "7b9b639b43ec5ba7d39934ba9da7554e8868e9aa6f06643307f130b92b3a3563",
+      "bytes": 142780
+    },
+    {
+      "file": "veres-dragon.jpg",
+      "name": "Veres Lưu ly Long mẫu",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/166800754f2d53bfe14fa4766b947c62660396bcd38981.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/veres/",
+      "sha256": "90c4abf681f56b1c02cbae90b7001e070a64ae09553e73984c2813a995c5c5ba",
+      "bytes": 218314
+    },
+    {
+      "file": "airi-sss.jpg",
+      "name": "Airi Thứ nguyên Vệ thần",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/d65869161b8ef0576b06c65e7f437a46659670695e35e1.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/airi/",
+      "sha256": "973e874bdfdbac0fb1bc70b94f6f2d779cec0040cdb552576a6d4d9eda49d6ff",
+      "bytes": 305842
+    },
+    {
+      "file": "sephera-nova.jpg",
+      "name": "Sephera NoVa Stardust",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/Sephera-Nova.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/sephera/",
+      "sha256": "2e7ccf08bdb61a840a5da0af0b5ef56104dd004c868886ff6d3461d19d2352c4",
+      "bytes": 141889
+    },
+    {
+      "file": "telannas-fee-sss.jpg",
+      "name": "Tel'Annas Thần sứ F.E.E-X1",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/acd939e7bd203ceebe66450431292e5a5cd114a5b51f11.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/telannas/",
+      "sha256": "fe6ea6da318fb789678fcdbc1b7ac0da7f1fbfb7d3eba28b7d6fcab1c8257dea",
+      "bytes": 247965
+    },
+    {
+      "file": "telannas-dimension-sss.jpg",
+      "name": "Tel'Annas Thứ nguyên vệ thần",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/a8711ec71b74022f658d35c1c8f4f63b5fbb7a7bc5ba51.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/telannas/",
+      "sha256": "8f303369dd5c8a54f34d9583a5e6b10c413d8e93de46c4e3daf7e2831534933a",
+      "bytes": 481937
+    },
+    {
+      "file": "telannas-newyear-sss.jpg",
+      "name": "Tel'Annas Tân niên vệ thần",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/700a2b1db620403126bb04ff26dace86659653e9112c71.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/telannas/",
+      "sha256": "2bde03b3be0f3c26710396bd101ba7408f89c91d4d49d5690b4bad27ec3f3eac",
+      "bytes": 279838
+    },
+    {
+      "file": "butterfly-phoenix-sss.jpg",
+      "name": "Butterfly Phượng Cửu Thiên",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/c192c05d24cefe6ad9bb61ef8e5ab5ca5e4530f0d4ad51.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/butterfly/",
+      "sha256": "607f4142c1ff69fa2323e490c030fe0d38e1552361924345771f35657c840ebe",
+      "bytes": 367279
+    },
+    {
+      "file": "liliana-magic-sss.jpg",
+      "name": "Liliana Ma Pháp Tối Thượng",
+      "tier": "SSS",
+      "url": "https://lienquan.garena.vn/wp-content/uploads/2024/05/51015.jpg",
+      "page": "https://lienquan.garena.vn/hoc-vien/tuong-skin/d/liliana/",
+      "sha256": "6288e4f1af2d4db148f1fac87d8e629ada4cf8d9ba0d4a5c91f3bf42a1f3a38d",
+      "bytes": 150931
+    }
+  ]
+}

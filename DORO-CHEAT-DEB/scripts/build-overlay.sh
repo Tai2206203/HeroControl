@@ -1,0 +1,102 @@
+#!/bin/bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+OUTPUT="$ROOT/.build/Overlay"
+SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+GENERATION="$(python3 "$ROOT/scripts/runtime-generation.py")"
+source "$ROOT/scripts/build-protection.sh"
+hc_build_protection iphoneos OVERLAY "$OUTPUT/protected-ios.o" -arch arm64 -miphoneos-version-min=15.0
+hc_build_protection iphoneos BACKEND "$OUTPUT/protected-bridge.o" -arch arm64 -miphoneos-version-min=15.0
+hc_build_protection macosx BACKEND "$OUTPUT/protected-bridge-host.o"
+mkdir -p "$OUTPUT/HeroOverlay.app"
+python3 "$ROOT/scripts/generate-overlay-features.py" "$OUTPUT/HCFeatures.h"
+xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
+    -miphoneos-version-min=15.0 -fobjc-arc -Wall -Wextra \
+    -Werror=implicit-function-declaration -I"$OUTPUT" \
+    "-DHC_RUNTIME_GENERATION=\"$GENERATION\"" \
+    -framework Foundation -framework CoreFoundation -framework UIKit -framework QuartzCore -framework CoreGraphics -framework ImageIO \
+    "$ROOT/Overlay/HeroOverlay.m" "$ROOT/Overlay/CameraEngine.m" "$OUTPUT/protected-ios.o" "$OUTPUT/protected-ios.o.opaque.o" -lc++ -Wl,-x -o "$OUTPUT/HeroOverlay.app/hero-overlay"
+cp "$ROOT/Overlay/Info.plist" "$OUTPUT/HeroOverlay.app/Info.plist"
+ditto "$ROOT/Assets/HeroIcons" "$OUTPUT/HeroOverlay.app/HeroIcons"
+ditto "$ROOT/Assets/Theme" "$OUTPUT/HeroOverlay.app/Theme"
+xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
+    -miphoneos-version-min=15.0 -fobjc-arc -Wall -Wextra -dynamiclib -fvisibility=hidden \
+    "-DHC_RUNTIME_GENERATION=\"$GENERATION\"" \
+    -framework Foundation -install_name @rpath/HeroOverlayBridge.dylib \
+    "$ROOT/Overlay/OverlayBridge.m" "$OUTPUT/protected-bridge.o" "$OUTPUT/protected-bridge.o.opaque.o" -lc++ -Wl,-x -o "$OUTPUT/HeroOverlayBridge.dylib"
+# Compile and exercise the actual preparation preflight without an iPhone/helper.
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -Werror=implicit-function-declaration -framework Foundation \
+    "$ROOT/scripts/reports-preparation-check.m" -o "$OUTPUT/reports-preparation-check"
+"$OUTPUT/reports-preparation-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -I"$OUTPUT" -framework Foundation \
+    "$ROOT/scripts/settings-store-check.m" -o "$OUTPUT/settings-store-check"
+"$OUTPUT/settings-store-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -std=c11 -Wall -Wextra -Werror "$ROOT/scripts/drawer-motion-check.c" -o "$OUTPUT/drawer-motion-check"
+xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Werror "$ROOT/scripts/input-capture-check.c" -o "$OUTPUT/input-capture-check"
+"$OUTPUT/input-capture-check"
+"$OUTPUT/drawer-motion-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation "$ROOT/scripts/report-notice-check.m" -o "$OUTPUT/report-notice-check"
+"$OUTPUT/report-notice-check"
+# Also exercise invalid input/unsupported-host responses of the actual ABI.
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -dynamiclib -fvisibility=hidden -framework Foundation \
+    "$ROOT/Overlay/OverlayBridge.m" "$OUTPUT/protected-bridge-host.o" "$OUTPUT/protected-bridge-host.o.opaque.o" -lc++ -Wl,-x -o "$OUTPUT/overlay-host.dylib"
+python3 "$ROOT/scripts/check-overlay-bridge.py" "$OUTPUT/overlay-host.dylib"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/overlay-lock-check.c" -o "$OUTPUT/overlay-lock-check"
+python3 "$ROOT/scripts/check-overlay-lock.py" "$OUTPUT/overlay-lock-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/camera-memory-check.c" -o "$OUTPUT/camera-memory-check"
+"$OUTPUT/camera-memory-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/esp-memory-check.c" -o "$OUTPUT/esp-memory-check"
+"$OUTPUT/esp-memory-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/esp-presentation-check.c" -o "$OUTPUT/esp-presentation-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/minimap-check.c" -o "$OUTPUT/minimap-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/esp-visual-check.c" -o "$OUTPUT/esp-visual-check"
+"$OUTPUT/esp-visual-check"
+"$OUTPUT/minimap-check"
+"$OUTPUT/esp-presentation-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/logic-esp-check.c" -o "$OUTPUT/logic-esp-check"
+"$OUTPUT/logic-esp-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/lua-reports-check.c" -o "$OUTPUT/lua-reports-check"
+"$OUTPUT/lua-reports-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -Wall -Wextra -Werror "$ROOT/scripts/remote-cstring-check.c" -o "$OUTPUT/remote-cstring-check"
+"$OUTPUT/remote-cstring-check"
+printf 'Built independent Hero Control overlay: %s\n' "$OUTPUT"
+
+python3 "$ROOT/scripts/verify-protection.py" --group OVERLAY "$OUTPUT/HeroOverlay.app/hero-overlay"
+
+python3 "$ROOT/scripts/verify-protection.py" --group BACKEND "$OUTPUT/HeroOverlayBridge.dylib"
+
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -std=c11 -Wall -Wextra -Werror "$ROOT/scripts/report-scroll-check.c" -o "$OUTPUT/report-scroll-check"
+"$OUTPUT/report-scroll-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation "$ROOT/scripts/report-analysis-check.m" -o "$OUTPUT/report-analysis-check"
+"$OUTPUT/report-analysis-check"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation -framework ImageIO -framework CoreGraphics \
+    "$ROOT/scripts/theme-assets-check.m" -o "$OUTPUT/theme-assets-check"
+"$OUTPUT/theme-assets-check" "$OUTPUT/HeroOverlay.app"
+
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation "$ROOT/scripts/read-memory-check.m" -o "$OUTPUT/read-memory-check"
+"$OUTPUT/read-memory-check"
+
+hc_build_protection macosx OVERLAY "$OUTPUT/protected-worker-host.o"
+xcrun --sdk macosx clang -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
+    -fobjc-arc -Wall -Wextra -framework Foundation -framework CoreFoundation \
+    "$ROOT/Overlay/CameraEngine.m" "$ROOT/scripts/read-memory-worker-check.m" \
+    "$OUTPUT/protected-worker-host.o" "$OUTPUT/protected-worker-host.o.opaque.o" -lc++ -o "$OUTPUT/read-memory-worker-check"
+"$OUTPUT/read-memory-worker-check"

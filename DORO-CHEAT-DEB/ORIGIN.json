@@ -1,0 +1,9 @@
+{
+  "sourceProject": "DORO-CHEAT TIPA",
+  "sourceCommit": "76f345e",
+  "sourceVersion": "0.18.0",
+  "sourceBuild": 38,
+  "independentSource": true,
+  "bundleID": "local.dorocheat.deb.app",
+  "stateHome": "/var/mobile/Library/Application Support/DORO-CHEAT-DEB"
+}

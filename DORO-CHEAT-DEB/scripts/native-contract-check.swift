@@ -1,0 +1,58 @@
+import Foundation
+
+// Builds alongside the production Models.swift and NativeBackend.swift on the
+// macOS runner. Exercises the real Objective-C -> C ABI -> JSON -> Swift path.
+@main
+struct NativeContractCheck {
+    static func main() async throws {
+        guard CommandLine.arguments.count == 2 else { fatalError("Expected dylib path") }
+        let backend = NativeBackend(libraryURL: URL(fileURLWithPath: CommandLine.arguments[1]))
+        let reply = try await backend.send(action: "status")
+        guard reply.ok, let snapshot = reply.snapshot, let report = snapshot.diagnostics,
+              !snapshot.connected, !snapshot.gameRunning, snapshot.gameInspectionAvailable == false,
+              snapshot.supportedKeys.isEmpty, !report.kernelProbeRequested, !report.kernelReadVerified,
+              report.jailbreakRoots != nil, report.resolverNotes != nil, report.providerChecks != nil else {
+            fatalError("Native diagnostics response violated the Swift contract")
+        }
+        let trace = await backend.exchangeTrace()
+        guard trace?.stage == "complete", trace?.rawResponse != nil else { fatalError("Missing response trace") }
+        let client: any BackendClient = backend
+        let protocolTrace = await client.exchangeTrace()
+        guard protocolTrace?.stage == trace?.stage, protocolTrace?.rawResponse == trace?.rawResponse else {
+            fatalError("Concrete and protocol calls returned different response traces")
+        }
+        let inspected = try await backend.send(action: "inspectGame")
+        guard inspected.ok, let game = inspected.snapshot?.gameInspection,
+              game.code == "game_inspection_requires_device", !game.gameRunning,
+              !game.processScanSucceeded, !game.memoryReadVerified, !game.moduleMatchesDump,
+              inspected.snapshot?.connected == false, inspected.snapshot?.supportedKeys.isEmpty == true,
+              inspected.snapshot?.gameProbeDiagnostics != nil else {
+            fatalError("Host game-inspection contract or refusal to read other processes failed")
+        }
+        do {
+            _ = try await backend.send(action: "apply", revision: "must-not-ack", settings: ControlSettings())
+            fatalError("Diagnostics backend unexpectedly accepted apply")
+        } catch let BackendError.rejected(_, data) {
+            let refused = try BackendReplyDecoder.decode(data)
+            guard !refused.ok, refused.snapshot?.connected == false else {
+                fatalError("Rejected response lost its diagnostic snapshot")
+            }
+            let refusalTrace = await backend.exchangeTrace()
+            guard refusalTrace?.stage == "rejected" else { fatalError("Missing rejection trace") }
+        }
+
+        let numeric = Data(#"{"protocolVersion":1,"ok":1,"message":"old broken response"}"#.utf8)
+        let runtimeStatus = try await backend.send(action: "runtimeStatus")
+        guard runtimeStatus.snapshot?.connected == false,
+              runtimeStatus.snapshot?.runtimeDiagnostics?.code == "runtime_requires_device" else {
+            fatalError("Host must refuse runtime operations without installing anything")
+        }
+        do {
+            _ = try BackendReplyDecoder.decode(numeric)
+            fatalError("Numeric JSON ok was accepted as a boolean")
+        } catch {
+            guard error.localizedDescription.contains("$.ok") else { throw error }
+        }
+        print("Production C ABI -> JSON -> Swift contract passed; numeric ok regression rejected at $.ok.")
+    }
+}

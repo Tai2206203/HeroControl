@@ -1,0 +1,41 @@
+name: Build DORO-CHEAT DEB
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  deb:
+    runs-on: macos-15
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        scheme: [roothide, rootless, rootful]
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate independent DEB source
+        run: |
+          python3 scripts/source-manifest.py
+          python3 scripts/validate-project.py
+          python3 scripts/verify-runtime-payload.py
+          python3 scripts/verify-protection.py
+          python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Test protected native constants
+        run: bash scripts/test-protection.sh
+      - name: Build independent DEB
+        run: bash scripts/build-deb.sh ${{ matrix.scheme }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DORO-CHEAT-DEB-${{ matrix.scheme }}
+          path: |
+            dist/*.deb
+            dist/*.deb.sha256
+            dist/DORO-CHEAT-DEB-source.zip
+            dist/DORO-CHEAT-DEB-source.zip.sha256
+            dist/signing-report-*.json
+          if-no-files-found: error

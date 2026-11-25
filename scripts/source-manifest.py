@@ -21,7 +21,7 @@ def main():
     destination = ROOT / 'source-manifest.json'
     if args.write:
         names = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT).decode('utf8').split('\0')
-        paths = sorted({p for p in names if p and p != 'source-manifest.json' and (ROOT / p).is_file()})
+        paths = sorted({p for p in names if p and p != 'source-manifest.json' and not p.startswith('DORO-CHEAT-DEB/') and (ROOT / p).is_file()})
         items = [entry(p) for p in paths]
         destination.write_text(json.dumps(items, ensure_ascii=False, indent=2)+'\n', encoding='utf8', newline='\n')
     else:
