@@ -32,14 +32,14 @@ jobs:
         run: bash scripts/test-simulator.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: HeroControl-TIPA-diagnostics
+          name: DORO-CHEAT-TIPA
           path: |
-            dist/HeroControl.tipa
-            dist/HeroControl.tipa.sha256
+            dist/DORO-CHEAT.tipa
+            dist/DORO-CHEAT.tipa.sha256
             dist/signing-report.json
           if-no-files-found: error
       - name: Send successful build to Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python3 scripts/send-telegram.py dist/HeroControl.tipa
+        run: python3 scripts/send-telegram.py dist/DORO-CHEAT.tipa

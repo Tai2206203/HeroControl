@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#define HC_RUNTIME_BUILD "31"
+#define HC_RUNTIME_BUILD "32"
 #ifndef HC_RUNTIME_GENERATION
 #define HC_RUNTIME_GENERATION "development"
 #endif
@@ -44,7 +44,7 @@ static inline BOOL HCRuntimeSettingsValid(id settings) {
         id flag=settings[key];
         if (flag && (![flag isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)flag)!=CFBooleanGetTypeID())) return NO;
     }
-    NSDictionary *ranges=@{@"minimapPortraitX":@[@0,@1],@"minimapPortraitY":@[@0,@1],@"minimapPortraitSize":@[@80,@240],@"minimapX":@[@0,@1],@"minimapY":@[@0,@1],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200],@"minimapIconSize":@[@8,@40],@"espBoxWidthScale":@[@0.5,@3],@"espBoxHeightScale":@[@0.5,@3],@"espIconSize":@[@12,@64],@"minimapCenterX":@[@-200,@200],@"minimapCenterZ":@[@-200,@200],@"minimapAngle":@[@-180,@180]};
+    NSDictionary *ranges=@{@"espCombinedScale":@[@0.5,@4],@"minimapPortraitX":@[@0,@1],@"minimapPortraitY":@[@0,@1],@"minimapPortraitSize":@[@80,@240],@"minimapX":@[@0,@1],@"minimapY":@[@0,@1],@"minimapSize":@[@80,@240],@"minimapWorldExtent":@[@30,@200],@"minimapIconSize":@[@8,@40],@"espBoxWidthScale":@[@0.5,@3],@"espBoxHeightScale":@[@0.5,@3],@"espIconSize":@[@12,@64],@"minimapCenterX":@[@-200,@200],@"minimapCenterZ":@[@-200,@200],@"minimapAngle":@[@-180,@180]};
     for (NSString *key in ranges) {
         id value=settings[key];NSArray *range=ranges[key];
         if (value && (![value isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)value)==CFBooleanGetTypeID() ||

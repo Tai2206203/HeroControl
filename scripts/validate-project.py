@@ -18,6 +18,9 @@ for file in (root / 'HeroControlTests').glob('*.swift'):
     assert f'path = "{file.name}";' in project, f'Test missing from project: {file.name}'
 info = plistlib.loads((root / 'HeroControl/Info.plist').read_bytes())
 assert info['CFBundlePackageType'] == 'APPL'
+assert info['CFBundleDisplayName'] == 'DORO-CHEAT'
+assert 'ASSETCATALOG_COMPILER_APPICON_NAME' in project and 'Assets.xcassets' in project
+assert 'DORO-CHEAT.tipa' in (root / 'scripts/build-tipa.sh').read_text('utf8')
 scheme = ET.parse(root / 'HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme')
 assert scheme.find('.//TestableReference/BuildableReference') is not None
 for ref in scheme.findall('.//BuildableReference'):

@@ -10,6 +10,7 @@
 #include "OverlayLock.h"
 #include "CapturePolicy.h"
 #include "../BackendSDK/EspPresentation.h"
+#include "../BackendSDK/CameraControl.h"
 #import "CameraEngine.h"
 #import "HeroAssets.h"
 #include "../BackendSDK/MinimapProjection.h"
@@ -127,7 +128,7 @@ static void HCState(void) {
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
         @"displayLimitHz": @(UIScreen.mainScreen.maximumFramesPerSecond), @"overlayDrawFPS": @(HCEspDrawFPS),
         @"reports": HCReportsStatus ?: @{@"code": @"reports_disabled", @"message": @"Đọc thư tố cáo đang tắt.", @"records": @[], @"querySupported": @NO},
-        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.14.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
+        @"settingsError": HCSettingsError ?: @"", @"appVersion": @"0.15.0", @"generation": @HC_RUNTIME_GENERATION, @"stage": HCStartupStage};
     NSData *data = [NSJSONSerialization dataWithJSONObject:state options:0 error:NULL];
     NSString *path = [HCDirectory stringByAppendingPathComponent:@"state.json"];
     NSError *writeError = nil;
@@ -160,8 +161,6 @@ static void HCStop(NSString *message, BOOL failed) {
 @property(nonatomic) CGPoint startPoint;
 @property(nonatomic) CGPoint startBubble;
 @property(nonatomic) BOOL dragged;
-@property(nonatomic, copy) NSString *reportCopyMessage;
-@property(nonatomic) NSTimeInterval reportCopyUntil;
 @property(nonatomic) NSTimeInterval cameraLastSave;
 @property(nonatomic) BOOL pendingSettingsSave;
 @property(nonatomic,copy) NSString *settingsNotice;
@@ -171,6 +170,7 @@ static void HCStop(NSString *message, BOOL failed) {
 - (void)cancelInteraction;
 @property(nonatomic,strong) HCEspDrawingView *espView;
 - (void)toggleMenu;
+- (void)welcome;
 - (void)receivePoint:(CGPoint)point phase:(UITouchPhase)phase pointer:(NSInteger)pointer;
 @end
 
@@ -178,6 +178,7 @@ static UIColor *HCAccent(void) { return [UIColor colorWithRed:0.39 green:0.88 bl
 static UIColor *HCMenuAccent(void) { return [UIColor colorWithRed:0.02 green:0.43 blue:0.36 alpha:1]; }
 static NSArray *HCCalibrationFields(void) {
     static NSArray *fields;static dispatch_once_t once;dispatch_once(&once,^{ fields=@[
+        @{@"key":@"espCombinedScale",@"title":@"Cỡ box + icon",@"min":@0.5,@"max":@4,@"step":@0.05,@"default":@1},
         @{@"key":@"minimapX",@"title":@"Khung ngang",@"min":@0,@"max":@1,@"step":@0.005,@"default":@0.015},
         @{@"key":@"minimapY",@"title":@"Khung dọc",@"min":@0,@"max":@1,@"step":@0.005,@"default":@0.02},
         @{@"key":@"minimapSize",@"title":@"Cỡ khung",@"min":@80,@"max":@240,@"step":@1,@"default":@150},
@@ -213,7 +214,8 @@ static NSArray *HCFilteredReports(NSDictionary *status,NSString *period) {
     return result;
 }
 static void HCText(NSString *text, CGRect rect, CGFloat size, UIColor *color, BOOL bold) {
-    [text drawInRect:rect withAttributes:@{NSFontAttributeName: bold ? [UIFont boldSystemFontOfSize:size] : [UIFont systemFontOfSize:size],
+    (void)bold;
+    [text drawInRect:rect withAttributes:@{NSFontAttributeName: [UIFont boldSystemFontOfSize:size],
         NSForegroundColorAttributeName: color}];
 }
 static CGFloat HCClamp(CGFloat value, CGFloat lower, CGFloat upper) { return MAX(lower, MIN(value, MAX(lower, upper))); }
@@ -239,7 +241,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     NSInteger _calibrationPage, _reportRecordIndex;
     BOOL _editingMinimap;
     CGRect _startMapRect;
-    double _menuOpenedAt, _nextMenuRedraw, _emptyEspSince;
+    double _menuOpenedAt, _nextMenuRedraw, _emptyEspSince, _welcomeUntil;
     BOOL _imagesPurged;
     HCEspScreenState _screenStates[HC_ESP_MAX_TARGETS];
     NSInteger _screenPID;
@@ -300,7 +302,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             } else if (!flag || CFGetTypeID((__bridge CFTypeRef)flag) != CFBooleanGetTypeID()) valid = NO;
         }
         if (!valid) {
-            HCSettingsError = @"Cấu hình sai kiểu dữ liệu. Mở Hero Control để kiểm tra.";
+            HCSettingsError = @"Cấu hình sai kiểu dữ liệu. Mở DORO-CHEAT để kiểm tra.";
             self.settings = nil; [self setNeedsDisplay]; return;
         }
         self.settings = [settings mutableCopy];
@@ -308,7 +310,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         self.baseSettings = [settings copy];
         HCSettingsError = nil;
     } else {
-        HCSettingsError = @"Không đọc được cấu hình. Mở lại Hero Control để kiểm tra.";
+        HCSettingsError = @"Không đọc được cấu hình. Mở lại DORO-CHEAT để kiểm tra.";
         // Do not replace a corrupt profile with invented defaults.
         self.settings = nil;
     }
@@ -324,7 +326,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
     struct stat lockInfo={0};
     if (editLock<0 || fstat(editLock,&lockInfo) || !S_ISREG(lockInfo.st_mode) || lockInfo.st_uid!=501 || flock(editLock,LOCK_EX|LOCK_NB)) {
         if (editLock>=0) close(editLock);
-        HCSettingsError=@"Chưa lấy được khóa chỉnh cấu hình. Thử lại trong Hero Control.";return;
+        HCSettingsError=@"Chưa lấy được khóa chỉnh cấu hình. Thử lại trong DORO-CHEAT.";return;
     }
     // Merge only the fields changed by this gesture. An app edit completed
     // during a slider drag must survive the HUD's eventual atomic replacement.
@@ -374,6 +376,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 }
 - (void)tile:(CGRect)rect title:(NSString *)title subtitle:(NSString *)subtitle image:(int32_t)hero action:(NSString *)action {
     HCFillGradient(rect,[UIColor colorWithWhite:0.98 alpha:1],[UIColor colorWithWhite:0.93 alpha:1]);
+    CGContextRef context=UIGraphicsGetCurrentContext();CGContextSaveGState(context);
+    [[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:14] addClip];
+    NSString *cover=hero==130 ? @"violet-sss.png" : hero==156 ? @"veres-dragon.jpg" : hero==118 ? @"sephera-nova.jpg" : hero==537 ? @"liliana-dragon.jpg" : @"diaochan-celestial.jpg";
+    HCDrawImageFill(HCThemeImage(cover),rect,0.72,1);
+    [[UIColor colorWithWhite:1 alpha:0.57] setFill];UIRectFill(rect);CGContextRestoreGState(context);
     NSString *glyph=hero==130 || hero==156 ? @"viewfinder" : hero==118 ? @"slider.horizontal.3" : hero==537 ? @"camera.fill" : @"envelope.fill";
     UIImage *symbol=[[UIImage systemImageNamed:glyph] imageWithTintColor:[HCMenuAccent() colorWithAlphaComponent:0.22] renderingMode:UIImageRenderingModeAlwaysOriginal];
     [symbol drawInRect:CGRectMake(CGRectGetMaxX(rect)-43,rect.origin.y+10,28,28)];
@@ -490,6 +497,10 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         double fade=_menuOpenedAt>0 ? HCClamp((NSProcessInfo.processInfo.systemUptime-_menuOpenedAt)/0.18,0,1) : 1;
         CGContextSetAlpha(ctx,fade);
         [UIColor.whiteColor setFill];[outline fill];
+        CGContextSaveGState(ctx);[outline addClip];
+        HCDrawImageFill(HCThemeImage(HCMenuArt(self.group)),p,0.30,1);
+        [[UIColor colorWithWhite:1 alpha:0.48] setFill];UIRectFill(p);
+        CGContextRestoreGState(ctx);
         CGFloat pulse=0.18+0.08*sin(NSProcessInfo.processInfo.systemUptime*1.7);
         [[HCMenuAccent() colorWithAlphaComponent:pulse] setStroke];
         UIBezierPath *accent=[UIBezierPath bezierPath];[accent moveToPoint:CGPointMake(p.origin.x+66,p.origin.y+50)];
@@ -504,11 +515,16 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             CGRect r=CGRectMake(side.origin.x+3,side.origin.y+6+i*step,38,step-3);
             BOOL selected=self.group==[groups[i] integerValue];
             if(selected) { [[UIColor colorWithWhite:0.82 alpha:0.6] setFill];[[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:12] fill]; }
-            UIImage *symbol=[[UIImage systemImageNamed:symbols[i]] imageWithTintColor:selected ? UIColor.blackColor : UIColor.grayColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+            CGContextSaveGState(ctx);[[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:11] addClip];
+            HCDrawImageFill(HCThemeImage(HCMenuArt([groups[i] integerValue])),r,1,1);
+            [[UIColor.blackColor colorWithAlphaComponent:selected ? 0.22 : 0.46] setFill];UIRectFill(r);
+            CGContextRestoreGState(ctx);
+            if(selected) { [HCAccent() setStroke];UIBezierPath *tabEdge=[UIBezierPath bezierPathWithRoundedRect:r cornerRadius:11];tabEdge.lineWidth=2;[tabEdge stroke]; }
+            UIImage *symbol=[[UIImage systemImageNamed:symbols[i]] imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
             [symbol drawInRect:CGRectMake(CGRectGetMidX(r)-11,CGRectGetMidY(r)-11,22,22)];
             [self target:[NSString stringWithFormat:@"tab:%@",groups[i]] rect:r];
         }
-        HCText(@"HERO CONTROL",CGRectMake(p.origin.x+66,p.origin.y+14,p.size.width-130,20),15,UIColor.blackColor,YES);
+        HCText(@"DORO-CHEAT",CGRectMake(p.origin.x+66,p.origin.y+14,p.size.width-130,20),15,UIColor.blackColor,YES);
         HCText(@"BẢNG ĐIỀU KHIỂN",CGRectMake(p.origin.x+66,p.origin.y+34,p.size.width-130,14),10,UIColor.darkGrayColor,YES);
         CGRect close=CGRectMake(CGRectGetMaxX(p)-47,p.origin.y+9,34,32);
         HCText(@"×",CGRectInset(close,10,0),30,UIColor.blackColor,NO);[self target:@"close" rect:close];
@@ -536,18 +552,24 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 [self tile:CGRectMake(x+tw+10,c.origin.y+th+12,tw,th) title:@"REPORTS" subtitle:@"LỊCH SỬ TỐ CÁO" image:193 action:@"tab:4"];
             }
         } else if(self.group==1) {
-            double scale=[self.settings[@"cameraScale"] doubleValue];
-            HCText([NSString stringWithFormat:@"CAMERA  %.2f×",scale],CGRectMake(c.origin.x,c.origin.y,c.size.width,30),22,UIColor.blackColor,YES);
-            CGRect enable=CGRectMake(c.origin.x,c.origin.y+40,c.size.width,36);
+            double distance=HCCameraDistance([self.settings[@"cameraScale"] doubleValue]);
+            HCText([NSString stringWithFormat:@"CAM XA  %.2f / 2",distance],CGRectMake(c.origin.x,c.origin.y,c.size.width,30),22,UIColor.blackColor,YES);
+            CGRect enable=CGRectMake(c.origin.x,c.origin.y+36,c.size.width,28);
             HCText([self.settings[@"cameraEnabled"] boolValue] ? @"CAMERA XA     ON" : @"CAMERA XA     OFF",enable,16,HCMenuAccent(),YES);[self target:@"cameraEnabled" rect:enable];
-            CGRect slider=CGRectMake(c.origin.x,c.origin.y+100,c.size.width,34);
-            [[UIColor colorWithWhite:0.8 alpha:1] setFill];UIRectFill(CGRectMake(slider.origin.x,slider.origin.y+15,slider.size.width,4));
-            CGFloat knob=slider.origin.x+(scale-1)/1.3*slider.size.width;
-            [HCMenuAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-9,slider.origin.y+8,18,18)] fill];[self target:@"camera" rect:slider];
-            CGRect minus=CGRectMake(c.origin.x,c.origin.y+136,50,24),plus=CGRectMake(CGRectGetMaxX(c)-50,c.origin.y+136,50,24);
+            CGRect slider=CGRectMake(c.origin.x,c.origin.y+80,c.size.width,28);
+            [[UIColor colorWithWhite:0.8 alpha:1] setFill];UIRectFill(CGRectMake(slider.origin.x,CGRectGetMidY(slider)-2,slider.size.width,4));
+            CGFloat knob=slider.origin.x+distance/2*slider.size.width;
+            [HCMenuAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(knob-9,CGRectGetMidY(slider)-9,18,18)] fill];[self target:@"camera" rect:slider];
+            CGRect minus=CGRectMake(c.origin.x,c.origin.y+115,50,22),plus=CGRectMake(CGRectGetMaxX(c)-50,c.origin.y+115,50,22);
             HCText(@"− 0.05",minus,12,HCMenuAccent(),YES);HCText(@"+ 0.05",plus,12,HCMenuAccent(),YES);
             [self target:@"camera-minus" rect:minus];[self target:@"camera-plus" rect:plus];
-            HCText(HCCameraStatus[@"message"] ?: @"Bật camera và kiểm tra trong trận.",CGRectMake(c.origin.x,c.origin.y+170,c.size.width,60),12,UIColor.darkGrayColor,NO);
+            double combined=[self.settings[@"espCombinedScale"] doubleValue] ?: 1;
+            HCText([NSString stringWithFormat:@"CỠ BOX + ICON   %.2f×",combined],CGRectMake(c.origin.x,c.origin.y+147,c.size.width,18),11,HCMenuAccent(),YES);
+            CGRect espSlider=CGRectMake(c.origin.x,c.origin.y+172,c.size.width,24);
+            [[UIColor colorWithWhite:0.8 alpha:1] setFill];UIRectFill(CGRectMake(espSlider.origin.x,CGRectGetMidY(espSlider)-2,espSlider.size.width,4));
+            CGFloat espKnob=espSlider.origin.x+(HCClamp(combined,0.5,4)-0.5)/3.5*espSlider.size.width;
+            [HCMenuAccent() setFill];[[UIBezierPath bezierPathWithOvalInRect:CGRectMake(espKnob-7,CGRectGetMidY(espSlider)-7,14,14)] fill];
+            [self target:@"esp-combined" rect:espSlider];
         } else if(self.group==2) {
             HCText(@"CẤU HÌNH CỦA BẠN",CGRectMake(c.origin.x,c.origin.y,c.size.width,28),16,HCMenuAccent(),YES);
             HCText(@"Thay đổi được tự lưu. LƯU tạo một bản riêng; TẢI khôi phục bản đó, gồm cả khung minimap ngang/dọc.",CGRectMake(c.origin.x,c.origin.y+35,c.size.width,44),11,UIColor.darkGrayColor,NO);
@@ -597,9 +619,6 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             }
             CGRect retry=CGRectMake(c.origin.x,c.origin.y+99,c.size.width*0.45,23);
             HCText(@"↻ THỬ LẠI",retry,11,HCMenuAccent(),YES);[self target:@"reports-refresh" rect:retry];
-            CGRect copy=CGRectMake(c.origin.x+c.size.width*0.48,c.origin.y+99,c.size.width*0.52,23);
-            HCText(self.reportCopyUntil>NSProcessInfo.processInfo.systemUptime ? self.reportCopyMessage : @"COPY LOG TỐ CÁO",copy,10,HCMenuAccent(),YES);
-            [self target:@"reports-copy" rect:copy];
             NSArray *periods=@[@"all",@"week",@"month"],*titles=@[@"TẤT CẢ",@"TUẦN NÀY",@"THÁNG NÀY"];
             NSString *period=self.settings[@"reportsPeriod"] ?: @"all";
             for(NSInteger i=0;i<3;i++) {
@@ -631,6 +650,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 NSDictionary *feature=features[i];
                 CGRect row=CGRectMake(c.origin.x+(i%columns)*(cellWidth+gap),c.origin.y+(i/columns)*rowHeight,cellWidth,rowHeight-6);
                 [[UIColor colorWithWhite:0.95 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:row cornerRadius:10] fill];
+                CGContextSaveGState(ctx);[[UIBezierPath bezierPathWithRoundedRect:row cornerRadius:10] addClip];
+                NSArray *art=HCMenuArtFiles();HCDrawImageFill(HCThemeImage(art[i%art.count]),row,0.45,1);
+                [[UIColor colorWithWhite:1 alpha:0.55] setFill];UIRectFill(row);CGContextRestoreGState(ctx);
                 BOOL on=[self.settings[@"flags"][feature[@"key"]] boolValue];
                 HCText(feature[@"title"],CGRectMake(row.origin.x+10,row.origin.y+9,row.size.width-54,row.size.height),12,UIColor.blackColor,NO);
                 HCText(on ? @"ON" : @"OFF",CGRectMake(CGRectGetMaxX(row)-38,row.origin.y+9,34,22),10,on ? HCMenuAccent() : UIColor.grayColor,YES);
@@ -665,6 +687,14 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         HCText(@"XONG",CGRectInset(done,9,5),10,UIColor.blackColor,YES);
         CGRect resize=[self minimapResizeRect];[HCAccent() setFill];[[UIBezierPath bezierPathWithRoundedRect:resize cornerRadius:6] fill];
         HCText(@"↘",CGRectInset(resize,5,3),18,UIColor.blackColor,YES);
+    }
+    if(_welcomeUntil>NSProcessInfo.processInfo.systemUptime) {
+        CGFloat width=MIN(356,self.bounds.size.width-32);
+        CGRect toast=CGRectMake((self.bounds.size.width-width)/2,MAX(44,self.safeAreaInsets.top+10),width,66);
+        [[UIColor colorWithRed:0.055 green:0.075 blue:0.11 alpha:0.95] setFill];
+        [[UIBezierPath bezierPathWithRoundedRect:toast cornerRadius:18] fill];
+        HCText(@"DORO-CHEAT",CGRectMake(toast.origin.x+16,toast.origin.y+12,width-32,20),16,HCAccent(),YES);
+        HCText(@"chúc bạn chơi game vui vẻ",CGRectMake(toast.origin.x+16,toast.origin.y+36,width-32,20),13,UIColor.whiteColor,YES);
     }
     CGRect bubble = [self bubbleRect];
     CGContextRef bubbleContext=UIGraphicsGetCurrentContext();CGContextSaveGState(bubbleContext);
@@ -759,10 +789,13 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if (!isfinite(height) || height < 4 || height > h) continue;
         CGFloat widthScale=HCClamp([self.settings[@"espBoxWidthScale"] doubleValue] ?: 1,0.5,3);
         CGFloat heightScale=HCClamp([self.settings[@"espBoxHeightScale"] doubleValue] ?: 1,0.5,3);
-        CGFloat boxWidth=height*0.48*widthScale,boxHeight=height*heightScale;
+        CGFloat combined=HCClamp([self.settings[@"espCombinedScale"] doubleValue] ?: 1,0.5,4);
+        HCEspDimensions dimensions=HCEspCombinedDimensions(height*0.48*widthScale,height*heightScale,
+            HCClamp([self.settings[@"espIconSize"] doubleValue] ?: 32,12,64),combined);
+        CGFloat boxWidth=dimensions.width,boxHeight=dimensions.height;
         CGRect box = CGRectMake(x-boxWidth/2,(top+bottom)/2-boxHeight/2,boxWidth,boxHeight);
         BOOL hpEnabled=[flags[@"DoroCheat.Reference.R1.HP"] boolValue];
-        double diameter=HCHeroBadgeSized(box.size.width,box.size.height,HCClamp([self.settings[@"espIconSize"] doubleValue] ?: 32,12,64));
+        double diameter=HCHeroBadgeSized(box.size.width,box.size.height,dimensions.icon);
         if (diameter>0 && ([flags[@"DoroCheat.Reference.R1.Icon"] boolValue] || hpEnabled)) {
             CGRect outer=CGRectMake(CGRectGetMidX(box)-diameter/2,CGRectGetMidY(box)-diameter/2,diameter,diameter);
             HCDrawHeroIcon(heroID,CGRectInset(outer,3.2,3.2));
@@ -787,6 +820,11 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         }
     }
 }
+- (void)welcome {
+    HCMenuOpen=NO;_editingMinimap=NO;[self cancelInteraction];
+    _welcomeUntil=NSProcessInfo.processInfo.systemUptime+3.5;[self setNeedsDisplay];HCState();
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(3.6*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ [self setNeedsDisplay]; });
+}
 - (void)toggleMenu {
     HCMenuOpen = !HCMenuOpen;
     self.activeTarget = nil; self.pointer = -1;
@@ -796,10 +834,15 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 - (void)cameraAt:(CGPoint)point {
     if (!self.settings) return;
     CGRect c = [self contentRect];
-    self.settings[@"cameraScale"] = @(1 + HCClamp((point.x - c.origin.x) / c.size.width, 0, 1) * 1.3);
+    self.settings[@"cameraScale"] = @(HCCameraScaleFromDistance(HCClamp((point.x-c.origin.x)/c.size.width,0,1)*2));
     NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;
     if(now-self.cameraLastSave>=0.12) { self.cameraLastSave=now;[self saveSettings]; }
     [self setNeedsDisplay];
+}
+- (void)espCombinedAt:(CGPoint)point {
+    CGRect c=[self contentRect];
+    self.settings[@"espCombinedScale"]=@(0.5+3.5*HCClamp((point.x-c.origin.x)/c.size.width,0,1));
+    [self refreshEspSurface];[self setNeedsDisplay];
 }
 - (void)receivePoint:(CGPoint)point phase:(UITouchPhase)phase pointer:(NSInteger)pointer {
     if (HCLocked || self.hidden) return;
@@ -810,6 +853,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         self.pointer = pointer; self.activeTarget = target;
         self.startPoint = point; self.startBubble = self.bubble; self.dragged = NO;
         if ([target isEqual:@"camera"]) { [self reloadSettings]; [self cameraAt:point]; }
+        if ([target isEqual:@"esp-combined"]) { [self reloadSettings];[self espCombinedAt:point]; }
         if ([target hasPrefix:@"adjust:"]) { [self reloadSettings];[self calibrationAt:point]; }
         if ([target isEqual:@"minimap-move"] || [target isEqual:@"minimap-resize"]) { [self reloadSettings];_startMapRect=[self minimapRect]; }
     } else if (pointer != self.pointer) return;
@@ -824,6 +868,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
                 [self setNeedsDisplay];
             }
         } else if ([self.activeTarget isEqual:@"camera"]) [self cameraAt:point];
+        else if ([self.activeTarget isEqual:@"esp-combined"]) [self espCombinedAt:point];
         else if ([self.activeTarget hasPrefix:@"adjust:"]) [self calibrationAt:point];
         else if ([self.activeTarget isEqual:@"minimap-move"] || [self.activeTarget isEqual:@"minimap-resize"]) [self minimapAt:point];
     } else if (phase == UITouchPhaseEnded || phase == UITouchPhaseCancelled) {
@@ -835,27 +880,9 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         if (phase == UITouchPhaseCancelled) { [self reloadSettings]; return; }
         if (mapGesture || [target hasPrefix:@"adjust:"]) { [self saveSettings];return; }
         if ([target isEqual:@"camera"]) { [self cameraAt:point]; [self saveSettings]; return; }
+        if ([target isEqual:@"esp-combined"]) { [self espCombinedAt:point];[self saveSettings];return; }
         if (self.dragged || ![[self targetAt:point] isEqual:target]) return;
         if ([target isEqual:@"bubble"] || [target isEqual:@"close"]) [self toggleMenu];
-        else if ([target isEqual:@"reports-copy"]) {
-            NSDictionary *log=@{@"schemaVersion":@1,@"appVersion":@"0.14.0",@"appBuild":@31,
-                @"exportedAt":@([NSDate date].timeIntervalSince1970),@"generation":@HC_RUNTIME_GENERATION,
-                @"reportsEnabled":self.settings[@"flags"][@"reports.enabled"] ?: @NO,
-                @"runtimeEnabled":self.settings[@"gameRuntimeEnabled"] ?: @NO,
-                @"refreshID":self.settings[@"reportsRefreshID"] ?: @"",
-                @"reports":HCReportsStatus ?: @{},@"camera":HCCameraStatus ?: @{}};
-            NSData *data=[NSJSONSerialization dataWithJSONObject:log options:NSJSONWritingPrettyPrinted|NSJSONWritingSortedKeys error:NULL];
-            NSString *text=data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : nil;
-            self.reportCopyMessage=@"LỖI COPY — DÙNG APP";
-            @try {
-                if(text) {
-                    UIPasteboard.generalPasteboard.string=text;
-                    if([UIPasteboard.generalPasteboard.string isEqual:text]) self.reportCopyMessage=@"ĐÃ COPY LOG";
-                }
-            } @catch(NSException *exception) { (void)exception; }
-            self.reportCopyUntil=NSProcessInfo.processInfo.systemUptime+4;
-            [self setNeedsDisplay];
-        }
         else if ([target isEqual:@"settings-save"] || [target isEqual:@"settings-load"]) {
             BOOL saving=[target isEqual:@"settings-save"];
             if(saving && self.pendingSettingsSave) [self saveSettings];
@@ -886,7 +913,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
             [self saveSettings];[self refreshEspSurface];
         }
         else if ([target isEqual:@"minimap-done"]) { _editingMinimap=NO;[self setNeedsDisplay]; }
-        else if ([target isEqual:@"stop"]) HCStop(@"Đã tắt nút nổi. Mở Hero Control để bật lại.", NO);
+        else if ([target isEqual:@"stop"]) HCStop(@"Đã tắt nút nổi. Mở DORO-CHEAT để bật lại.", NO);
         else if ([target hasPrefix:@"tab:"]) { self.group = [[target substringFromIndex:4] integerValue]; [self setNeedsDisplay]; }
         else if ([target hasPrefix:@"period:"]) {
             [self reloadSettings];self.settings[@"reportsPeriod"]=[target substringFromIndex:7];_reportRecordIndex=0;[self saveSettings];
@@ -904,7 +931,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         else if ([target isEqual:@"camera-minus"] || [target isEqual:@"camera-plus"]) {
             [self reloadSettings];
             if(self.settings) {
-                self.settings[@"cameraScale"]=@(HCClamp([self.settings[@"cameraScale"] doubleValue]+([target isEqual:@"camera-plus"] ? 0.05 : -0.05),1,2.3));
+                self.settings[@"cameraScale"]=@(HCCameraScaleFromDistance(HCCameraDistance([self.settings[@"cameraScale"] doubleValue])+([target isEqual:@"camera-plus"] ? 0.05 : -0.05)));
                 [self saveSettings];
             }
         }
@@ -1006,7 +1033,7 @@ static void HCUpdateLock(void) {
     HCStage(@"delegate_launch");
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0), ^{
         @autoreleasepool {
-            for(NSString *name in @[@"app-background.jpg"]) (void)HCThemeImage(name);
+            for(NSString *name in [HCMenuArtFiles() arrayByAddingObject:@"app-background.jpg"]) (void)HCThemeImage(name);
         }
     });
     HCOverlayController *controller = [HCOverlayController new];
@@ -1045,13 +1072,14 @@ static void HCUpdateLock(void) {
         if ([HCOrientationObserver respondsToSelector:@selector(activeInterfaceOrientation)])
             HCRotate([HCOrientationObserver activeInterfaceOrientation]);
     }
-    int stopToken, toggleToken, lockToken, springboardToken;
+    int stopToken, toggleToken, lockToken, springboardToken, welcomeToken;
     notify_register_dispatch(HCOverlayNotification(HCDirectory, @"stop").UTF8String, &stopToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCStop(@"Đã tắt nút nổi.", NO); });
+    notify_register_dispatch(HCOverlayNotification(HCDirectory,@"welcome").UTF8String,&welcomeToken,dispatch_get_main_queue(),^(int token){ (void)token;[HCCanvas welcome]; });
     notify_register_dispatch(HCOverlayNotification(HCDirectory, @"toggle").UTF8String, &toggleToken, dispatch_get_main_queue(), ^(int token) { (void)token; [HCCanvas toggleMenu]; });
     notify_register_dispatch("com.apple.springboard.lockstate", &lockToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCUpdateLock(); });
-    notify_register_dispatch("SBSpringBoardDidLaunchNotification", &springboardToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCStop(@"SpringBoard đã khởi động lại. Mở Hero Control để bật nút nổi.", NO); });
+    notify_register_dispatch("SBSpringBoardDidLaunchNotification", &springboardToken, dispatch_get_main_queue(), ^(int token) { (void)token; HCStop(@"SpringBoard đã khởi động lại. Mở DORO-CHEAT để bật nút nổi.", NO); });
     HCStartupStage = @"ready";
-    HCPhase = @"visible"; HCMessage = @"Đã đăng ký nút nổi Hero Control. Chạm để mở/thu menu; kéo để di chuyển.";
+    HCPhase = @"visible"; HCMessage = @"Đã đăng ký nút nổi DORO-CHEAT. Chạm để mở/thu menu; kéo để di chuyển.";
     [NSNotificationCenter.defaultCenter addObserverForName:UIScreenCapturedDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
         (void)notification;[HCCanvas refreshEspSurface];
     }];
@@ -1059,7 +1087,7 @@ static void HCUpdateLock(void) {
         (void)notification;[HCCanvas cancelInteraction];
     }];
     [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidReceiveMemoryWarningNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
-        (void)notification;HCPurgeHeroImages();HCEspLastSample=nil;[HCCanvas.espView setNeedsDisplay];
+        (void)notification;HCPurgeHeroImages();[HCThemeCache() removeAllObjects];HCEspLastSample=nil;[HCCanvas.espView setNeedsDisplay];
     }];
     HCUpdateLock(); HCState();
     HCCamera = [[HCCameraEngine alloc] initWithProfile:HCProfile report:^(NSDictionary *report) {
@@ -1076,7 +1104,7 @@ static void HCUpdateLock(void) {
         HCReportsStatus = report;
         if (HCMenuOpen && HCCanvas.group == 4) [HCCanvas setNeedsDisplay];
     }];
-    [HCCamera start];
+    [HCCamera start];[HCCanvas welcome];
     self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayTick:)];
     NSInteger maximum = UIScreen.mainScreen.maximumFramesPerSecond;
     self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(MIN(60, maximum), maximum, maximum);

@@ -3,6 +3,10 @@
 #include <assert.h>
 #include <stdio.h>
 int main(void) {
+    HCEspDimensions normal=HCEspCombinedDimensions(48,100,32,1),large=HCEspCombinedDimensions(48,100,32,2);
+    assert(large.width==normal.width*2 && large.height==normal.height*2 && large.icon==normal.icon*2);
+    assert(HCHeroBadgeSized(large.width,large.height,large.icon)==64);
+    assert(HCEspCombinedDimensions(48,100,32,NAN).width==0);
     HCHeroHealth hp=HCHeroHealthValue(100,100,true);
     assert(hp.known && hp.ratio==1 && hp.green==1 && hp.red==0);
     hp=HCHeroHealthValue(50,100,true);

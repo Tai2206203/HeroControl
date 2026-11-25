@@ -83,12 +83,12 @@ codesign --force --sign - --entitlements "$ROOT/Signing/App.entitlements" "$STAG
 codesign --verify --deep --strict "$STAGE/Payload/HeroControl.app"
 python3 "$ROOT/scripts/verify-entitlements.py" "$STAGE/Payload/HeroControl.app" \
     --output "$ROOT/dist/signing-report.json"
-OUTPUT="$ROOT/dist/HeroControl.tipa"
+OUTPUT="$ROOT/dist/DORO-CHEAT.tipa"
 # zip can append entries to an existing archive; always create a fresh archive.
-(cd "$STAGE" && /usr/bin/zip -qry "$STAGE/HeroControl.tipa" Payload)
-mv -f "$STAGE/HeroControl.tipa" "$OUTPUT"
+(cd "$STAGE" && /usr/bin/zip -qry "$STAGE/DORO-CHEAT.tipa" Payload)
+mv -f "$STAGE/DORO-CHEAT.tipa" "$OUTPUT"
 /usr/bin/unzip -t "$OUTPUT"
-/usr/bin/shasum -a 256 "$OUTPUT" > "$ROOT/dist/HeroControl.tipa.sha256"
+/usr/bin/shasum -a 256 "$OUTPUT" > "$ROOT/dist/DORO-CHEAT.tipa.sha256"
 printf '\nBuilt: %s\n' "$OUTPUT"
 printf 'Backend bundled: %s\n' "$BACKEND"
 printf 'The default diagnostics backend does not implement game functions. Device testing is required.\n'

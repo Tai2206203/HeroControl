@@ -2,6 +2,14 @@
 #define HC_ESP_VISUAL_STYLE_H
 #include <stdbool.h>
 #include <math.h>
+typedef struct { double width,height,icon; } HCEspDimensions;
+static inline HCEspDimensions HCEspCombinedDimensions(double width,double height,double icon,double scale) {
+    if(!isfinite(width) || !isfinite(height) || !isfinite(icon) || !isfinite(scale) || width<=0 || height<=0 || icon<=0)
+        return (HCEspDimensions){0};
+    scale=fmax(0.5,fmin(4,scale));
+    return (HCEspDimensions){width*scale,height*scale,icon*scale};
+}
+
 typedef struct { bool known; double ratio, red, green, blue; } HCHeroHealth;
 static inline HCHeroHealth HCHeroHealthValue(double current,double maximum,bool known) {
     HCHeroHealth result={false,0,0.55,0.55,0.6};

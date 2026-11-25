@@ -11,11 +11,26 @@ class HeroIconAssetsTests(unittest.TestCase):
         theme = ROOT.parent / 'Theme'
         manifest = json.loads((theme / 'manifest.json').read_text('utf8'))
         entries = [manifest['userImage']] + manifest['skins']
-        self.assertEqual(len(manifest['skins']), 3)
+        self.assertEqual(len(manifest['skins']), 9)
         for entry in entries:
             data = (theme / entry['file']).read_bytes()
             self.assertEqual(hashlib.sha256(data).hexdigest(), entry['sha256'])
             self.assertTrue(data.startswith((b'\xff\xd8\xff', b'\x89PNG\r\n\x1a\n')))
+
+    def test_app_icon_uses_the_same_source_as_the_floating_button(self):
+        project = ROOT.parent.parent
+        manifest = json.loads((project / 'Assets/AppIcon.json').read_text('utf8'))
+        source = project / manifest['source']
+        self.assertEqual(source.name, 'app-background.jpg')
+        self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), manifest['sourceSHA256'])
+        for entry in manifest['files']:
+            data = (project / entry['file']).read_bytes()
+            self.assertTrue(data.startswith(b'\x89PNG\r\n\x1a\n'))
+            self.assertEqual(hashlib.sha256(data).hexdigest(), entry['sha256'])
+            self.assertEqual(data[25], 2, 'App icon must be RGB without alpha')
+        data = (project / 'HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png').read_bytes()
+        import struct
+        self.assertEqual(struct.unpack('>II', data[16:24]), (1024, 1024))
 
     def test_workbook_catalog_has_unique_ids_and_complete_offline_assets(self):
         catalog = json.loads((ROOT / 'catalog.json').read_text('utf8'))

@@ -1,0 +1,38 @@
+{
+  "source": "Assets/Theme/app-background.jpg",
+  "sourceSHA256": "db6c136b37bc07ccc5cfdb97d1f64ac113d0cf7fa42a1e58c432836eca758e27",
+  "files": [
+    {
+      "file": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+      "sha256": "46498ea529af32e7e85132cfd94ae115268f75356d53094022790ae90d7d21a1"
+    },
+    {
+      "file": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-120.png",
+      "sha256": "0232d8e377619d690154b5a256ada00800d805c737e1d2edc55cb044111c4735"
+    },
+    {
+      "file": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-180.png",
+      "sha256": "79532f81620fbb9c4f8c271aa4f4a3bed74755b36e8b4356a64dc572c8849dc3"
+    },
+    {
+      "file": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-40.png",
+      "sha256": "c2b1b3e0be7a2df1009719c832a6736cb6f008130876ba574295883a28bb5b3e"
+    },
+    {
+      "file": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-58.png",
+      "sha256": "a99f2a36c19520e2ada9eb2e46515db5bac77e0f54cf386c049eaae352dff847"
+    },
+    {
+      "file": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-60.png",
+      "sha256": "83f6ed759f2c9efad046475a793d054f33aec6df907acde4c553117074147b0e"
+    },
+    {
+      "file": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-80.png",
+      "sha256": "fcc335e2dcd2754e8acb29af0621ff4648868e8f2a7bdcb2151016c00c76e4f3"
+    },
+    {
+      "file": "HeroControl/Assets.xcassets/AppIcon.appiconset/AppIcon-87.png",
+      "sha256": "bca2930b11d2ed344a479a7137f74a7822c60c0913ffaa88e8683f8eade8f924"
+    }
+  ]
+}

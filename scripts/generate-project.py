@@ -32,11 +32,13 @@ for group, names in [('App', source_names), ('Tests', test_names)]:
         ref = obj(f'{group}/{name}', 'PBXFileReference', f'lastKnownFileType = sourcecode.swift; path = {quote(name)}; sourceTree = "<group>";')
         obj(f'Build/{group}/{name}', 'PBXBuildFile', f'fileRef = {ref};')
 obj('Info', 'PBXFileReference', 'lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>";')
+obj('AppAssets', 'PBXFileReference', 'lastKnownFileType = folder.assetcatalog; path = "Assets.xcassets"; sourceTree = "<group>";')
+obj('Build/AppAssets', 'PBXBuildFile', f'fileRef = {ident("AppAssets")};')
 obj('Theme', 'PBXFileReference', 'lastKnownFileType = folder; path = "../Assets/Theme"; sourceTree = "<group>";')
 obj('Build/Theme', 'PBXBuildFile', f'fileRef = {ident("Theme")};')
 obj('Product/App', 'PBXFileReference', 'explicitFileType = wrapper.application; includeInIndex = 0; path = HeroControl.app; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('Product/Tests', 'PBXFileReference', 'explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeroControlTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
-obj('Group/App', 'PBXGroup', f'children = {array([ident("App/" + n) for n in source_names] + [ident("Info"), ident("Theme")])}; path = HeroControl; sourceTree = "<group>";')
+obj('Group/App', 'PBXGroup', f'children = {array([ident("App/" + n) for n in source_names] + [ident("Info"), ident("Theme"), ident("AppAssets")])}; path = HeroControl; sourceTree = "<group>";')
 obj('Group/Tests', 'PBXGroup', f'children = {array([ident("Tests/" + n) for n in test_names])}; path = HeroControlTests; sourceTree = "<group>";')
 obj('Group/Products', 'PBXGroup', f'children = {array([ident("Product/App"), ident("Product/Tests")])}; name = Products; sourceTree = "<group>";')
 obj('Group/Main', 'PBXGroup', f'children = {array([ident("Group/App"), ident("Group/Tests"), ident("Group/Products")])}; sourceTree = "<group>";')
@@ -44,7 +46,7 @@ obj('Group/Main', 'PBXGroup', f'children = {array([ident("Group/App"), ident("Gr
 for group, names in [('App', source_names), ('Tests', test_names)]:
     for phase, isa in [('Sources', 'PBXSourcesBuildPhase'), ('Frameworks', 'PBXFrameworksBuildPhase'), ('Resources', 'PBXResourcesBuildPhase')]:
         files = [ident(f'Build/{group}/{name}') for name in names] if phase == 'Sources' else []
-        if group == 'App' and phase == 'Resources': files.append(ident('Build/Theme'))
+        if group == 'App' and phase == 'Resources': files.extend([ident('Build/Theme'), ident('Build/AppAssets')])
         obj(f'Phase/{group}/{phase}', isa, f'buildActionMask = 2147483647; files = {array(files)}; runOnlyForDeploymentPostprocessing = 0;')
 
 obj('TestProxy', 'PBXContainerItemProxy', f'containerPortal = {ident("Project")}; proxyType = 1; remoteGlobalIDString = {ident("Target/App")}; remoteInfo = HeroControl;')
@@ -67,13 +69,13 @@ app_settings = {
     'INFOPLIST_FILE': 'HeroControl/Info.plist', 'GENERATE_INFOPLIST_FILE': 'NO',
     'TARGETED_DEVICE_FAMILY': '1', 'SUPPORTED_PLATFORMS': 'iphoneos iphonesimulator',
     'LD_RUNPATH_SEARCH_PATHS': '$(inherited) @executable_path/Frameworks',
-    'CODE_SIGN_STYLE': 'Automatic', 'CURRENT_PROJECT_VERSION': '31', 'MARKETING_VERSION': '0.14.0'
+    'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon', 'CODE_SIGN_STYLE': 'Automatic', 'CURRENT_PROJECT_VERSION': '32', 'MARKETING_VERSION': '0.15.0'
 }
 test_settings = {
     'PRODUCT_NAME': '$(TARGET_NAME)', 'PRODUCT_BUNDLE_IDENTIFIER': 'local.herocontrol.tests',
     'GENERATE_INFOPLIST_FILE': 'YES', 'TARGETED_DEVICE_FAMILY': '1',
     'TEST_HOST': '$(BUILT_PRODUCTS_DIR)/HeroControl.app/HeroControl', 'BUNDLE_LOADER': '$(TEST_HOST)',
-    'SUPPORTED_PLATFORMS': 'iphoneos iphonesimulator', 'CODE_SIGN_STYLE': 'Automatic'
+    'SUPPORTED_PLATFORMS': 'iphoneos iphonesimulator', 'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon', 'CODE_SIGN_STYLE': 'Automatic'
 }
 for group, base in [('Project', project_settings), ('App', app_settings), ('Tests', test_settings)]:
     for mode in ['Debug', 'Release']:

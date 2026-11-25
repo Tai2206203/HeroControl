@@ -41,22 +41,33 @@ static UIImage *HCHeroIcon(int32_t heroID) {
     }
     return image;
 }
-static UIImage *HCThemeImage(NSString *name) {
+static NSCache *HCThemeCache(void) {
     static NSCache *cache;static dispatch_once_t once;
-    dispatch_once(&once,^{ cache=[NSCache new];cache.countLimit=1;cache.totalCostLimit=1024*1024; });
+    dispatch_once(&once,^{ cache=[NSCache new];cache.countLimit=10;cache.totalCostLimit=16*1024*1024; });
+    return cache;
+}
+static NSArray<NSString *> *HCMenuArtFiles(void) {
+    return @[@"violet-sss.png",@"lauriel-sss.jpg",@"liliana-dragon.jpg",@"airi-sss.jpg",@"yena-spirit.jpg",@"diaochan-celestial.jpg",@"veres-dragon.jpg",@"sephera-nova.jpg",@"violet-nobara.jpg"];
+}
+static NSString *HCMenuArt(NSInteger group) {
+    switch(group) { case 0:return @"lauriel-sss.jpg";case 1:return @"liliana-dragon.jpg";
+        case 2:return @"airi-sss.jpg";case 3:return @"yena-spirit.jpg";case 4:return @"diaochan-celestial.jpg";
+        default:return @"violet-sss.png"; }
+}
+static UIImage *HCThemeImage(NSString *name) {
+    NSCache *cache=HCThemeCache();
     UIImage *image=[cache objectForKey:name];
     if(!image) {
         NSURL *url=[NSURL fileURLWithPath:[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:[@"Theme/" stringByAppendingString:name]]];
         CGImageSourceRef source=CGImageSourceCreateWithURL((__bridge CFURLRef)url,NULL);
         if(source) {
             NSDictionary *options=@{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,
-                (__bridge id)kCGImageSourceThumbnailMaxPixelSize:@256,(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,
+                (__bridge id)kCGImageSourceThumbnailMaxPixelSize:([name isEqual:@"app-background.jpg"] ? @256 : @768),(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,
                 (__bridge id)kCGImageSourceShouldCacheImmediately:@YES};
             CGImageRef thumbnail=CGImageSourceCreateThumbnailAtIndex(source,0,(__bridge CFDictionaryRef)options);
-            if(thumbnail) { image=[UIImage imageWithCGImage:thumbnail];CGImageRelease(thumbnail); }
+            if(thumbnail) { image=[UIImage imageWithCGImage:thumbnail];[cache setObject:image forKey:name cost:CGImageGetBytesPerRow(thumbnail)*CGImageGetHeight(thumbnail)];CGImageRelease(thumbnail); }
             CFRelease(source);
         }
-        if(image) [cache setObject:image forKey:name];
     }
     return image;
 }

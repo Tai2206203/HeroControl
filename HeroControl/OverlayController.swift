@@ -146,10 +146,8 @@ final class OverlayController: ObservableObject {
     @Published private(set) var message = "Đang chuẩn bị nút nổi…"
     @Published private(set) var failure: String?
     @Published private(set) var busy = false
-    @Published private(set) var report = "{}"
     private let client = OverlayClient()
     private var profile: URL?
-    private var failureReport: String?
     private let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("HeroOverlay", isDirectory: true)
 
@@ -178,17 +176,11 @@ final class OverlayController: ObservableObject {
         return
 #else
         do {
-            let (state, message, report, ok) = try await client.send(action: action, directory: directory, profile: profile)
-            self.state = state; self.message = message; self.report = report
-            if !ok { failure = message; failureReport = report }
-            else if action == "start" || running { failure = nil; failureReport = nil }
+            let (state, message, _, ok) = try await client.send(action: action, directory: directory, profile: profile)
+            self.state = state; self.message = message
+            if !ok { failure = message }
+            else if action == "start" || running { failure = nil }
         } catch { failure = error.localizedDescription; message = error.localizedDescription }
 #endif
-    }
-    func exportReport() throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("HeroControl-overlay.json")
-        // Polling status must not discard the startup log of the failed launch.
-        try Data((failureReport ?? report).utf8).write(to: url, options: .atomic)
-        return url
     }
 }

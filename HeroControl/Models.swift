@@ -90,6 +90,7 @@ struct ControlSettings: Codable, Equatable {
     var minimapPortraitX: Double? = nil
     var minimapPortraitY: Double? = nil
     var minimapPortraitSize: Double? = nil
+    var espCombinedScale: Double? = nil
     var espBoxWidthScale: Double? = nil
     var espBoxHeightScale: Double? = nil
     var espIconSize: Double? = nil
@@ -101,6 +102,10 @@ struct ControlSettings: Codable, Equatable {
     var minimapAngle: Double? = nil
     var reportsRefreshID: String? = nil
     var reportsPeriod: String? = nil
+    var cameraDistance: Double {
+        get { cameraScale.isFinite ? min(2, max(0, (cameraScale - 1) / 0.65)) : 0 }
+        set { cameraScale = 1 + 0.65 * (newValue.isFinite ? min(2, max(0, newValue)) : 0) }
+    }
     mutating func normalize() {
         minimapAutoAlign = false // Retire automatic projection; preserve manual calibration.
         flags = Dictionary(uniqueKeysWithValues: Feature.all.map { ($0.key, flags[$0.key] ?? false) })
@@ -113,6 +118,7 @@ struct ControlSettings: Codable, Equatable {
         if let v = minimapPortraitY { minimapPortraitY = v.isFinite ? min(1, max(0, v)) : 0.02 }
         if let v = minimapPortraitSize { minimapPortraitSize = v.isFinite ? min(240, max(80, v)) : 150 }
         if let v = minimapIconSize { minimapIconSize = v.isFinite ? min(40, max(8, v)) : 20 }
+        if let v = espCombinedScale { espCombinedScale = v.isFinite ? min(4, max(0.5, v)) : 1 }
         if let v = espBoxWidthScale { espBoxWidthScale = v.isFinite ? min(3, max(0.5, v)) : 1 }
         if let v = espBoxHeightScale { espBoxHeightScale = v.isFinite ? min(3, max(0.5, v)) : 1 }
         if let v = espIconSize { espIconSize = v.isFinite ? min(64, max(12, v)) : 32 }

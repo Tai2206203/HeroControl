@@ -158,6 +158,20 @@ final class ControlTests: XCTestCase {
         XCTAssertEqual(store.revision, "native-edit-revision")
         XCTAssertEqual(ControlStore(directory: folder).revision, store.revision)
     }
+    func testCameraDistanceUsesZeroDefaultAndTwoMaximumWithoutBreakingLegacyZoom() {
+        var settings = ControlSettings()
+        XCTAssertEqual(settings.cameraDistance, 0)
+        settings.cameraDistance = 2
+        XCTAssertEqual(settings.cameraDistance, 2, accuracy: 0.00001)
+        XCTAssertEqual(settings.cameraScale, 2.3, accuracy: 0.00001)
+        settings.cameraDistance = 0
+        XCTAssertEqual(settings.cameraScale, 1)
+        settings.cameraScale = 1.65
+        XCTAssertEqual(settings.cameraDistance, 1, accuracy: 0.00001)
+        settings.espCombinedScale = 2.5;settings.normalize()
+        XCTAssertEqual(settings.espCombinedScale, 2.5)
+    }
+
     @MainActor
     func testSettingSnapshotRoundTripAndCorruptLoadKeepsCurrentProfile() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -213,25 +227,6 @@ final class ControlTests: XCTestCase {
         store.setReportsEnabled(false)
         XCTAssertFalse(store.settings.flags["reports.enabled"] == true)
         XCTAssertEqual(store.settings.cameraEnabled, true)
-    }
-
-    @MainActor
-    func testReportCopyLogRetainsFailureDiagnosticsWithoutHeroCatalog() throws {
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: folder) }
-        let store = ControlStore(directory: folder)
-        let data = Data(#"{"reports":{"code":"reports_query_error","message":"failed","candidateCaptureError":"player_center","queryError":"network_wrapper_missing","mailError":"mail_list_not_ready","lastQueryStatus":"empty","queryPulseCount":3,"rosterPlayerCount":10,"records":[]}}"#.utf8)
-        let overlay = try JSONDecoder().decode(OverlayState.self, from: data)
-        let text = try store.reportDiagnosticsText(overlayState: overlay)
-        let log = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
-        let reports = try XCTUnwrap(log["overlayReports"] as? [String: Any])
-        XCTAssertEqual(reports["queryError"] as? String, "network_wrapper_missing")
-        XCTAssertEqual(reports["mailError"] as? String, "mail_list_not_ready")
-        XCTAssertEqual(reports["candidateCaptureError"] as? String, "player_center")
-        XCTAssertEqual(reports["queryPulseCount"] as? Int, 3)
-        XCTAssertNil(log["heroes"])
-        XCTAssertNotNil(log["exportedAt"])
     }
 
     func testRuntimeHistoryMetadataDecodesWithoutClaimingCompleteness() throws {

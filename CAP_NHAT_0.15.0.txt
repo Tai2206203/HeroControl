@@ -1,0 +1,11 @@
+DORO-CHEAT 0.15.0 — build 32
+
+Tên hiển thị ứng dụng/menu: DORO-CHEAT. Tệp xuất: dist/DORO-CHEAT.tipa. Giữ bundle ID để không mất cấu hình đã lưu.
+Icon ứng dụng dùng đúng ảnh app-background.jpg của phím tắt nổi, xuất các cỡ iPhone và 1024px RGB; iOS tự bo góc. Không thay đổi nội dung ảnh.
+Mở ứng dụng: tự bật nút nổi, đóng menu, hiển thị lời chúc “DORO-CHEAT chúc bạn chơi game vui vẻ” trong 3,5 giây và đưa launcher về màn hình chính khi API hệ thống cho phép. Không hiện bảng điều khiển, nút copy/xuất log hay chẩn đoán. Khi lỗi khởi động chỉ có nút chạm để thử lại.
+Cam xa hiển thị 0–2: 0 = giá trị gốc của game, 2 = mức xa tối đa đã dùng trước đây. Công thức đổi thang số giữ nguyên cameraScale 1–2.3 và cấu hình cũ; không thay offsets hoặc giới hạn đọc/ghi đã xác minh.
+Thanh CỠ BOX + ICON nằm trong tab Camera và đầu mục Căn chỉnh, hệ số 0.5–4.0; phóng to/thu nhỏ cả box và icon cảnh cùng lúc, giữ tâm và lưu cùng setting. Không đổi kích thước minimap.
+Menu/tab/thẻ dùng 9 ảnh skin nữ đầy đủ từ các trang tướng chính thức Garena, được đóng gói offline. Ảnh hiển thị được giải mã có giới hạn, cache theme tối đa 16MiB; không thêm ảnh động hay tải ảnh qua mạng trong app.
+Bỏ view chẩn đoán, clipboard và export API trên giao diện. Các trạng thái nội bộ cần cho worker vẫn được giữ để kiểm tra phiên/độ mới và tránh dùng dữ liệu cũ.
+
+Host checks không xác nhận thao tác về Home, thông báo overlay, icon SpringBoard hay hình menu trên iPhone. CI cần build với Xcode và thử trên thiết bị.

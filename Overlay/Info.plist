@@ -4,11 +4,11 @@
     <key>CFBundleExecutable</key><string>hero-overlay</string>
     <key>CFBundleIdentifier</key><string>local.herocontrol.overlay</string>
     <key>CFBundleName</key><string>HeroOverlay</string>
-    <key>CFBundleDisplayName</key><string>Hero Control Overlay</string>
+    <key>CFBundleDisplayName</key><string>DORO-CHEAT</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-    <key>CFBundleVersion</key><string>31</string>
-    <key>CFBundleShortVersionString</key><string>0.14.0</string>
+    <key>CFBundleVersion</key><string>32</string>
+    <key>CFBundleShortVersionString</key><string>0.15.0</string>
     <key>LSRequiresIPhoneOS</key><true/>
     <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
 </dict></plist>

@@ -1,4 +1,5 @@
 #include "../BackendSDK/CameraMemory.h"
+#include "../BackendSDK/CameraControl.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -41,6 +42,9 @@ static Fixture createFixture(void) {
     return f;
 }
 int main(void) {
+    assert(HCCameraDistance(1)==0 && fabs(HCCameraDistance(2.3)-2)<0.000001);
+    assert(HCCameraScaleFromDistance(0)==1 && fabs(HCCameraScaleFromDistance(2)-2.3)<0.000001);
+    assert(HCCameraScaleFromDistance(-5)==1 && HCCameraDistance(NAN)==0);
     Fixture f = createFixture(); HCCameraMemory memory = {&f, readMemory, writeMemory};
     HCCameraSnapshot object; float written = 0, actual = 0;
     assert(HCCameraApply(memory, 0x10000000, 1.6f, &object, &written) == HC_CAMERA_OK);

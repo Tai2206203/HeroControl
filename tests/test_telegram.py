@@ -24,7 +24,7 @@ class TelegramTests(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.addCleanup(self.folder.cleanup)
-        self.path = Path(self.folder.name) / "HeroControl.tipa"
+        self.path = Path(self.folder.name) / "DORO-CHEAT.tipa"
         with zipfile.ZipFile(self.path, "w") as archive:
             archive.writestr("Payload/HeroControl.app/Info.plist", "test fixture only")
 

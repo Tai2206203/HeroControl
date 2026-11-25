@@ -73,7 +73,10 @@ static NSDictionary *HCOverlayHandle(NSDictionary *request) {
         } while (running && NSProcessInfo.processInfo.systemUptime < deadline);
         if (running) return HCOverlayReply(NO, @"Phiên nút nổi cũ chưa dừng. Bấm Tắt nút nổi rồi bật lại.", state, directory);
     }
-    if (running) return HCOverlayReply(YES, @"Nút nổi đã chạy; giữ nguyên phiên hiện có.", state, nil);
+    if (running) {
+        notify_post(HCOverlayNotification(directory,@"welcome").UTF8String);
+        return HCOverlayReply(YES,@"DORO-CHEAT",state,nil);
+    }
     NSString *helper = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Tools/HeroOverlay.app/hero-overlay"];
     if (access(helper.fileSystemRepresentation, X_OK))
         return HCOverlayReply(NO, @"Gói cài thiếu Tools/HeroOverlay.app/hero-overlay.", state, nil);

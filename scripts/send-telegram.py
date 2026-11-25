@@ -56,10 +56,10 @@ def send_document(token, chat_id, path, opener=urllib.request.urlopen):
     server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     run_id = os.environ.get("GITHUB_RUN_ID", "")
-    caption = f"Hero Control | commit {commit}\nSHA-256: {digest}"
+    caption = f"DORO-CHEAT | commit {commit}\nSHA-256: {digest}"
     if repo and run_id:
         caption += f"\n{server}/{repo}/actions/runs/{run_id}"
-    caption += "\n0.14.0 build 31: lý do tố cáo có tên; bỏ lệnh chat/banner; Lưu/Tải setting trong menu; khung minimap ngang/dọc riêng; ESP giữ mẫu tối đa 120ms, xóa khung cũ và giới hạn ảnh."
+    caption += "\nDORO-CHEAT 0.15.0 build 32: mở app chỉ bật nút nổi và lời chúc; icon app dùng ảnh nút nổi; cam 0–2, thanh cỡ box+icon chung; menu ảnh skin nữ; bỏ nút copy/xuất log."
     boundary = "HeroControl" + uuid.uuid4().hex
     body = multipart(chat_id, caption, path.name, payload, boundary)
     request = urllib.request.Request(
