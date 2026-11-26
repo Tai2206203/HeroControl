@@ -30,10 +30,13 @@ int main(void) {
     double saved=HCMinimapDragPosition(10,70,896,150);
     assert(saved*896==80);
     assert(HCMinimapDragPosition(0,0,0,150)==0);
-    assert(HCShouldHideOverlay(false,true,true,true));
-    assert(HCShouldHideOverlay(false,true,false,false));
+    assert(!HCShouldHideOverlay(false,true,true,true));
+    assert(!HCShouldHideOverlay(false,true,false,false));
     assert(!HCShouldHideOverlay(false,true,false,true));
     assert(!HCShouldHideOverlay(false,false,true,false));
     assert(HCShouldHideOverlay(true,false,false,true));
+    for(int locked=0;locked<2;locked++) for(int enabled=0;enabled<2;enabled++)
+        for(int captured=0;captured<2;captured++) for(int secure=0;secure<2;secure++)
+            assert(HCShouldHideOverlay(locked,enabled,captured,secure)==(bool)locked);
     puts("ESP visuals passed: HP colors/unknowns, badge containment and bounded minimap dragging.");
 }

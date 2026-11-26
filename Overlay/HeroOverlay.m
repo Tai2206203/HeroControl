@@ -95,29 +95,44 @@ static UIView *HCOverlayRootView;
 static UITextField *HCOverlaySecureField;
 static NSInteger HCConfiguredCaptureMode=-1;
 static UIView *HCCachedSecureHost;
+static double HCSecureHostRetryAt;
 static void HCRefreshCaptureHost(UIView *canvas,UIView *espView) {
     if(!HCOverlayRootView) return;
     BOOL sizeChanged=!CGRectEqualToRect(HCOverlaySecureField.frame,HCOverlayRootView.bounds);
     BOOL configure=HCConfiguredCaptureMode!=HCCaptureProtected;
     if(sizeChanged) HCOverlaySecureField.frame=HCOverlayRootView.bounds;
+    double now=NSProcessInfo.processInfo.systemUptime;
+    // UIKit may create/replace the text canvas after attachment to a window.
+    UIView *previousHost=HCCachedSecureHost;
+    BOOL stale=HCCachedSecureHost && ![HCCachedSecureHost isDescendantOfView:HCOverlaySecureField];
+    if(stale) HCCachedSecureHost=nil;
+    BOOL retry=HCCaptureProtected && !HCCachedSecureHost && now>=HCSecureHostRetryAt;
     if(configure && HCCaptureProtected) {
         HCOverlaySecureField.secureTextEntry=NO;HCOverlaySecureField.secureTextEntry=YES;
+        HCCachedSecureHost=nil;
     }
-    if(sizeChanged || configure) {
-        [HCOverlaySecureField layoutIfNeeded];HCCachedSecureHost=HCSecureCanvas(HCOverlaySecureField);
+    if(sizeChanged || configure || retry) {
+        [HCOverlaySecureField setNeedsLayout];[HCOverlaySecureField layoutIfNeeded];
+        HCCachedSecureHost=HCSecureCanvas(HCOverlaySecureField);
+        HCSecureHostRetryAt=now+1;
     }
     UIView *secure=HCCachedSecureHost;
     HCSecureHostAvailable=secure!=nil;
-    UIView *parent=HCCaptureProtected ? secure : HCOverlayRootView;
-    if(secure && (sizeChanged || configure)) secure.frame=HCOverlayRootView.bounds;
-    if(parent && canvas.superview!=parent) [parent addSubview:canvas];
-    if(configure) {
-        BOOL menuConfigured=HCConfigureCaptureLayer(canvas.layer,secure.layer,HCCaptureProtected);
-        BOOL espConfigured=HCConfigureCaptureLayer(espView.layer,secure.layer,HCCaptureProtected);
-        HCCaptureLayerConfigured=HCCaptureProtected && menuConfigured && espConfigured;
-        HCConfiguredCaptureMode=HCCaptureProtected;
+    // Keep the local HUD usable on unsupported UIKit versions. Report that
+    // exclusion is unavailable rather than silently claiming privacy or hiding.
+    UIView *parent=HCCaptureProtected && secure ? secure : HCOverlayRootView;
+    if(secure && (sizeChanged || configure || retry)) {
+        secure.frame=HCOverlayRootView.bounds;
+        secure.backgroundColor=UIColor.clearColor;secure.clipsToBounds=NO;
     }
-    canvas.hidden=HCShouldHideOverlay(HCLocked,HCCaptureProtected,HCCaptureActive,secure!=nil);
+    if(canvas.superview!=parent) [parent addSubview:canvas];
+    if(configure || previousHost!=secure || retry) {
+        BOOL menuConfigured=HCConfigureCaptureLayer(canvas.layer,secure.layer,HCCaptureProtected && secure!=nil);
+        BOOL espConfigured=HCConfigureCaptureLayer(espView.layer,secure.layer,HCCaptureProtected && secure!=nil);
+        HCCaptureLayerConfigured=HCCaptureProtected && secure && menuConfigured && espConfigured;
+    }
+    HCConfiguredCaptureMode=HCCaptureProtected;
+    canvas.hidden=HCShouldHideOverlay(HCLocked,HCCaptureProtected,HCCaptureActive,HCSecureHostAvailable);
 }
 static NSString *HCStartupStage = @"entry";
 
@@ -128,7 +143,7 @@ static void HCState(void) {
         @"touchEvents": @(HCTouchCount), @"hiddenForLock": @(HCLocked),
         @"hidEvents": @(HCHIDCount), @"axTouchEvents": @(HCAXCount), @"pointerFallbacks": @(HCPointerFallbackCount),
         @"inputBackend": HCInputBackend,
-        @"hiddenForCapture": @(HCCaptureProtected && (!HCSecureHostAvailable || HCCaptureActive)), @"captureLayerConfigured": @(HCCaptureLayerConfigured), @"captureScope": @"menu_and_esp", @"captureProtected": @(HCCaptureProtected), @"secureHostAvailable": @(HCSecureHostAvailable), @"screenCaptured": @(HCCaptureActive),
+        @"hiddenForCapture": @NO, @"captureLayerConfigured": @(HCCaptureLayerConfigured), @"captureScope": @"menu_and_esp", @"captureProtected": @(HCCaptureProtected), @"secureHostAvailable": @(HCSecureHostAvailable), @"screenCaptured": @(HCCaptureActive),
         @"iconCount": @(HCHeroCatalog().count), @"settingsOnly": @NO, @"camera": HCCameraStatus ?: @{@"code": @"camera_disabled", @"message": @"Camera xa đang tắt."},
         @"esp": HCEspStatus ?: @{@"code": @"esp_disabled", @"message": @"ESP đang tắt."},
         @"espLastSample": HCEspLastSample ?: (id)NSNull.null,
@@ -832,7 +847,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
         }
         CGRect privacy=CGRectMake(p.origin.x+66,CGRectGetMaxY(p)-31,MIN(240,p.size.width-178),22);
         [[UIColor colorWithWhite:0.94 alpha:1] setFill];[[UIBezierPath bezierPathWithRoundedRect:privacy cornerRadius:7] fill];
-        HCText(HCCaptureProtected ? @"TỰ ẨN QUAY/CHỤP: ON" : @"TỰ ẨN QUAY/CHỤP: OFF",CGRectInset(privacy,7,5),9,HCCaptureProtected ? HCMenuAccent() : UIColor.darkGrayColor,YES);
+        HCText(HCCaptureProtected ? (HCCaptureLayerConfigured ? @"LỚP RIÊNG: ON" : @"LỚP RIÊNG: CHƯA HỖ TRỢ") : @"LỚP RIÊNG: OFF",CGRectInset(privacy,7,5),9,HCCaptureProtected ? HCMenuAccent() : UIColor.darkGrayColor,YES);
         [self target:@"capture" rect:privacy];
         CGRect stop=CGRectMake(CGRectGetMaxX(p)-104,CGRectGetMaxY(p)-33,94,25);
         HCText(@"TẮT NÚT NỔI",CGRectInset(stop,4,3),10,UIColor.systemOrangeColor,YES);[self target:@"stop" rect:stop];
@@ -1187,6 +1202,7 @@ static NSDictionary *HCOverlayReadProfileForMerge(void) {
 // view hitTest gets a chance to return nil. Our controls use the AX monitor,
 // not UIKit-delivered touches, so let the underlying application receive input.
 - (BOOL)_ignoresHitTest { return YES; }
+// Preserve the secure window contract from the original TrollSpeed host.
 - (BOOL)_isSecure { return HCCaptureProtected; }
 - (BOOL)_shouldCreateContextAsSecure { return HCCaptureProtected; }
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
@@ -1263,6 +1279,8 @@ static void HCUpdateLock(void) {
     HCOverlayRootView.backgroundColor=UIColor.clearColor;
     HCOverlaySecureField=[[UITextField alloc] initWithFrame:HCOverlayRootView.bounds];
     HCOverlaySecureField.backgroundColor=UIColor.clearColor;HCOverlaySecureField.textColor=UIColor.clearColor;
+    HCOverlaySecureField.borderStyle=UITextBorderStyleNone;HCOverlaySecureField.clipsToBounds=NO;
+    HCOverlaySecureField.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
     HCOverlaySecureField.userInteractionEnabled=NO;HCOverlaySecureField.text=@" ";
     // Trigger UIKit to configure the canvas after the secure state changes.
     HCOverlaySecureField.secureTextEntry=NO;HCOverlaySecureField.secureTextEntry=YES;

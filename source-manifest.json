@@ -925,6 +925,11 @@
     "sha256": "a7a96bcef38b0dadd831eef9852764a1c3187bfaebf2c4317acd3826db2b6858"
   },
   {
+    "path": "CAP_NHAT_0.18.0_CAPTURE.txt",
+    "bytes": 1925,
+    "sha256": "53fe652c94f91f7a08fa6b4f1adb76e47d0c677a588cf0cc82a6f512544e9745"
+  },
+  {
     "path": "CAP_NHAT_0.2.1.txt",
     "bytes": 1705,
     "sha256": "20fe5279920a0e6f260f0e9e146774fbe3220f32aa5b727d2849a2217df66b56"
@@ -1022,7 +1027,7 @@
   {
     "path": "HeroControl.xcodeproj/project.pbxproj",
     "bytes": 9825,
-    "sha256": "170ea828881c4f7550b3a8ed82c5220a4e9c0aadcf8fa3ef1091f5cbd5ffd3b0"
+    "sha256": "b898fc7b57952af653d64242aa7f3d2e2be4c54d2607e64981e631896e8d28cf"
   },
   {
     "path": "HeroControl.xcodeproj/xcshareddata/xcschemes/HeroControl.xcscheme",
@@ -1097,7 +1102,7 @@
   {
     "path": "HeroControl/Info.plist",
     "bytes": 1049,
-    "sha256": "e0b78abee127c01d14f969759874dcbd808abb40b39ed9e66d9026634a5d7248"
+    "sha256": "2d0f957c0a2ad7e65ef322a529b0a27fdaed771ed155853c6427d0f8d4e44cd7"
   },
   {
     "path": "HeroControl/Models.swift",
@@ -1136,8 +1141,8 @@
   },
   {
     "path": "Overlay/CapturePolicy.h",
-    "bytes": 254,
-    "sha256": "3c8e75a830db963d3f19d8ddabc6bcb5f9ada12aeb64b73bd5f686548a0c6180"
+    "bytes": 422,
+    "sha256": "9f7d17eba3cffe3018397695e0093f5cd96c74c79cdabd8aa536639085ab76e6"
   },
   {
     "path": "Overlay/DrawerMotion.h",
@@ -1151,13 +1156,13 @@
   },
   {
     "path": "Overlay/HeroOverlay.m",
-    "bytes": 98565,
-    "sha256": "dfb763e76743f7ce2e4a7f6220d8cc6211f2d93daf3fa6938bab1ce86abb55d9"
+    "bytes": 99723,
+    "sha256": "44f2fd78391571c5776605b1b0935d27b0176c2557a01347207683d6abf32747"
   },
   {
     "path": "Overlay/Info.plist",
     "bytes": 830,
-    "sha256": "4018209c4afc8c023bcaab77e128a395b676035b7e66f921ae5a05859dcf3825"
+    "sha256": "d788c484177a37657c38668a05db6c95071b8f59406c0c943e3b9b299fff2b7c"
   },
   {
     "path": "Overlay/InputCapture.h",
@@ -1406,8 +1411,8 @@
   },
   {
     "path": "scripts/esp-visual-check.c",
-    "bytes": 2006,
-    "sha256": "95618ab59585b50de0756ccadfc0110f28e0d160cbb509b459bb791dbe3c1240"
+    "bytes": 2260,
+    "sha256": "4d637fb88da174c7f0b6628f0d1d435db64f8c11f9b8d7ceff64cfb102993124"
   },
   {
     "path": "scripts/fetch-hero-icons.py",
@@ -1422,7 +1427,7 @@
   {
     "path": "scripts/generate-project.py",
     "bytes": 9387,
-    "sha256": "b18098850a2a4c815d321a4f4ffed9c52085b4269df841f1317cc1a3a5dd6b05"
+    "sha256": "983d2695162c1b1f507c06b52b2d41ef0f85badea0cb819ec2da31bb35acbabb"
   },
   {
     "path": "scripts/import-runtime-reference.py",
@@ -1531,8 +1536,8 @@
   },
   {
     "path": "scripts/send-telegram.py",
-    "bytes": 5726,
-    "sha256": "14d8d09a0609c012fbec00cff03102366aa9ede1406a09ba48c0146b7ed44dee"
+    "bytes": 5696,
+    "sha256": "f16a3c58fa99260cabf716654be22970d165d997a5c1b8777eab99df4e26c377"
   },
   {
     "path": "scripts/settings-store-check.m",

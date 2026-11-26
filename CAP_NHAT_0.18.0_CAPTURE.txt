@@ -1,0 +1,25 @@
+TIPA 0.18.0 build 39 — khôi phục hiển thị khi quay màn hình
+
+Đối chiếu CAP_NHAT_0.11.0/0.11.1 và commit e066816: logic cũ chủ động đặt
+hidden khi isCaptured hoặc thiếu secure canvas. Vì vậy overlay biến mất tại máy.
+Bỏ riêng điều kiện này; khóa màn hình vẫn ẩn HUD như trước.
+
+Giữ cửa sổ secure, secureTextEntry canvas và cấu hình compositor có sẵn.
+Không thay cơ chế bảo vệ bằng việc ẩn UIView. Giữ menu/nút nổi/ESP cùng lớp bảo vệ.
+Tìm lại canvas tối đa mỗi giây nếu UIKit chưa tạo canvas hoặc thay canvas cũ;
+không toggle secureTextEntry mỗi frame. Nếu không có host, giữ nút/menu để có thể
+thao tác và báo “LỚP RIÊNG: CHƯA HỖ TRỢ”. Khi đó nội dung có thể lọt bản ghi.
+Cấu hình thành công không phải bằng chứng bản ghi đã loại bỏ nội dung.
+
+Kiểm tra hồi quy: 16 tổ hợp khóa/ON-OFF/đang quay/có host; chỉ khóa màn hình
+mới ẩn tại máy. 26 kiểm thử Python và kiểm tra project/protection/payload đã qua.
+Chưa xác minh build iOS hoặc ảnh chụp/quay thực tế trên iPhone tại Windows.
+
+Thử trên máy: cài TIPA mới, mở lại để dừng HUD bản cũ; bật lớp riêng, bắt đầu quay,
+kiểm tra mắt vẫn thấy nút/menu/ESP và mở video kiểm tra chúng không có trong video.
+Thử OFF → ON, xoay máy, dừng quay và khóa/mở khóa. Nếu không đạt, ghi rõ phiên bản
+iOS và trạng thái công tắc; không kết luận thành công chỉ từ trạng thái layer.
+
+Tham chiếu gốc được ThirdParty/NOTICE.txt chỉ ra:
+https://github.com/Lessica/TrollSpeed/blob/a609be260c8261ead36509c3bc4ded8479da9c40/sources/HUDMainWindow.mm
+https://github.com/TelegramMessenger/Telegram-iOS/blob/master/submodules/UIKitRuntimeUtils/Source/UIKitRuntimeUtils/UIKitUtils.m
